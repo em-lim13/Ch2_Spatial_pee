@@ -1,0 +1,13 @@
+﻿date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-08-18,Tzartus116,KCCA16,standard,NA,F5,3.6,0,29.58,28.77,29.07,,
+2022-08-18,Tzartus116,KCCA16,standard,NA,F8,3.6,100,74.57,74.99,76.86,,
+2022-08-18,Tzartus116,KCCA16,standard,NA,F11,3.6,300,160.7,161.6,161.8,,
+2022-08-18,Tzartus116,KCCA16,standard,NA,F18,3.6,600,283.3,284.1,283.5,"288.5, 289.6",
+2022-08-18,Tzartus116,KCCA16,standard,NA,F26,3.6,800,373.8,374,372,"365.8, 368.9, 368.1",
+2022-08-18,Tzartus116,KCCA16,bf,NA,F27,3.6,0,-29.09,-29.35,-29.17,,
+2022-08-18,Tzartus116,KCCA16,3,outside,D22,3.4,0,21.27,21.27,21,,
+2022-08-18,Tzartus116,KCCA16,3,inside,C13,3.4,0,12.62,11.63,13.51,,
+2022-08-18,Tzartus116,KCCA16,1,outside,C11,3.9,0,65.3,64.99,66.52,,
+2022-08-18,Tzartus116,KCCA16,1,inside,C12,3.9,0,79.32,78.78,80.26,,
+2022-08-18,Tzartus116,KCCA16,2,inside,G02,3.6,0,49.09,48.9,50.22,,
+2022-08-18,Tzartus116,KCCA16,2,outside,D21,3.6,0,42.78,42.38,41.38,,

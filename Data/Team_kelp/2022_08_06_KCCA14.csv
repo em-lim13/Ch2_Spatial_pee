@@ -1,0 +1,13 @@
+﻿date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-08-06,Danvers_danger_rock,KCCA14,standard,NA,F1,1.7,0,0.548,0.519,0.506,,
+2022-08-06,Danvers_danger_rock,KCCA14,standard,NA,F2,1.7,100,37.81,36.84,36.34,,
+2022-08-06,Danvers_danger_rock,KCCA14,standard,NA,F3,1.7,300,109.4,111.7,111,,
+2022-08-06,Danvers_danger_rock,KCCA14,standard,NA,F4,1.7,600,213.4,215.8,215.1,220.3,
+2022-08-06,Danvers_danger_rock,KCCA14,standard,NA,F5,1.7,800,299.1,296.1,296.6,,
+2022-08-06,Danvers_danger_rock,KCCA14,bf,NA,F8,1.7,0,-26.51,-29.06,-29.48,,
+2022-08-06,Danvers_danger_rock,KCCA14,1,outside,D10,1.5,0,-1.489,-2.023,-2.129,,
+2022-08-06,Danvers_danger_rock,KCCA14,1,inside,D11,1.5,0,20.51,21.29,20.96,,
+2022-08-06,Danvers_danger_rock,KCCA14,2,outside,D12,1.5,0,-0.913,-0.213,-0.203,,
+2022-08-06,Danvers_danger_rock,KCCA14,2,inside,D13,1.5,0,14.97,13.4,13.56,,
+2022-08-06,Danvers_danger_rock,KCCA14,3,outside,D14,1.9,0,11.68,12,11.9,,
+2022-08-06,Danvers_danger_rock,KCCA14,3,inside,D15,1.9,0,24.78,25.13,23.35,,

@@ -1,0 +1,13 @@
+﻿date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-08-05,Second_beach_south,KCCA13,standard,NA,E1,6.5,0,128.5,127.9,127.8,,"diluted E1 with E6. Diluted fluor reads 0.252, 0.354, 0.574"
+2022-08-05,second beach south,KCCA13,standard,NA,E2,6.5,100,151.3,151.1,149.9,,
+2022-08-05,second beach south,KCCA13,standard,NA,E3,6.5,300,190.1,189,190.5,"187.5, 193.1",
+2022-08-05,second beach south,KCCA13,standard,NA,E4,6.5,600,253.4,255.5,255.8,"252.1, 259.1",
+2022-08-05,second beach south,KCCA13,standard,NA,E5,6.5,800,299.7,300.1,299,,
+2022-08-05,second beach south,KCCA13,bf,NA,E6,6.5,0,-27.85,-27.87,-27.85,,
+2022-08-05,second beach south,KCCA13,1,inside,D1,6.8,0,96.11,93.24,94.75,,
+2022-08-05,second beach south,KCCA13,1,outside,D2,6.8,0,101.3,101.9,103.4,,
+2022-08-05,second beach south,KCCA13,2,inside,D3,6.5,0,96.37,96.52,97.25,,
+2022-08-05,second beach south,KCCA13,2,outside,D4,6.5,0,94.18,95.5,94.41,,
+2022-08-05,second beach south,KCCA13,3,inside,D5,6.3,0,101.6,103.3,103.2,"106.4, 105.3",
+2022-08-05,second beach south,KCCA13,3,outside,D6,6.3,0,91.66,94.02,92.29,,

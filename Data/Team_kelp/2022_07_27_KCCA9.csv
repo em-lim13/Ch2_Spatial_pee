@@ -1,0 +1,13 @@
+﻿date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-07-27,Wizard,KCCA9,standard,NA,E1,3.8,0,-0.192,-0.381,-0.484,,
+2022-07-27,Wizard,KCCA9,standard,NA,E2,3.8,100,33.72,35.8,36.02,,
+2022-07-27,Wizard,KCCA9,standard,NA,E3,3.8,300,118.2,118,115.8,111.1,
+2022-07-27,Wizard,KCCA9,standard,NA,E4,3.8,600,233.2,233,235,"223.7, 236.6",
+2022-07-27,Wizard,KCCA9,standard,NA,E5,3.8,800,314.1,314.2,314.2,,
+2022-07-27,Wizard,KCCA9,bf,NA,E6,3.8,0,-41.06,-41.55,-41.23,,
+2022-07-27,Wizard,KCCA9,1,inside,D1,4.2,0,24.17,23.21,22.92,,
+2022-07-27,Wizard,KCCA9,1,outside,D2,4.2,0,3.192,3.943,3.035,,
+2022-07-27,Wizard,KCCA9,2,inside,D3,3.6,0,18.75,18.67,19.5,,
+2022-07-27,Wizard,KCCA9,2,outside,D4,3.6,0,3.852,4.985,4.875,,
+2022-07-27,Wizard,KCCA9,3,inside,D5,3.8,0,7.316,8.336,7.831,,
+2022-07-27,Wizard,KCCA9,3,outside,D6,3.8,0,3.189,2.509,3.104,,

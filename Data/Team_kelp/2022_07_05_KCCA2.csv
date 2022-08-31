@@ -1,0 +1,13 @@
+date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-07-05,Between Scotts and Brady's,KCCA2,standard,NA,F4,0.7,0,0.835,0.55,0.259,,
+2022-07-05,Between Scotts and Brady's,KCCA2,standard,NA,F14,0.7,100,41.61,42.51,43.82,,
+2022-07-05,Between Scotts and Brady's,KCCA2,standard,NA,F13,0.7,300,110.7,112.9,113.5,116.2,
+2022-07-05,Between Scotts and Brady's,KCCA2,standard,NA,F15,0.7,600,231.7,229.8,230.3,223.4,
+2022-07-05,Between Scotts and Brady's,KCCA2,standard,NA,F16,0.7,800,289,296,298.6,"282.4, 290.1",
+2022-07-05,Between Scotts and Brady's,KCCA2,bf,NA,F17,0.7,0,-69.6,-69.62,-69.46,,
+2022-07-05,Between Scotts and Brady's,KCCA2,1,inside,D1,0.7,0,7.042,8.077,7.882,,
+2022-07-05,Between Scotts and Brady's,KCCA2,1,outside,D2,0.7,0,27.14,29.26,28.07,,
+2022-07-05,Between Scotts and Brady's,KCCA2,2,inside,D3,0.7,0,-13.69,-13.7,-14.19,,
+2022-07-05,Between Scotts and Brady's,KCCA2,2,outside,D4,0.7,0,5.843,5.911,6.186,,
+2022-07-05,Between Scotts and Brady's,KCCA2,3,inside,D5,0.7,0,-11.61,-11.08,-10.73,,
+2022-07-05,Between Scotts and Brady's,KCCA2,3,outside,D6,0.7,0,15.33,15.85,15.62,,

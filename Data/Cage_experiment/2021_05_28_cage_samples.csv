@@ -1,0 +1,23 @@
+cage_ID,line,depth,sal_est,temp_est,cukes,cuke_len1,cuke_width1,cuke_len2,cuke_width2,substrate,bottle,syringe,animals,tide_height,cuke_notes,notes
+A1,A,4.4,31.4,10.1,0,0,0,0,0,sand,D01,1,low,0.7,NA,tossing in surge
+A2,A,4.6,31.4,10.1,2,25,15,44,17,sand,D02,2,low,0.7,both soft,tossing in surge
+A3,A,4.5,31.4,10.1,1,47,18,0,0,sand,D03,3,med,0.7,soft,"urchins, some acid weed, surge"
+A4,A,4.3,31.4,10.1,2,47,13,27,20,rock,D04,4,high,0.7,"cuke 1 soft, cuke 2 hard","urchins, lots of organe cukes, angry sculpin, cali cukes, 1 abalone"
+A5,A,4.1,31.4,10.1,0,0,0,0,0,rock,D05,5,med,0.7,NA,"crab, urchins"
+A6,A,3.9,31.4,10.1,1,24,15,0,0,rock,D06,6,med,0.7,hardish,"urchins (few), cali cukes"
+A7,A,3.4,31.2,10.3,1,27,18,0,0,rock,D07,7,high,0.7,soft,"some urchins, orange cukes, cali cukes"
+A8,A,2.9,31.2,10.3,0,0,0,0,0,rock,D08,8,high,0.7,NA,"tossing in surge, lots inverts (cukes, sea star, urchin)"
+A9,A,3.5,31.4,10.1,2,43,14,34,17,rock,D09,9,med,0.7,both soft,some urchins
+B1,B,5.6,31.4,10.1,1,37,20,0,0,sand,D10,1,med,1.6,hardish,"some acid weed, urchins, some macro, some surge"
+B2,B,5.6,31.4,10.1,2,23,20,37,17,sand,D11,2,low,1.6,"cuke 1 hard, cuke 2 soft","in acid weed, cage on its side"
+B3,B,5.8,31.4,10.1,0,0,0,0,0,sand,D12,3,low,1.6,NA,macro and acid weed
+B4,B,5.6,31.4,10.1,0,0,0,0,0,sand,D13,4,low,1.6,NA,acid weed
+B5,B,5.7,31.4,10.1,1,25,27,0,0,sand,D14,5,low,1.6,HARD,"macro, some acid weed"
+B6,B,5.6,31.4,10.1,2,31,19,36,19,sand,D15,6,low,1.6,both hard,acid weed on one side of the line
+B7,B,5.5,31.4,10.1,0,0,0,0,0,sand,D16,7,low,1.6,NA,acid weed
+B8,B,5.4,31.4,10.1,1,31,17,0,0,sand,D17,8,low,1.6,hardish,"mix of shellhash, acid weed, other reds"
+B9,B,5.3,31.4,10.1,2,27,25,29,18,sand,D18,9,low,1.6,both hard,"mix of shellhash, acid weed, other reds"
+AWP1,A,4.2,31.4,10.1,NA,0,0,0,0,rock,F01,10,high,0.7,NA,whirlpack filled after A4
+AWP2,A,4.2,31.4,10.1,NA,0,0,0,0,rock,F02,10,high,0.7,NA,whirlpack filled after A4
+BWP1,B,5.3,31.4,10.1,NA,0,0,0,0,sand,F03,11,low,1.6,NA,ziplock filled after B4
+BWP2,B,5.3,31.4,10.1,NA,0,0,0,0,sand,F04,11,low,1.6,NA,ziplock filled after B4

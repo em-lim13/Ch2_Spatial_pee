@@ -1,0 +1,13 @@
+date ,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-07-04,Ross_slug,KCCA1,standard,NA,F13,2,0,0.242,-1.575,-0.245,,
+2022-07-04,Ross_slug,KCCA1,standard,NA,F14,2,100,36.02,35.89,37.14,,
+2022-07-04,Ross_slug,KCCA1,standard,NA,F15,2,300,115.6,117.9,116.7,112.5,
+2022-07-04,Ross_slug,KCCA1,standard,NA,F21,2,600,227.3,226.8,226.1,"221.3, 220.8",
+2022-07-04,Ross_slug,KCCA1,standard,NA,F23,2,800,300.8,301.2,303.7,295.3,
+2022-07-04,Ross_slug,KCCA1,bf,NA,F1,2,0,-108.8,-108.8,-108.8,,
+2022-07-04,Ross_slug,KCCA1,1,outside,F27,2,0,-49.73,-50.35,-49.65,,
+2022-07-04,Ross_slug,KCCA1,1,inside,F4,2,0,-27.74,-29.2,-28.83,,
+2022-07-04,Ross_slug,KCCA1,2,inside,F17,2,0,-25.62,-24.71,-25.22,-27.5,
+2022-07-04,Ross_slug,KCCA1,2,outside,F16,2,0,-40.23,-40.79,-39,,
+2022-07-04,Ross_slug,KCCA1,3,inside,F26,2,0,-24.56,-23.85,-23.98,,
+2022-07-04,Ross_slug,KCCA1,3,outside,F22,2,0,-45.43,-44.65,-45.35,,

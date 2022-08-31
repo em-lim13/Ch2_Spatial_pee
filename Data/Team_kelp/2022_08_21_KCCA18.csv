@@ -1,0 +1,13 @@
+﻿date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-08-21,Second_beach,KCCA18,standard,NA,F1,4.2,0,-0.674,0.616,2.587,,
+2022-08-21,Second_beach,KCCA18,standard,NA,F2,4.2,100,36.53,35.86,36.44,,
+2022-08-21,Second_beach,KCCA18,standard,NA,F3,4.2,300,112.8,115.1,112.2,108.9,
+2022-08-21,Second_beach,KCCA18,standard,NA,F4,4.2,600,179.8,179.6,176.8,,
+2022-08-21,Second_beach,KCCA18,standard,NA,F11,4.2,800,296.3,292.2,298,,
+2022-08-21,Second_beach,KCCA18,bf,NA,F12,4.2,0,-107.1,-107.3,-107.2,,
+2022-08-21,Second_beach,KCCA18,1,inside,D7,4.2,0,43,45.65,44.44,,
+2022-08-21,Second_beach,KCCA18,1,outside,D10,4.2,0,4.316,6.342,5.791,,
+2022-08-21,Second_beach,KCCA18,2,inside,D9,4.4,0,25.18,27.31,26.55,,
+2022-08-21,Second_beach,KCCA18,2,outside,D11,4.4,0,-15.34,-16.74,-16.28,,
+2022-08-21,Second_beach,KCCA18,3,inside,D12,4,0,30.41,30.02,31,,
+2022-08-21,Second_beach,KCCA18,3,outside,D8,4,0,-20.57,-21.05,-21.52,,

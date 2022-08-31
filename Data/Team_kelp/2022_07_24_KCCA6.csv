@@ -1,0 +1,13 @@
+﻿date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-07-24,Less_dangerous_bay,KCCA6,standard,NA,E1,4.9,0,-0.151,0.171,0.058,,
+2022-07-24,Less_dangerous_bay,KCCA6,standard,NA,E2,4.9,100,38.57,39.89,38.87,35.3,
+2022-07-24,Less_dangerous_bay,KCCA6,standard,NA,E3,4.9,300,114.3,116.5,115.1,,
+2022-07-24,Less_dangerous_bay,KCCA6,standard,NA,E4,4.9,600,212.2,210.4,209.3,"205.3, 215.5, 207.5",
+2022-07-24,Less_dangerous_bay,KCCA6,standard,NA,E5,4.9,800,306.2,308.8,308.9,"305.0, 296.0",
+2022-07-24,Less_dangerous_bay,KCCA6,bf,NA,E6,4.9,0,-22.04,-22.04,-22.04,,
+2022-07-24,Less_dangerous_bay,KCCA6,1,outside,D1,4.9,0,22.82,22.86,22.95,,
+2022-07-24,Less_dangerous_bay,KCCA6,1,inside,D2,4.9,0,-15.36,-15.05,-15.2,,
+2022-07-24,Less_dangerous_bay,KCCA6,2,inside,D3,4.9,0,-13.68,-13.52,-13.57,,
+2022-07-24,Less_dangerous_bay,KCCA6,2,outside,D4,4.9,0,10.57,11.3,9.761,,
+2022-07-24,Less_dangerous_bay,KCCA6,3,inside,D5,5,0,-14.66,-14.61,-14.66,,
+2022-07-24,Less_dangerous_bay,KCCA6,3,outside,D6,5,0,3.821,3.356,3.15,,

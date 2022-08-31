@@ -1,0 +1,13 @@
+﻿date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-08-07,Cable_beach,KCCA15,standard,NA,E1,2.7,0,0.747,-0.366,0.263,,
+2022-08-07,Cable_beach,KCCA15,standard,NA,E2,2.7,100,26.95,27.33,26.12,"30.90, 30.10",
+2022-08-07,Cable_beach,KCCA15,standard,NA,E3,2.7,300,110,108.6,107.6,106.8,
+2022-08-07,Cable_beach,KCCA15,standard,NA,E4,2.7,600,217,215.6,217.8,"228.0, 221.7",
+2022-08-07,Cable_beach,KCCA15,standard,NA,E5,2.7,800,297.4,298.1,296.5,"307.0, 310.2",
+2022-08-07,Cable_beach,KCCA15,bf,NA,E6,2.7,0,-85.85,-85.84,-85.79,,
+2022-08-07,Cable_beach,KCCA15,1,outside,D1,2.8,0,-17.14,-17.9,-17.13,,
+2022-08-07,Cable_beach,KCCA15,1,inside,D2,2.8,0,-7.217,-6.013,-5.262,,
+2022-08-07,Cable_beach,KCCA15,2,outside,D3,2.6,0,-10.04,-8.756,-8.073,-5.262,
+2022-08-07,Cable_beach,KCCA15,2,inside,D4,2.6,0,-3.368,-2.847,-3.627,,
+2022-08-07,Cable_beach,KCCA15,3,inside,D5,2.6,0,-3.257,-1.505,-1.549,,
+2022-08-07,Cable_beach,KCCA15,3,outside,D6,2.6,0,-13.76,-13.56,-12.51,,

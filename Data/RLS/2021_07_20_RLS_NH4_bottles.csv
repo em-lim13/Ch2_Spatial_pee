@@ -1,0 +1,17 @@
+site,site_ID,bottle,syringe,depth,temp_est,sal_est,date,sample,comments,lat_dec,long_dec,region,period
+Scotts,BMSC9,D1,10,7,11.9,28.4,2021-07-13,sample,,48.834311,-125.148126,main,third
+Scotts,BMSC9,D2,5,7,11.9,28.4,2021-07-13,sample,,48.834311,-125.148126,main,third
+Scotts,BMSC9,D3,WP,7,11.9,28.4,2021-07-13,sample,,48.834311,-125.148126,main,third
+Scotts,BMSC9,D4,WP,7,11.9,28.4,2021-07-13,matrix,,48.834311,-125.148126,main,third
+Ross,BMSC10,D5,7,5,11.6,28.6,2021-07-13,sample,,48.870574,-125.160794,deer,third
+Ross,BMSC10,D6,6,5,11.6,28.6,2021-07-13,sample,,48.870574,-125.160794,deer,third
+Ross,BMSC10,D7,WP,5,11.6,28.6,2021-07-13,sample,,48.870574,-125.160794,deer,third
+Ross,BMSC10,D8,WP,5,11.6,28.6,2021-07-13,matrix,,48.870574,-125.160794,deer,third
+Kirby,BMSC2,D9,3,4,11.9,28.5,2021-07-14,sample,,48.849393,-125.185895,deer,third
+Kirby,BMSC2,D10,2,5.5,11,28.7,2021-07-14,sample,,48.849393,-125.185895,deer,third
+Kirby,BMSC2,D11,WP,5,11.5,28.6,2021-07-14,sample,,48.849393,-125.185895,deer,third
+Kirby,BMSC2,D12,WP,5,11.5,28.6,2021-07-14,matrix,,48.849393,-125.185895,deer,third
+Ohiat,BMSC3,D13,11,4,13.2,28,2021-07-14,sample,,48.856046,-125.183473,deer,third
+Ohiat,BMSC3,D14,8,4,13.2,28,2021-07-14,sample,,48.856046,-125.183473,deer,third
+Ohiat,BMSC3,D15,WP,4,13.2,28,2021-07-14,sample,,48.856046,-125.183473,deer,third
+Ohiat,BMSC3,D16,WP,4,13.2,28,2021-07-14,matrix,,48.856046,-125.183473,deer,third

@@ -1,0 +1,13 @@
+﻿date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-07-25,Ed_king_east_inside,KCCA7,standard,NA,F1,2.8,0,-1.911,-3.426,-1.306,-0.1,
+2022-07-25,Ed_king_east_inside,KCCA7,standard,NA,F2,2.8,100,41.76,42.33,43.17,,
+2022-07-25,Ed_king_east_inside,KCCA7,standard,NA,F3,2.8,300,113.8,116.5,115.9,,
+2022-07-25,Ed_king_east_inside,KCCA7,standard,NA,F4,2.8,600,222.4,224.6,222.7,210.2,
+2022-07-25,Ed_king_east_inside,KCCA7,standard,NA,F5,2.8,800,305.5,306.2,306.1,299.3,
+2022-07-25,Ed_king_east_inside,KCCA7,bf,NA,F8,2.8,0,-118.4,-118.2,-118.3,,
+2022-07-25,Ed_king_east_inside,KCCA7,1,inside,D13,2.9,0,13.89,15.56,15.84,,
+2022-07-25,Ed_king_east_inside,KCCA7,1,outside,D14,2.9,0,-5.252,-3.104,-2.962,,
+2022-07-25,Ed_king_east_inside,KCCA7,2,inside,D15,2.8,0,25.43,26.5,26.39,,
+2022-07-25,Ed_king_east_inside,KCCA7,2,outside,D16,2.8,0,5.548,4.616,6.619,,
+2022-07-25,Ed_king_east_inside,KCCA7,3,inside,D17,2.8,0,11.88,12.09,11.44,,
+2022-07-25,Ed_king_east_inside,KCCA7,3,outside,D23,2.8,0,-25.31,-26.29,-26.43,,
