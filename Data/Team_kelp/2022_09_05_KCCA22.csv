@@ -1,0 +1,13 @@
+date,site,site_code,sample,kelp,bottle_number,depth_m,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2022-09-05,Taylor_rock,KCCA22,standard,NA,D23,1.8,0,75.48,75.26,77.49,80.33,
+2022-09-05,Taylor_rock,KCCA22,standard,NA,D24,1.8,100,112.8,112.4,113.8,15.6,
+2022-09-05,Taylor_rock,KCCA22,standard,NA,D25,1.8,300,186.6,187.9,187.4,185.6,
+2022-09-05,Taylor_rock,KCCA22,standard,NA,D26,1.8,600,299.3,300.7,299.3,"307.7, 304.1, 307.2, 290.1",
+2022-09-05,Taylor_rock,KCCA22,standard,NA,D27,1.8,800,367.4,367.3,369.9,"372.0, 359.8",
+2022-09-05,Taylor_rock,KCCA22,bf,NA,D28,1.8,0,-76.53,-76.42,-76.55,,
+2022-09-05,Taylor_rock,KCCA22,1,inside,F11,1.7,0,9.66,7.928,10.02,,
+2022-09-05,Taylor_rock,KCCA22,1,outside,F14,1.7,0,2.287,1.789,3.944,,
+2022-09-05,Taylor_rock,KCCA22,2,outside,F15,1.9,0,-1.1016,-0.546,-0.091,,
+2022-09-05,Taylor_rock,KCCA22,2,inside,F12,1.9,0,11.92,13.35,13.87,,
+2022-09-05,Taylor_rock,KCCA22,3,inside,F13,1.7,0,28.75,29.47,30.48,31.93,
+2022-09-05,Taylor_rock,KCCA22,3,outside,F16,1.7,0,1.723,2.197,2.129,4.251,
