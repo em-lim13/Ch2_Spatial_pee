@@ -943,11 +943,134 @@ samples_kc19 <- data_kc19 %>%
 ggplot(samples_kc19, aes(kelp, nh4_conc)) +
   geom_point()
 
+# KCCA21 Bordelais ----
+# Load the background fluorometry reading
+data_kc21_bf <- read_csv("Data/Team_kelp/2022_09_01_KCCA21.csv") %>%
+  filter(sample == "bf") %>% # just the BF sample
+  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
+  select(bf, site_code) 
+
+# Load the standards and the sample data
+data_kc21 <- read_csv("Data/Team_kelp/2022_09_01_KCCA21.csv") %>%
+  as.data.frame() %>%
+  left_join(data_kc21_bf, by = "site_code") %>%
+  mutate(mean_FLU_unadj = (FLU1 + FLU2 + FLU3)/3,
+         mean_FLU = mean_FLU_unadj - bf) %>%
+  filter(sample != "bf")
+
+# Build the standard curve for protocol 1!
+standard_kc21 <- data_kc21 %>%
+  filter(sample == "standard") %>% 
+  mutate(nh4_added_umol = nh4_vol_uL/1e6 * 200, #amount of NH4
+         total_vol_L = nh4_vol_uL/1e6 + 0.04, #new volume of sample + NH4
+         nh4_conc_final_umol_L = nh4_added_umol / total_vol_L) #concentration
+#of NH4 in seawater sample
+
+#graph standard curve
+ggplot(standard_kc21, aes(nh4_conc_final_umol_L, mean_FLU)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE)
+
+#model for protocol 1
+mod_kc21 <- lm(mean_FLU ~ nh4_conc_final_umol_L, data = standard_kc21)
+summary(mod_kc21)
+
+#save coefficients
+int_kc21 <- coef(mod_kc21)[1]
+slope_kc21 <- coef(mod_kc21)[2]
+
+# calculate ammonium in standards
+standard_b_kc21 <- standard_kc21 %>%
+  mutate(int = int_kc21, 
+         slope = slope_kc21, 
+         nh4_conc = abs(int/slope),
+         true_nh4_conc = nh4_conc + nh4_conc_final_umol_L)
+
+# Now move into protocol 2! Use the standards to calculate ammonium in samples
+# Now BF-corrected FLU of standard curve against calculated NH4 concentration
+mod2_kc21 <- lm(mean_FLU ~ true_nh4_conc, data = standard_b_kc21)
+summary(mod2_kc21)
+
+# pull coefficients from model
+int2_kc21 <- coef(mod2_kc21)[1]
+slope2_kc21 <- coef(mod2_kc21)[2]
+
+# calculate how much ammonium is in the samples
+samples_kc21 <- data_kc21 %>%
+  filter(sample != "standard") %>%
+  mutate(nh4_conc = (mean_FLU - int2_kc21)/slope2_kc21)
+
+# Plot 
+ggplot(samples_kc21, aes(kelp, nh4_conc)) +
+  geom_point()
+
+# KCCA22 Taylor Rock ----
+# Load the background fluorometry reading
+data_kc22_bf <- read_csv("Data/Team_kelp/2022_09_05_KCCA22.csv") %>%
+  filter(sample == "bf") %>% # just the BF sample
+  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
+  select(bf, site_code) 
+
+# Load the standards and the sample data
+data_kc22 <- read_csv("Data/Team_kelp/2022_09_05_KCCA22.csv") %>%
+  as.data.frame() %>%
+  left_join(data_kc22_bf, by = "site_code") %>%
+  mutate(mean_FLU_unadj = (FLU1 + FLU2 + FLU3)/3,
+         mean_FLU = mean_FLU_unadj - bf) %>%
+  filter(sample != "bf")
+
+# Build the standard curve for protocol 1!
+standard_kc22 <- data_kc22 %>%
+  filter(sample == "standard") %>% 
+  mutate(nh4_added_umol = nh4_vol_uL/1e6 * 200, #amount of NH4
+         total_vol_L = nh4_vol_uL/1e6 + 0.04, #new volume of sample + NH4
+         nh4_conc_final_umol_L = nh4_added_umol / total_vol_L) #concentration
+#of NH4 in seawater sample
+
+#graph standard curve
+ggplot(standard_kc22, aes(nh4_conc_final_umol_L, mean_FLU)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE)
+
+#model for protocol 1
+mod_kc22 <- lm(mean_FLU ~ nh4_conc_final_umol_L, data = standard_kc22)
+summary(mod_kc22)
+
+#save coefficients
+int_kc22 <- coef(mod_kc22)[1]
+slope_kc22 <- coef(mod_kc22)[2]
+
+# calculate ammonium in standards
+standard_b_kc22 <- standard_kc22 %>%
+  mutate(int = int_kc22, 
+         slope = slope_kc22, 
+         nh4_conc = abs(int/slope),
+         true_nh4_conc = nh4_conc + nh4_conc_final_umol_L)
+
+# Now move into protocol 2! Use the standards to calculate ammonium in samples
+# Now BF-corrected FLU of standard curve against calculated NH4 concentration
+mod2_kc22 <- lm(mean_FLU ~ true_nh4_conc, data = standard_b_kc22)
+summary(mod2_kc22)
+
+# pull coefficients from model
+int2_kc22 <- coef(mod2_kc22)[1]
+slope2_kc22 <- coef(mod2_kc22)[2]
+
+# calculate how much ammonium is in the samples
+samples_kc22 <- data_kc22 %>%
+  filter(sample != "standard") %>%
+  mutate(nh4_conc = (mean_FLU - int2_kc22)/slope2_kc22)
+
+# Plot 
+ggplot(samples_kc22, aes(kelp, nh4_conc)) +
+  geom_point()
+
 # Pull all the data together ----
 kcca <- rbind(samples_kc1, samples_kc2, samples_kc3, samples_kc4, 
               samples_kc6, samples_kc7, samples_kc9, samples_kc12, 
               samples_kc13, samples_kc14, samples_kc15, samples_kc16,
-              samples_kc17, samples_kc18, samples_kc19) %>%
+              samples_kc17, samples_kc18, samples_kc19, samples_kc21,
+              samples_kc22) %>%
   select(date, site, site_code, sample, kelp, depth_m, nh4_conc)
 
 # separate the inside vs outside so I can put them back together side by side as separate columns
@@ -975,12 +1098,18 @@ kelp <- read_csv("Data/Team_kelp/kelp_density_2022_KDC_CMA.csv") %>%
                           ifelse(Nereo_5m2 == "0", "macro", "mixed"))))%>%
   select(site_code, sample, kelp_sp, kelp_den)
 
+kelp_summary <- kelp %>%
+  group_by(site_code) %>%
+  summarise(avg_kelp_den = mean(kelp_den)) 
+
 # merge kelp data with the pee data
 kcca_final <- kcca_not_final %>%
   left_join(kelp, by = c("site_code", "sample")) %>%
   group_by(site) %>%
   mutate(nh4_avg = mean(c(nh4_outside, nh4_inside)),
-         site = as.factor(site))
+         site = as.factor(site),
+         percent_diff = 100*(nh4_inside-nh4_outside)/nh4_outside) %>%
+  left_join(kelp_summary, by = "site_code")
 
 #
 kcca_summary <- kcca_final %>%
@@ -988,6 +1117,7 @@ kcca_summary <- kcca_final %>%
   summarise(kelp_den = mean(kelp_den),
             in_minus_out = mean(in_minus_out),
             kelp_sp = kelp_sp)
+
 
 # Plots ----
 
@@ -1004,17 +1134,17 @@ ggplot(kcca_final, aes(kelp_den, in_minus_out)) +
   geom_smooth(method = lm,
               alpha = 0.25)
 
-# asymptote?
+# better asymptote?
 ggplot(kcca_final, aes(kelp_den, in_minus_out)) +
   geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
   geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
   labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Density") +
-stat_smooth(method = 'nls', 
-            formula = y ~ 0.25-exp(-k*x),
-            se = FALSE)
+  geom_smooth(method = "loess",
+              span = 1,
+              alpha = 0.25)
 
-# better asymptote?
-ggplot(kcca_final, aes(kelp_den, in_minus_out)) +
+# Percent difference 
+ggplot(kcca_final, aes(kelp_den, percent_diff)) +
   geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
   geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
   labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Density") +
