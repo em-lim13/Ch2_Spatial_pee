@@ -10,6 +10,7 @@ library(visreg)
 library(ggplot2)
 theme_set(theme_bw())
 library(RColorBrewer)
+library(ggeffects)
 source("Code/theme_black.R")
      
 # Calculate NH4+ for April - May 2021 RLS samples -------
@@ -562,7 +563,42 @@ summary(res)
 
 pee <- lm(adj_nh4_conc ~ site * period, data = rls_data)
 
+
+# Stats -------
+# Does pee vary by site?
+simple_model <- lm(nh4_conc ~ site_ID, data = rls_data)
+summary(simple_model)
+
+sum_stats_pee <- ggpredict(simple_model, terms = "site_ID") %>% 
+  #and then we'll just rename one of the columns so it's easier to plot
+  rename(site_ID = x,
+         nh4_conc = predicted)
+#View(sum_stats_crabs)
+
 # Graphing ----
+
+# Dot and whisker?
+ggplot() +
+  geom_point(data = sum_stats_pee, 
+             aes(y = site_ID, x = nh4_conc, colour = site_ID),
+             size = 4) +
+  geom_errorbar(data = sum_stats_pee, 
+                aes(y = site_ID,
+                    x = nh4_conc,
+                    colour = site_ID,
+                    # and you can decide which type of error to show here
+                    # we're using 95% CI
+                    xmin = conf.low,
+                    xmax = conf.high),
+                width = 0.2,
+                size = 1.2)  +
+  geom_point(data = rls_data, aes (y = site_ID, x = nh4_conc, colour = site_ID), alpha = 0.5, height = 0, size = 2) +
+  labs(x= "Ammonium concentration (umol/L)", y = "Site") +
+  theme_black() +
+  theme(legend.position="none") 
+
+#ggsave("Output/Figures/RLS_pee_black.png", device = "png",
+#       height = 9, width = 16, dpi = 400)
 
 # Site vs pee
 ggplot(rls_data, aes(adj_nh4_conc, site, colour = period)) +
@@ -615,130 +651,3 @@ anova(pee)
 summary(pee)
 
 visreg(pee, "depth", by = "site")
-
-
-# Play with abundance data -------------
-rls <- read_csv("Data/RLS/updated_RLS.csv") %>%
-  select(-1) %>%
-  select(-Inverts) %>%
-  filter(Method != 0) %>%
-  slice(2:n()) %>%
-  rename(
-    site_ID = `Site No.`,
-    site_name = `Site Name`, 
-    common_name = `Common name`
-  ) %>%
-  filter(Species != "Debris - Metal") %>%
-  filter(Species != "Debris - Other") %>%
-  filter(Species != "Debris - Wood") %>%
-  filter(Species != "Debris - Glass") %>%
-  filter(Species != "Debris - Fishing Gear")
-
-# I wonder what the most abundant species are?
-rls_ranked <- rls %>% group_by(Species) %>%
-  summarise(sum = sum(Total))  %>% arrange(desc(sum))
-
-# where are the most limpets???
-rls_limpets <- rls %>%
-  filter(Species == "Diodora aspera") %>%
-  group_by(site_name) %>%
-  summarize(limpets = sum(Total)) %>%
-  arrange(desc(limpets))
-
-rls_hell <- rls %>%
-  mutate(
-    mass = ifelse(Species == "Mesocentrotus franciscanus", 300,
-           ifelse(Species == "Pomaulax gibberosus", 60,
-           ifelse(Species == "Patiria miniata", 60,
-           ifelse(Species == "Rhinogobiops nicholsii", 6,
-           ifelse(Species == "Apostichopus californicus", 695,
-           ifelse(Species == "Haliotis kamtschatkana", 200,
-           ifelse(Species == "Acmaea mitra", 8,
-           ifelse(Species == "Ceratostoma foliatum", 14,
-           ifelse(Species == "Orthasterias koehleri", 25,
-           ifelse(Species == "Dermasterias imbricata", 60,
-           ifelse(Species == "Paguroidea spp.", 6,
-           ifelse(Species == "Strongylocentrotus purpuratus", 70,
-           ifelse(Species == "Pisaster ochraceus", 100, # top 16 inverts
-           ifelse(Species == "Hexagrammos decagrammus", 600,
-           ifelse(Species == "Sebastes flavidus", 1500,
-           ifelse(Species == "Sebastes melanops", 1500,
-           ifelse(Species == "Sebastes caurinus", 1500,
-           ifelse(Species == "Sebastes maliger", 1500,
-           ifelse(Species == "Sebastes nebulosus", 1500,
-           ifelse(Species == "Sebastes spp. juv", 100,
-           ifelse(Species == "Jordania zonope", 10,
-           ifelse(Species == "Artedius harringtoni", 10,
-           ifelse(Species == "Embiotoca lateralis", 750,
-           ifelse(Species == "Oxylebius pictus", 500,
-           ifelse(Species == "Rhacochilus vacca", 500,
-           ifelse(Species == "Ophiodon elongatus", 1000,
-           10)))))
-                        )))))))))))))))))))))
-  )
-##### NEED TO FIGURE OUT BETTER MASS ESTIMATES!!!!!!!
-# Jasmin says to uyse dry or ash free
-# Rick has published bioass stuff
-
-# weight calc for kelp greenling = log W = log a + b·log L
-10^ ((-5.138) + 3.274*log10(200))
-
-# weight calc for rockfish = log W = log a + b·log L
-10^ ((-5.168) + 3.375*log10(690))
-
-# blackeye goby
-10^ ((-4.356) + 2.720*log10(75))
-
-# Calculate how much mass each species contributes
-rls_heaven <- rls_hell %>%
-  mutate(total_mass = Total*mass)
-
-# summarize total mass for each site
-rls_summary <- rls_heaven %>%
-  group_by(site_ID) %>%
-  summarize(total_critter_mass = sum(total_mass)) %>%
-  arrange(desc(total_critter_mass))
-
-# what's biggest by weight? urchin then cukes
-rls_biomass_ranked <- rls_heaven %>% 
-  group_by(Species) %>%
-  summarise(sum = sum(total_mass),
-            total_animals = n())  %>%
-  arrange(desc(total_animals))
-
-# most abundant species
-rls_species <- rls %>%
-  group_by(Species, common_name) %>%
-  summarize(total_critters = sum(Total)) %>%
-  arrange(desc(total_critters))
-
-write_csv(rls_species, "Output/Output_data/RSL_abundant_species.csv")
-
-# join mass and abundance data with ammonium data  
-bottles_f2 <- bottles_f %>%
-  left_join(rls_summary, by = "site_ID") %>%
-  mutate(
-    total_mass_kg = total_critter_mass/1000
-  )
-
-cuke_rank <- rls_heaven %>%
-  filter(Species == "Apostichopus californicus") %>%
-  group_by(site_name) %>%
-  summarise(sum = sum(Total))  %>% arrange(desc(sum))
-
-
-# more stats
-model <- lmer(nh4_conc ~ depth + total_critter_mass + (1|site_ID), bottles_f2)
-summary(model)
-visreg(model)
-
-# Graph mass vs pee????
-
-ggplot(bottles_f2, aes(total_mass_kg, nh4_conc)) +
-  geom_point(aes(colour = site), size = 2.5) +
-  geom_smooth(method = lm) +
-  labs(x = "Total animal biomass (kg)", y = "Ammonium concentration (umol)") +
-  theme_black() 
-
-#ggsave("Output/Figures/RLS_sites_pee_mass.png", device = "png",
-#       height = 9, width = 16, dpi = 400)
