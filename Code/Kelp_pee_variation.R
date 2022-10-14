@@ -19,20 +19,22 @@ source("Code/theme_black.R")
 # for the next morning reading see ME_BF_analysis 
 
 # Load the background fluorometry reading
+# This is how much a sample glows when the OPA is added immediately before being read on the fluorometer
 data_kc1_bf <- read_csv("Data/Team_kelp/2022_07_04_KCCA1.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc1 <- read_csv("Data/Team_kelp/2022_07_04_KCCA1.csv") %>%
   as.data.frame() %>%
-  left_join(data_kc1_bf, by = "site_code") %>%
+  filter(sample != "bf") %>% # cut the bf sample
+  left_join(data_kc1_bf, by = "site_code") %>% # Add the background flu as a column
   mutate(mean_FLU_unadj = (FLU1 + FLU2 + FLU3)/3,
-         mean_FLU = mean_FLU_unadj - bf) %>%
-  filter(sample != "bf")
+         mean_FLU = mean_FLU_unadj - bf) # correct the samples with this bf value
 
 # Build the standard curve for protocol 1!
+# We need to estimate how much ammonium is in the standard water
 standard_kc1 <- data_kc1 %>%
   filter(sample == "standard") %>% 
   mutate(nh4_added_umol = nh4_vol_uL/1e6 * 200, #amount of NH4
@@ -44,16 +46,18 @@ standard_kc1 <- data_kc1 %>%
 ggplot(standard_kc1, aes(nh4_conc_final_umol_L, mean_FLU)) +
   geom_point() +
   geom_smooth(method = lm, se = FALSE)
+# Inspect this curve to make sure nothing is wonky!
 
 #model for protocol 1
 mod_kc1 <- lm(mean_FLU ~ nh4_conc_final_umol_L, data = standard_kc1)
 summary(mod_kc1)
+# Check Adjusted R-squared value, we're looking for at least 0.98
 
 #save coefficients
 int_kc1 <- coef(mod_kc1)[1]
 slope_kc1 <- coef(mod_kc1)[2]
 
-# calculate ammonium in standards
+# calculate ammonium in standards using these coefficients
 standard_b_kc1 <- standard_kc1 %>%
   mutate(int = int_kc1, 
          slope = slope_kc1, 
@@ -61,7 +65,7 @@ standard_b_kc1 <- standard_kc1 %>%
          true_nh4_conc = nh4_conc + nh4_conc_final_umol_L)
 
 # Now move into protocol 2! Use the standards to calculate ammonium in samples
-# Now BF-corrected FLU of standard curve against calculated NH4 concentration
+# BF-corrected FLU of standard curve against calculated NH4 concentration
 mod2_kc1 <- lm(mean_FLU ~ true_nh4_conc, data = standard_b_kc1)
 summary(mod2_kc1)
 
@@ -74,9 +78,6 @@ samples_kc1 <- data_kc1 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc1)/slope2_kc1)
 
-# Plot 
-ggplot(samples_kc1, aes(kelp, nh4_conc)) +
-  geom_point()
 
 # KCCA2 Between Brady's and Scotts -----
 # this data was read on the fluorometer twice
@@ -87,8 +88,8 @@ ggplot(samples_kc1, aes(kelp, nh4_conc)) +
 # Load the background fluorometry reading
 data_kc2_bf <- read_csv("Data/Team_kelp/2022_07_05_KCCA2.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc2 <- read_csv("Data/Team_kelp/2022_07_05_KCCA2.csv") %>%
@@ -140,10 +141,6 @@ samples_kc2 <- data_kc2 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc2)/slope2_kc2)
 
-# Plot 
-ggplot(samples_kc2, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA3 Flemming 112 -----
 # this data was read on the fluorometer twice
 # once 5 hours after the OPA spike and again the next morning
@@ -153,8 +150,8 @@ ggplot(samples_kc2, aes(kelp, nh4_conc)) +
 # Load the background fluorometry reading
 data_kc3_bf <- read_csv("Data/Team_kelp/2022_07_06_KCCA3.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc3 <- read_csv("Data/Team_kelp/2022_07_06_KCCA3.csv") %>%
@@ -206,16 +203,12 @@ samples_kc3 <- data_kc3 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc3)/slope2_kc3)
 
-# Plot 
-ggplot(samples_kc3, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA4 Fleming112 -----
 # Load the background fluorometry reading
 data_kc4_bf <- read_csv("Data/Team_kelp/2022_07_07_KCCA4.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc4 <- read_csv("Data/Team_kelp/2022_07_07_KCCA4.csv") %>%
@@ -267,16 +260,12 @@ samples_kc4 <- data_kc4 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc4)/slope2_kc4)
 
-# Plot 
-ggplot(samples_kc4, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA6 Less_dangerous_bay -----
 # Load the background fluorometry reading
 data_kc6_bf <- read_csv("Data/Team_kelp/2022_07_24_KCCA6.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc6 <- read_csv("Data/Team_kelp/2022_07_24_KCCA6.csv") %>%
@@ -328,16 +317,12 @@ samples_kc6 <- data_kc6 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc6)/slope2_kc6)
 
-# Plot 
-ggplot(samples_kc6, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA7 Ed_king_east_inside ----
 # Load the background fluorometry reading
 data_kc7_bf <- read_csv("Data/Team_kelp/2022_07_25_KCCA7.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc7 <- read_csv("Data/Team_kelp/2022_07_25_KCCA7.csv") %>%
@@ -389,16 +374,12 @@ samples_kc7 <- data_kc7 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc7)/slope2_kc7)
 
-# Plot 
-ggplot(samples_kc7, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA9 Wizard -----
 # Load the background fluorometry reading
 data_kc9_bf <- read_csv("Data/Team_kelp/2022_07_27_KCCA9.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc9 <- read_csv("Data/Team_kelp/2022_07_27_KCCA9.csv") %>%
@@ -450,16 +431,12 @@ samples_kc9 <- data_kc9 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc9)/slope2_kc9)
 
-# Plot 
-ggplot(samples_kc9, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA12 North_helby_rock -----
 # Load the background fluorometry reading
 data_kc12_bf <- read_csv("Data/Team_kelp/2022_08_03_KCCA12.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc12 <- read_csv("Data/Team_kelp/2022_08_03_KCCA12.csv") %>%
@@ -511,16 +488,12 @@ samples_kc12 <- data_kc12 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc12)/slope2_kc12)
 
-# Plot 
-ggplot(samples_kc12, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA13 Second_beach_south ----
 # Load the background fluorometry reading
 data_kc13_bf <- read_csv("Data/Team_kelp/2022_08_05_KCCA13.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc13 <- read_csv("Data/Team_kelp/2022_08_05_KCCA13.csv") %>%
@@ -572,16 +545,12 @@ samples_kc13 <- data_kc13 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc13)/slope2_kc13)
 
-# Plot 
-ggplot(samples_kc13, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA14 Danvers_danger_rock -----
 # Load the background fluorometry reading
 data_kc14_bf <- read_csv("Data/Team_kelp/2022_08_06_KCCA14.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc14 <- read_csv("Data/Team_kelp/2022_08_06_KCCA14.csv") %>%
@@ -633,16 +602,12 @@ samples_kc14 <- data_kc14 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc14)/slope2_kc14)
 
-# Plot 
-ggplot(samples_kc14, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA15 Cable_beach ----
 # Load the background fluorometry reading
 data_kc15_bf <- read_csv("Data/Team_kelp/2022_08_07_KCCA15.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc15 <- read_csv("Data/Team_kelp/2022_08_07_KCCA15.csv") %>%
@@ -694,16 +659,12 @@ samples_kc15 <- data_kc15 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc15)/slope2_kc15)
 
-# Plot 
-ggplot(samples_kc15, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA16 Tzartus 116 ----
 # Load the background fluorometry reading
 data_kc16_bf <- read_csv("Data/Team_kelp/2022_08_18_KCCA16.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc16 <- read_csv("Data/Team_kelp/2022_08_18_KCCA16.csv") %>%
@@ -755,16 +716,12 @@ samples_kc16 <- data_kc16 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc16)/slope2_kc16)
 
-# Plot 
-ggplot(samples_kc16, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA17 Turf Island ----
 # Load the background fluorometry reading
 data_kc17_bf <- read_csv("Data/Team_kelp/2022_08_20_KCCA17.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc17 <- read_csv("Data/Team_kelp/2022_08_20_KCCA17.csv") %>%
@@ -816,16 +773,12 @@ samples_kc17 <- data_kc17 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc17)/slope2_kc17)
 
-# Plot 
-ggplot(samples_kc17, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA18 Second Beach ----
 # Load the background fluorometry reading
 data_kc18_bf <- read_csv("Data/Team_kelp/2022_08_21_KCCA18.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc18 <- read_csv("Data/Team_kelp/2022_08_21_KCCA18.csv") %>%
@@ -851,7 +804,9 @@ ggplot(standard_kc18, aes(nh4_conc_final_umol_L, mean_FLU)) +
 #model for protocol 1
 mod_kc18 <- lm(mean_FLU ~ nh4_conc_final_umol_L, data = standard_kc18)
 summary(mod_kc18)
-# CURVE LOOKS LIKE SHIT
+# DAMN THE CURVE LOOKS LIKE SHIT
+# something is weird with the 800 spike, the readings aren't within 3 units
+# Double check the data sheet
 
 #save coefficients
 int_kc18 <- coef(mod_kc18)[1]
@@ -878,16 +833,12 @@ samples_kc18 <- data_kc18 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc18)/slope2_kc18)
 
-# Plot 
-ggplot(samples_kc18, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA19 Second Beach ----
 # Load the background fluorometry reading
 data_kc19_bf <- read_csv("Data/Team_kelp/2022_08_22_KCCA19.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc19 <- read_csv("Data/Team_kelp/2022_08_22_KCCA19.csv") %>%
@@ -939,16 +890,12 @@ samples_kc19 <- data_kc19 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc19)/slope2_kc19)
 
-# Plot 
-ggplot(samples_kc19, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA21 Bordelais ----
 # Load the background fluorometry reading
 data_kc21_bf <- read_csv("Data/Team_kelp/2022_09_01_KCCA21.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc21 <- read_csv("Data/Team_kelp/2022_09_01_KCCA21.csv") %>%
@@ -1000,16 +947,12 @@ samples_kc21 <- data_kc21 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc21)/slope2_kc21)
 
-# Plot 
-ggplot(samples_kc21, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # KCCA22 Taylor Rock ----
 # Load the background fluorometry reading
 data_kc22_bf <- read_csv("Data/Team_kelp/2022_09_05_KCCA22.csv") %>%
   filter(sample == "bf") %>% # just the BF sample
-  mutate(bf = (FLU1 + FLU2 + FLU3)/3) %>%
-  select(bf, site_code) 
+  transmute(bf = (FLU1 + FLU2 + FLU3)/3,
+            site_code = site_code) 
 
 # Load the standards and the sample data
 data_kc22 <- read_csv("Data/Team_kelp/2022_09_05_KCCA22.csv") %>%
@@ -1061,10 +1004,6 @@ samples_kc22 <- data_kc22 %>%
   filter(sample != "standard") %>%
   mutate(nh4_conc = (mean_FLU - int2_kc22)/slope2_kc22)
 
-# Plot 
-ggplot(samples_kc22, aes(kelp, nh4_conc)) +
-  geom_point()
-
 # Pull all the data together ----
 kcca <- rbind(samples_kc1, samples_kc2, samples_kc3, samples_kc4, 
               samples_kc6, samples_kc7, samples_kc9, samples_kc12, 
@@ -1087,9 +1026,10 @@ kcca_not_final <- kcca %>%
          sample = as.numeric(sample))
 
 # Kelp density data -----
+# Load the kelp density Data from Claire
 kelp <- read_csv("Data/Team_kelp/kelp_density_2022_KDC_CMA.csv") %>%
   as.data.frame() %>%
-  filter(Transect_dist != "15") %>%
+  filter(Transect_dist != "15") %>% # Remove the transect that's not paired with a pee sample
   mutate(sample = ifelse(Transect_dist == 0, 1, 
                          ifelse(Transect_dist == 5, 2, 3)),
          kelp_den = Macro_5m2 + Nereo_5m2,
@@ -1111,7 +1051,9 @@ kcca_final <- kcca_not_final %>%
          percent_diff = 100*(nh4_inside-nh4_outside)/nh4_outside) %>%
   left_join(kelp_summary, by = "site_code")
 
-#
+# Average kelp density for each forest... I should probably go back and add the fourth transect to this avg
+# Also Claire's biomass estimates
+# Basically it would be nice to have a single metric of how much kelp is in each forest
 kcca_summary <- kcca_final %>%
   group_by(site_code) %>%
   summarise(kelp_den = mean(kelp_den),
@@ -1125,8 +1067,8 @@ kcca_summary <- kcca_final %>%
 ggplot(kcca_final, aes(site, in_minus_out)) +
   geom_boxplot()
 
-# each point is a sample
-# linear 
+# each point is a single transect with a pee difference and a kelp density 
+# linear model
 ggplot(kcca_final, aes(kelp_den, in_minus_out)) +
   geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
   geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
@@ -1134,7 +1076,7 @@ ggplot(kcca_final, aes(kelp_den, in_minus_out)) +
   geom_smooth(method = lm,
               alpha = 0.25)
 
-# better asymptote?
+# try plotting the same data but with a better asymptote?
 ggplot(kcca_final, aes(kelp_den, in_minus_out)) +
   geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
   geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
@@ -1144,6 +1086,7 @@ ggplot(kcca_final, aes(kelp_den, in_minus_out)) +
               alpha = 0.25)
 
 # Percent difference 
+# With a truly heinious curve, thanks loess
 ggplot(kcca_final, aes(kelp_den, percent_diff)) +
   geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
   geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
@@ -1169,9 +1112,9 @@ ggplot() +
                        breaks = c("blue", "green"),
                        labels = c("Outside kelp", "Inside kelp"),
                        guide = "legend")
+# Ok this is sort of neat, you can see the base ammonium levels and then how different they are, by site. might be neat to arrange these with kelp density instead of site on the x
 
-
-# stats? ----
+# stats! ----
 # I don't think this is linear I'm going to have to fit some kind of curve to it.....
 
 # linear model though for fun
