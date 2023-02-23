@@ -24,26 +24,15 @@ rls_common_name_check <- rls  %>%
   count(common_name, Species, Code)
 
 # Comments:
-# Capitalize first letter of each code
 # Cali cukes named inconsistently
 # Blood stars can't be identified to species
     # Pacific blood star should be Henricia spp.
-# Hermit crabs. Ugh. 
-  # Jasmin's notation: Paguroidea spp.	Unidentified Hermit crab	Hermit
+# No more separating juv fish from unidentified fish. 
+
 # Black rockfish with latin name Sebastes flavidus at KCCA1
   # Looked at Kieran's sheet, it's supposed to be a black rockfish
-# 2 unidentified greenlings on KCCA1
-  # datasheet called them "J Green" and they're 5 cm
-  # Juvenile greenlings
-  # Jasmin has used: Hsp	Hexagrammos sp.	Greenling juv. for these
-# 5 unidentified rockfish on KCCA1
-  # datasheet calls them "J RF" 5 cm and 7.5 cm
-  # Juv rockfish
-  # Sebastes spp. juv	Rockfish YOY	Sjuv
-# Include juv in species names for those
+
 # Add common names for the other unidentified species
-# All common names capital first letter, lower case for rest
-# Purple sea star vs Ochre star? Leave for now
 
 #Questions:
 # Not sure what the two NOT PRESENT species are at KCCA13, one with code "mfra" and one code "cry"
@@ -59,41 +48,39 @@ rls_common_name_check <- rls  %>%
 
 # Tidy up the data!!!
 rls_tidy <- rls %>%
-  mutate(Code = str_to_sentence(Code)) %>% # capitalize first letter of each code
+  mutate(Code = str_to_lower(Code)) %>% # capitalize first letter of each code
   mutate(Species = case_when(
     common_name == "California sea cucumber" | common_name == "Californian sea cucumber" ~ "Apostichopus californicus",
     Species == "Sebastes flavidus" & common_name == "Black rockfish" ~ "Sebastes melanops",
     Species == "Henricia leviuscula" ~ "Henricia spp.",
-    Species == "Hexagrammos spp." ~ "Hexagrammos spp. juv",
     Species == "Pagurus spp." ~ "Paguroidea spp.",
-    Species == "Sebastes spp." ~ "Sebastes spp. juv",
     Species == "Oncorhynchus" | Species == "oncorhynchus" ~ "Oncorhynchus spp.",
+    Species == "Sebastes spp. juv" ~ "Sebastes spp.",
     TRUE ~ as.character(Species))) %>% 
   mutate(common_name = case_when(
     Species == "Apostichopus californicus" ~ "California sea cucumber",
-    Species == "Crassadoma gigantea" ~ "Giant rock scallop",
-    Species == "Hexagrammos spp. juv" ~ "Greenling YOY",
-    Species == "Sebastes spp. juv" ~ "Rockfish YOY",
+    Species == "Hexagrammos spp." ~ "Unidentified greenling",
+    Species == "Sebastes spp." ~ "Unidentified rockfish",
     Species == "Henricia spp." ~ "Unidentified blood star",
     Species == "Tonicella spp." ~ "Unidentified lined chiton",
     Species == "Pandulus spp." ~ "Unidentified shrimp",
     Species == "Paguroidea spp." ~ "Unidentified hermit crab",
     Species == "Clupea pallasii" ~ "Pacific herring",
-    Species == "Oncorhynchus spp." ~ "Pacific salmon",
+    Species == "Oncorhynchus spp." ~ "Unidentified pacific salmon",
     Species == "Stylasterias forreri" ~ "Velcro sea star",
     TRUE ~ as.character(common_name))) %>%
   mutate(Code = case_when(
-    Species == "Apostichopus californicus" ~ "Aca",
-    Species == "Sebastes melanops" ~ "Sme",
-    Species == "Henricia spp." ~ "Hsp",
-    Species == "Hexagrammos spp. juv" ~ "Hjuv",
-    Species == "Tonicella spp." ~ "Tsp",
-    Species == "Pandulus spp." ~ "Psp",
-    Species == "Paguroidea spp." ~ "Hermit",
-    Species == "Sebastes spp. juv" ~ "Sjuv",
-    Species == "Mesocentrotus franciscanus" ~ "Mfr",
-    Species == "Oncorhynchus spp." ~ "Osp",
-    TRUE ~ as.character(Code)))
+    Species == "Apostichopus californicus" ~ "aca",
+    Species == "Sebastes melanops" ~ "sme",
+    Species == "Henricia spp." ~ "henricia",
+    Species == "Hexagrammos spp." ~ "hexagrammos",
+    Species == "Tonicella spp." ~ "tonicella",
+    Species == "Pandulus spp." ~ "pandulus",
+    Species == "Paguroidea spp." ~ "hermit",
+    Species == "Sebastes spp." ~ "sebastes",
+    Species == "Oncorhynchus spp." ~ "oncorhynchus",
+    TRUE ~ as.character(Code))) %>%
+  filter(Species != "Ophiopholis aculeata") # Filter brittle star
 
 # check to make sure each species only has one name and one code! 
 rls_last_check <- rls_tidy %>%
