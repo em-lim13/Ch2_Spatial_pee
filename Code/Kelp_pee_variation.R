@@ -1,16 +1,13 @@
-# Script to determine whether ammonium is higher or lower in a kelp forest
+# Script to calculate ammonium in vs outside a kelp forest
 # July 4, 2022
 # Em Lim
 
+# This code only calculates the concentration of ammonium in each sample and generates a csv
+# The actual analysis is completed in "Kelp_pee_analysis.R"
+
+
 # Load packages -----
 library(tidyverse)
-library(visreg)
-library(ggplot2)
-library(lmerTest)
-library(lme4)
-theme_set(theme_bw())
-source("Code/theme_black.R")
-
 
 # KCCA1 Slug Island -----
 # this data was read on the fluorometer twice
@@ -1023,101 +1020,7 @@ kcca_not_final <- kcca %>%
   rename(nh4_inside = nh4_conc) %>%
   left_join(kcca_outside, by= c("site_code", "sample")) %>%
   mutate(in_minus_out = nh4_inside - nh4_outside,
-         sample = as.numeric(sample))
+         sample = as.numeric(sample)) %>%
+  select(-kelp)
 
-# Kelp density data -----
-# Load the kelp density Data from Claire
-kelp <- read_csv("Data/Team_kelp/kelp_density_2022_KDC_CMA.csv") %>%
-  as.data.frame() %>%
-  filter(Transect_dist != "15") %>% # Remove the transect that's not paired with a pee sample
-  mutate(sample = ifelse(Transect_dist == 0, 1, 
-                         ifelse(Transect_dist == 5, 2, 3)),
-         kelp_den = Macro_5m2 + Nereo_5m2,
-         kelp_sp = ifelse(kelp_den == 0, "none",
-                          ifelse(Macro_5m2 == 0, "nereo", 
-                          ifelse(Nereo_5m2 == "0", "macro", "mixed"))))%>%
-  select(site_code, sample, kelp_sp, kelp_den)
-
-kelp_summary <- kelp %>%
-  group_by(site_code) %>%
-  summarise(avg_kelp_den = mean(kelp_den)) 
-
-# merge kelp data with the pee data
-kcca_final <- kcca_not_final %>%
-  left_join(kelp, by = c("site_code", "sample")) %>%
-  group_by(site) %>%
-  mutate(nh4_avg = mean(c(nh4_outside, nh4_inside)),
-         site = as.factor(site),
-         percent_diff = 100*(nh4_inside-nh4_outside)/nh4_outside) %>%
-  left_join(kelp_summary, by = "site_code")
-
-# Average kelp density for each forest... I should probably go back and add the fourth transect to this avg
-# Also Claire's biomass estimates
-# Basically it would be nice to have a single metric of how much kelp is in each forest
-kcca_summary <- kcca_final %>%
-  group_by(site_code) %>%
-  summarise(kelp_den = mean(kelp_den),
-            in_minus_out = mean(in_minus_out),
-            kelp_sp = kelp_sp)
-
-
-# Plots ----
-
-# boxplot site vs pee diff
-ggplot(kcca_final, aes(site, in_minus_out)) +
-  geom_boxplot()
-
-# each point is a single transect with a pee difference and a kelp density 
-# linear model
-ggplot(kcca_final, aes(kelp_den, in_minus_out)) +
-  geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
-  labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Density") +
-  geom_smooth(method = lm,
-              alpha = 0.25)
-
-# try plotting the same data but with a better asymptote?
-ggplot(kcca_final, aes(kelp_den, in_minus_out)) +
-  geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
-  labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Density") +
-  geom_smooth(method = "loess",
-              span = 1,
-              alpha = 0.25)
-
-# Percent difference 
-# With a truly heinious curve, thanks loess
-ggplot(kcca_final, aes(kelp_den, percent_diff)) +
-  geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
-  labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Density") +
-  geom_smooth(method = "loess",
-              span = 1,
-              alpha = 0.25)
-
-#ggsave("Output/Figures/in_out_kelp_pee.png", device = "png",
-#       height = 9, width = 16, dpi = 400)
-
-# Ammonium at the site level?
-kcca_final %>%
-  mutate(site = fct_reorder(site, nh4_avg, .fun='median')) %>%
-ggplot() +
-  geom_point(aes(x = reorder(site, nh4_avg), nh4_outside, 
-             colour = "blue")) +
-  geom_point(aes(x = reorder(site, nh4_avg), nh4_inside, 
-                 colour = "green")) +
-  labs(y = "NH4 concentration", x = "Site") + 
-  theme(axis.text.x=element_text(angle = 65, hjust = 1))+
-  scale_color_identity(name = "Sample",
-                       breaks = c("blue", "green"),
-                       labels = c("Outside kelp", "Inside kelp"),
-                       guide = "legend")
-# Ok this is sort of neat, you can see the base ammonium levels and then how different they are, by site. might be neat to arrange these with kelp density instead of site on the x
-
-# stats! ----
-# I don't think this is linear I'm going to have to fit some kind of curve to it.....
-
-# linear model though for fun
-kelp_pee_mod <- lmer(in_minus_out ~ kelp_den + (1|site), data = kcca_final)
-summary(kelp_pee_mod)
-visreg(kelp_pee_mod)
+# write_csv(kcca_not_final, "Data/Team_kelp/Output_data/kelp_pee.csv")
