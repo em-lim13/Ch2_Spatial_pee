@@ -17,7 +17,7 @@ source("Code/theme_black.R")
 # load site names
 names <- read_csv("Data/Team_kelp/Output_data/site_names.csv")
 
-# kelp pee inside vs outside data from Kelp_pee_variation.R
+# kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
 pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
 
 # kelp density data from Claire
@@ -62,11 +62,12 @@ data <- pee %>%
          bio_tran_scale = base::scale(Biomassm2kg),
          bio_mean_scale = base::scale(BiomassM),
          forest_bio_scale = base::scale(forest_biomass),
-         area_scale = base::scale(Area_m2),) %>%
+         area_scale = base::scale(Area_m2),
+         log_pee_diff = log(in_minus_out + 1)) %>%
   filter(SiteName != "Second Beach South")
 
 
-# OK let's do some friggin model dredging
+# OK let's do some friggin model dredging -----
 
 model_all <- lmer(in_minus_out ~ den_scale + bio_tran_scale + bio_mean_scale + area_scale + forest_bio_scale + kelp_sp + (1|site), data = data, na.action = na.fail)
 summary(model_all)
@@ -75,12 +76,50 @@ visreg(model_all)
 dredge <- as.data.frame(dredge(model_all)) %>%
   filter(delta < 3)
 
+# the best model has the mean biomass of the whole forest
+# best has mean bio + total forest biomass
+# second best is just mean bio
+# third is mean bio + total forest biomass + total area
+
+bio_mod <- lmer(in_minus_out ~ bio_mean_scale + (1|site), data = data)
+summary(bio_mod)
+visreg(bio_mod)
+# Forests with more mean biomass/m2 retain more pee!
+
+# plot?
+ggplot(data, aes(bio_mean_scale, in_minus_out)) +
+  geom_point() +
+  geom_smooth(method = lm) 
+
 # Let's be intelligent and build the model I think would be best
 # I'd guess the biomass/m2 (density x biomass) = bio_tran_scale would matter bc that's the info about the kelp on the transect the samples were taken on
 # And I'd guess the mean biomass/m2 (den x bio) of the kelp forest (how much kelp is around) will matter
-model_best <- lmer(in_minus_out ~ bio_tran_scale* bio_mean_scale  + (1|site), data = data, na.action = na.fail)
-summary(model_best)
-visreg(model_best)
+mod1 <- lmer(in_minus_out ~ bio_tran_scale* bio_mean_scale  + (1|site), data = data, na.action = na.fail)
+summary(mod1)
+visreg(mod1, "bio_tran_scale", by = "bio_mean_scale")
+# It looks like at high mean biomass, the relationship levels out
+# So maybe there's an asymptote!
+
+# let's try taking the log of the  in_minus_out and see if that improves fit
+
+mod2 <- lmer(log_pee_diff ~ bio_tran_scale* bio_mean_scale  + (1|site), data = data, na.action = na.fail)
+summary(mod1)
+visreg(mod1, "bio_tran_scale", by = "bio_mean_scale")
+
+
+# go back to the preferred model with just mean biomass
+bio_mod2 <- lmer(log_pee_diff ~ bio_mean_scale + (1|site), data = data)
+summary(bio_mod2)
+visreg(bio_mod2)
+
+# Use AIC to see if this improves things
+AIC(bio_mod, bio_mod2, mod1)
+# Yes bio_mod2 is preferred, taking the log of the response variable helps a lot
+
+# Ok let's plot this
+
+
+
 
 # Old Kelp density data -----
 
