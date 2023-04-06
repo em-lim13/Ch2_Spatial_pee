@@ -291,9 +291,9 @@ ggplot(tubs_nh4, aes(flow_s, NH4_conc, colour = cukes_num)) + geom_boxplot() + t
 ggplot(tubs_nh4_added_final, aes(Week, NH4_conc)) + geom_boxplot()
 
 # stats
-model <- lm(NH4_conc ~ flow_s * cukes_num + time, data = tubs_nh4)
+model <- lm(NH4_conc ~ flow_s + Week, data = tubs_nh4_added_final)
 summary(model)
-anova(model)
+visreg(model)
 
 # Average for each treatment
 mean(tubs_f$nh4_conc[tubs_f$cukes_num == 0]) # 1.999316
