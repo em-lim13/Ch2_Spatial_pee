@@ -12,6 +12,7 @@ library(lme4)
 library(lmerTest)
 library(PNWColors)
 library(patchwork)
+library(ggeffects)
 source("Code/theme_black.R")
 
 theme_set(theme_bw())
@@ -56,6 +57,7 @@ slope <- coef(sc_mod1)[2]
 ##Calculating the matrix effects -----
 Fst_zero <- standard_f$mean_FLU[standard_f$nh4_vol_uL == "0"]
 Fst_spike <- standard_f$mean_FLU[standard_f$nh4_vol_uL == "200"]
+
 
 matrix <- tubs %>%
   filter(sample_matrix == "matrix") %>%
@@ -268,9 +270,45 @@ tubs_nh4_added_final <- rbind(tubs_nh4_added1, tubs_nh4_added2) %>%
                                        ifelse(flow_s == 4, 25, "Control"))))) %>%
   mutate(flow_s = factor(flow_s, levels = c("Control", 10, 15, 20, 25)))
         
-# look at the data! -----
+# stats ----
+model <- lm(nh4_added ~ flow_s + Week, data = tubs_nh4_added_final)
+summary(model)
+visreg(model)
+
+# Plot ------
 csee_pal <- pnw_palette("Starfish")
-  
+
+# use ggpredict to get estimates
+sum_stats <- ggpredict(model, terms = c("flow_s")) %>% 
+  dplyr::rename(flow_s = x,
+                nh4_added = predicted) %>% 
+  as_tibble()
+
+# now make dot whisker plots\
+ggplot() +
+  geom_point(data = sum_stats,
+             aes(x = flow_s, y = nh4_added, colour = flow_s),
+             size = 6) +
+  geom_errorbar(data = sum_stats,
+                aes(x = flow_s,
+                    y = nh4_added,
+                    ymin = conf.low,
+                    ymax = conf.high, 
+                    colour = flow_s),
+                width = 0.4,
+                size = 1.5) +
+  geom_jitter(data = tubs_nh4_added_final, 
+              aes(x = flow_s, y = nh4_added, colour = flow_s), 
+              size = 3, alpha = 0.5, height=0) +
+  theme_black() + 
+  labs(x = "Flow rate (cm/s)", y = "Change in Ammonium (umol/L)") +
+  theme(legend.position = "none") +
+  scale_colour_manual(values = rev(csee_pal))
+
+#ggsave("Output/Figures/Flow_rates.png", device = "png",
+#       height = 9, width = 16, dpi = 400)
+
+# Old boxplot
 ggplot(tubs_nh4_added_final, 
        aes(flow_s, nh4_added, fill = flow_s)) + 
   geom_boxplot(colour = "white", alpha = 0.9) + 
@@ -290,10 +328,7 @@ ggplot(tubs_nh4, aes(flow_s, NH4_conc, colour = cukes_num)) + geom_boxplot() + t
 # what was the ammonium like between the weeks
 ggplot(tubs_nh4_added_final, aes(Week, NH4_conc)) + geom_boxplot()
 
-# stats
-model <- lm(NH4_conc ~ flow_s + Week, data = tubs_nh4_added_final)
-summary(model)
-visreg(model)
+# ? ------
 
 # Average for each treatment
 mean(tubs_f$nh4_conc[tubs_f$cukes_num == 0]) # 1.999316

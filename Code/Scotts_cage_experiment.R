@@ -12,6 +12,7 @@ library(lme4)
 library(lmerTest)
 library(RColorBrewer)
 library(PNWColors)
+library(ggeffects)
 source("Code/theme_black.R")
 
 theme_set(theme_bw())
@@ -193,4 +194,36 @@ ggplot(cages_f, aes(nh4_conc, depth)) +
 model <- lm(nh4_conc ~ cukes + depth + line, cages_f)
 summary(model)
 visreg(model)
+
+# Better plot -----
+
+# use ggpredict to get estimates
+sum_stats <- ggpredict(model, terms = c("cukes")) %>% 
+  dplyr::rename(cukes = x,
+                nh4_conc = predicted) %>% 
+  as_tibble()
+
+ggplot() +
+  geom_point(data = sum_stats,
+             aes(x = cukes, y = nh4_conc, colour = cukes),
+             size = 6) +
+  geom_errorbar(data = sum_stats,
+                aes(x = cukes,
+                    y = nh4_conc,
+                    ymin = conf.low,
+                    ymax = conf.high, 
+                    colour = cukes),
+                width = 0.4,
+                size = 1.5) +
+  geom_jitter(data = cages_f, 
+              aes(x = cukes, y = nh4_conc, colour = cukes), 
+              size = 3, alpha = 0.5, height=0) +
+  theme_black() + 
+  labs(x = "Sea cucumber treatment", y = "Ammonium (umol/L)") +
+  theme(legend.position = "none") +
+  scale_colour_manual(values = rev(csee_pal))
+
+# ggsave("Output/Figures/cuke_cage.png", device = "png",
+#        height = 9, width = 16, dpi = 400)
+
 
