@@ -8,7 +8,7 @@
 
 # Load packages -----
 library(tidyverse)
-
+library(visreg)
 # KCCA1 Slug Island -----
 # this data was read on the fluorometer twice
 # once 5 hours after the OPA spike and again the next morning
@@ -54,26 +54,94 @@ summary(mod_kc1)
 int_kc1 <- coef(mod_kc1)[1]
 slope_kc1 <- coef(mod_kc1)[2]
 
+# OK but what if we ignore BF completely?
+mod4_kc1 <- lm(mean_FLU_unadj ~ nh4_conc_final_umol_L, data = standard_kc1)
+summary(mod4_kc1)
+
+#save coefficients from that no BF model
+int4_kc1 <- coef(mod4_kc1)[1]
+slope4_kc1 <- coef(mod4_kc1)[2]
+
 # calculate ammonium in standards using these coefficients
 standard_b_kc1 <- standard_kc1 %>%
   mutate(int = int_kc1, 
          slope = slope_kc1, 
          nh4_conc = abs(int/slope),
-         true_nh4_conc = nh4_conc + nh4_conc_final_umol_L)
+         true_nh4_conc = nh4_conc + nh4_conc_final_umol_L,
+         nh4_conc_no_BF = abs(int4_kc1/slope4_kc1),
+         true_nh4_conc_no_BF = nh4_conc_no_BF + nh4_conc_final_umol_L)
 
 # Now move into protocol 2! Use the standards to calculate ammonium in samples
 # BF-corrected FLU of standard curve against calculated NH4 concentration
-mod2_kc1 <- lm(mean_FLU ~ true_nh4_conc, data = standard_b_kc1)
+
+# first plot the fluorescence, uncorrected for background fluorescence, against the expected concentration of the standard additions (the concentration I just calculated)
+a<- ggplot(standard_b_kc1, aes(true_nh4_conc, mean_FLU_unadj)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  xlim(c(0, 6))  + ylim(c(-50, 350))
+
+b<- ggplot(standard_b_kc1, aes(true_nh4_conc, mean_FLU)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  xlim(c(0, 6)) + ylim(c(-50, 350))
+
+a + b
+
+# Mod with uncorrected fluorescence from protocol 1 vs true conc
+# What the paper suggests
+mod2_kc1 <- lm(mean_FLU_unadj ~ true_nh4_conc, data = standard_b_kc1)
 summary(mod2_kc1)
+visreg(mod2_kc1)
 
 # pull coefficients from model
 int2_kc1 <- coef(mod2_kc1)[1]
 slope2_kc1 <- coef(mod2_kc1)[2]
 
+# Mod with bf-corrected fluorescence from protocol 1 vs true conc
+# What I *THINK* the paper actually means???
+mod3_kc1 <- lm(mean_FLU ~ true_nh4_conc, data = standard_b_kc1)
+summary(mod3_kc1)
+visreg(mod3_kc1)
+
+# pull coefficients from model
+int3_kc1 <- coef(mod3_kc1)[1]
+slope3_kc1 <- coef(mod3_kc1)[2]
+
+# Now the model where we completely ignore BF
+mod4_kc1 <- lm(mean_FLU_unadj ~ true_nh4_conc_no_BF, data = standard_b_kc1)
+summary(mod4_kc1)
+visreg(mod4_kc1)
+
+# pull coefficients from model
+int4_kc1 <- coef(mod4_kc1)[1]
+slope4_kc1 <- coef(mod4_kc1)[2]
+
 # calculate how much ammonium is in the samples
 samples_kc1 <- data_kc1 %>%
   filter(sample != "standard") %>%
-  mutate(nh4_conc = (mean_FLU - int2_kc1)/slope2_kc1)
+  mutate(nh4_conc_1 = (mean_FLU - int2_kc1)/slope2_kc1, # what the paper says
+         nh4_conc_2 = (mean_FLU - int3_kc1)/slope3_kc1, # what I think the paper means
+         nh4_conc_4 = (mean_FLU - int4_kc1)/slope4_kc1, # no BF considered
+         nh4_1_avg = mean(nh4_conc_1), # what the paper says
+         nh4_2_avg = mean(nh4_conc_2), # what i think the paper means
+         nh4_4_avg = mean(nh4_conc_4)) # no BF considered
+
+# what the paper says
+  # using the uncorrected BF FLU to make the standard curve for protocol 2
+  # 2.4 avg
+# What I think the paper means
+  # using the corrected BF FLU to make the standard curve for protocol 2
+  # 0.95 avg
+# Ignoring BF
+  # 0.96 avg
+
+# 
+
+# The nh4 conc from the 0 addition bottle in protocol 1 was 1.402456
+  # And that sample had a higher fluorescence than any of the sample bottles
+  # So I don't believe that we're supposed to regress the *uncorrected* FLU from protocol 1, because that estimates nh4 values that are higher than the 0 addition std bottle, which had a higher fluorescence than the sample bottles!
+
+# So the way I've coded the following protocol 1 and protocol 2 calculations is correct. We want to make the protocol 2 std curve with the *corrected FLU*
 
 
 # KCCA2 Between Brady's and Scotts -----
