@@ -33,11 +33,9 @@ samples_kc22 <- pee_calc("Data/Team_kelp/2022_09_05_KCCA22.csv")
 
 
 # Pull all the data together ----
-kcca <- rbind(samples_kc1, samples_kc2, samples_kc3, samples_kc4, 
-              samples_kc6, samples_kc7, samples_kc9, samples_kc12, 
-              samples_kc13, samples_kc14, samples_kc15, samples_kc16,
-              samples_kc17, samples_kc18, samples_kc19, samples_kc21,
-              samples_kc22) %>%
+dfs = sapply(.GlobalEnv, is.data.frame) 
+
+kcca <- do.call(rbind, mget(names(dfs)[dfs])) %>%
   select(date, site, site_code, sample, kelp, depth_m, nh4_conc)
 
 # separate the inside vs outside so I can put them back together side by side as separate columns
