@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-11,2023-05-26,Aguilar_point,BMSC23,6,standard,D5,0,75.05,74,73.91,71.34,
+2023-05-11,2023-05-26,Aguilar_point,BMSC23,6,standard,D8,100,160.1,158.3,157.9,162.1,
+2023-05-11,2023-05-26,Aguilar_point,BMSC23,6,standard,D12,300,327.6,326.3,328.6,339.1,336.7
+2023-05-11,2023-05-26,Aguilar_point,BMSC23,6,standard,D21,600,590.6,590.2,589.8,"613.9, 584.9, 604.9, 608.2, 600.0, 592.7, 596.1, 598.0, 587.0",
+2023-05-11,2023-05-26,Aguilar_point,BMSC23,6,standard,E7,800,760.4,761.6,763.4,"766.1, 767.4",
+2023-05-11,2023-05-26,Aguilar_point,BMSC23,6,bf,D25,0,-26.94,-26.71,-26.71,,
+2023-05-11,2023-05-26,Aguilar_point,BMSC23,6,sample,F8,0,61.16,59.28,59.4,,
+2023-05-11,2023-05-26,Aguilar_point,BMSC23,6,sample,F13,0,43.2,42.9,42.43,,

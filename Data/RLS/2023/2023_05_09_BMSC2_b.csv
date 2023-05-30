@@ -1,0 +1,8 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-09,2023-05-24,Kirby,BMSC2,6.5,standard,G11,0,-55.07,-54.54,-55.19,,
+2023-05-09,2023-05-24,Kirby,BMSC2,6.5,standard,F27,100,63.74,63.19,60.79,59.59,
+2023-05-09,2023-05-24,Kirby,BMSC2,6.5,standard,H06,300,293.2,295.7,296.2,,
+2023-05-09,2023-05-24,Kirby,BMSC2,6.5,standard,D25,800,832,831.5,831.8,"872.1, 840.2, 827.4, 826.5",
+2023-05-09,2023-05-24,Kirby,BMSC2,6.5,bf,F12,0,-77.67,-77.4,-77.18,,
+2023-05-09,2023-05-24,Kirby,BMSC2,6.5,sample,D23,0,-63.97,-63.82,-63.22,,
+2023-05-09,2023-05-24,Kirby,BMSC2,6.5,sample,D12,0,2.043,0.707,1.289,-1.673,

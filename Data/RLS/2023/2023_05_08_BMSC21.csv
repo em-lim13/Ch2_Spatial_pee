@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-08,2023-05-24,DixonSW,BMSC21,5.5,standard,F5,0,-65.51,-63.53,-63.73,,
+2023-05-08,2023-05-24,DixonSW,BMSC21,5.5,standard,D7,100,51.56,51.37,51.72,,
+2023-05-08,2023-05-24,DixonSW,BMSC21,5.5,standard,F24,300,296.9,295.8,295.8,,
+2023-05-08,2023-05-24,DixonSW,BMSC21,5.5,standard,D15,600,621.4,622.4,620.4,,
+2023-05-08,2023-05-24,DixonSW,BMSC21,5.5,standard,F24,800,856.8,857.1,858.1,,
+2023-05-08,2023-05-24,DixonSW,BMSC21,5.5,bf,D14,0,-76.45,-76.21,-76.45,,
+2023-05-08,2023-05-24,DixonSW,BMSC21,5.5,sample,D18,0,-58.36,-57.17,-57.43,,
+2023-05-08,2023-05-24,DixonSW,BMSC21,5.5,sample,F4,0,-14.6,-13.67,-14.01,,

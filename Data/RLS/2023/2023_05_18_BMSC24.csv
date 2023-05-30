@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-18,2023-05-30,Swiss boy,BMSC24,9,standard,E1,0,34.1,35.17,35.22,39.18,
+2023-05-18,2023-05-30,Swiss boy,BMSC24,9,standard,E2,50,84.36,84.95,84.75,,
+2023-05-18,2023-05-30,Swiss boy,BMSC24,9,standard,E3,100,136.3,135.5,134.8,"131.7, 132.5",
+2023-05-18,2023-05-30,Swiss boy,BMSC24,9,standard,E4,300,341.6,339.2,341.2,333,
+2023-05-18,2023-05-30,Swiss boy,BMSC24,9,standard,E5,600,635.2,634.2,636,"617.4, 622, 624.1, 620",
+2023-05-18,2023-05-30,Swiss boy,BMSC24,9,bf,H04,0,-23.72,-23.85,-23.93,,
+2023-05-18,2023-05-30,Swiss boy,BMSC24,9,sample,D13,0,8.893,8.594,8.856,12.19,
+2023-05-18,2023-05-30,Swiss boy,BMSC24,9,sample,D26,0,82.96,85.61,86.88,,

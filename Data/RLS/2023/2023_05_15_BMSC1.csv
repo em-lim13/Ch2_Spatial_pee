@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-15,2023-05-26,Dodger channel,BMSC1,5.3,standard,D14,0,56.63,55.95,57.15,,
+2023-05-15,2023-05-26,Dodger channel,BMSC1,5.3,standard,F15,100,148,147.6,148.4,,
+2023-05-15,2023-05-26,Dodger channel,BMSC1,5.3,standard,C13,300,327.8,328.7,327.6,"336.1, 336.2",
+2023-05-15,2023-05-26,Dodger channel,BMSC1,5.3,standard,F2,600,592.1,590.3,591.8,"545.3, 587.7, 595.7, 594.8",
+2023-05-15,2023-05-26,Dodger channel,BMSC1,5.3,standard,E1,800,757.3,757.6,755.4,"753.4, 749.4, 743.5, 753.1",
+2023-05-15,2023-05-26,Dodger channel,BMSC1,5.3,bf,F24,0,-27.47,-27.47,-27.09,,
+2023-05-15,2023-05-26,Dodger channel,BMSC1,5.3,sample,F16,0,33.22,33.82,33.79,30.72,
+2023-05-15,2023-05-26,Dodger channel,BMSC1,5.3,sample,F17,0,46.7,47.26,46.51,,

@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-10,2023-05-24,Ed_King_SW_Pyramid,BMSC19,5.5,standard,H02,0,54.67,56.9,56.42,59.07,
+2023-05-10,2023-05-24,Ed_King_SW_Pyramid,BMSC19,5.5,standard,H07,100,173.8,172.7,174.9,,
+2023-05-10,2023-05-24,Ed_King_SW_Pyramid,BMSC19,5.5,standard,G07,300,416.8,416.8,415.6,"403.8, 398.5, 412.6, 420.0, 413.1,421.8",
+2023-05-10,2023-05-24,Ed_King_SW_Pyramid,BMSC19,5.5,standard,H04,600,742.2,745.2,744.2,"734.4,728.2",
+2023-05-10,2023-05-24,Ed_King_SW_Pyramid,BMSC19,5.5,standard,G12,800,915,916.7,915.9,"961.4, 918.2, 929.3, 922.5, 923.7, 928.9, 910.8",
+2023-05-10,2023-05-24,Ed_King_SW_Pyramid,BMSC19,5.5,bf,H08,0,-76.53,-77.24,-76.14,,
+2023-05-10,2023-05-24,Ed_King_SW_Pyramid,BMSC19,5.5,sample,D9,0,-14.14,-13.56,-13.51,,
+2023-05-10,2023-05-24,Ed_King_SW_Pyramid,BMSC19,5.5,sample,F26,0,71.65,69.25,71.17,67.99,

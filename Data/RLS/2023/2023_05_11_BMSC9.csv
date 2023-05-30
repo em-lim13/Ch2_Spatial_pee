@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-11,2023-05-26,Eagle_bay,BMSC9,6,standard,F5,0,68.66,67.92,66.86,,
+2023-05-11,2023-05-26,Eagle_bay,BMSC9,6,standard,D11,100,153.6,153.1,155,160.2,
+2023-05-11,2023-05-26,Eagle_bay,BMSC9,6,standard,F27,300,331.8,331.2,331.6,"335.0, 335.8, 324.2, 340.6",
+2023-05-11,2023-05-26,Eagle_bay,BMSC9,6,standard,D6,600,606.2,605.8,603.2,"600.7, 596.8",
+2023-05-11,2023-05-26,Eagle_bay,BMSC9,6,standard,D7,800,749.2,748.2,750.6,"768.8, 770.3, 771.9, 758.6, 764.7, 758.2",
+2023-05-11,2023-05-26,Eagle_bay,BMSC9,6,bf,D9,0,-28.98,-28.66,-28.18,,
+2023-05-11,2023-05-26,Eagle_bay,BMSC9,6,sample,D2,0,49.97,49.79,48.23,,
+2023-05-11,2023-05-26,Eagle_bay,BMSC9,6,sample,D10,0,93.55,90.39,92.2,96.73,

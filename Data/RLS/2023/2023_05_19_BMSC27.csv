@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-19,2023-05-30,San jose north,BMSC27,8,standard,F22,0,4.525,5.266,5.495,,
+2023-05-19,2023-05-30,San jose north,BMSC27,8,standard,F23,50,53.26,54.82,54.18,,
+2023-05-19,2023-05-30,San jose north,BMSC27,8,standard,F24,100,92.72,93.27,91.64,,
+2023-05-19,2023-05-30,San jose north,BMSC27,8,standard,F25,300,291.2,292.9,293.3,,
+2023-05-19,2023-05-30,San jose north,BMSC27,8,standard,F26,600,585.1,582.5,583.4,"567.5, 577.5, 576.6",
+2023-05-19,2023-05-30,San jose north,BMSC27,8,bf,G07,0,-23.88,-23.77,-23.99,,
+2023-05-19,2023-05-30,San jose north,BMSC27,8,sample,D21,0,-4.775,-4.661,-4.997,,
+2023-05-19,2023-05-30,San jose north,BMSC27,8,sample,G10,0,-12.6,-13.02,-12.51,,

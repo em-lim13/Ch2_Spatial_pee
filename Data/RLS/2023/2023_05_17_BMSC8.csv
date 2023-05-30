@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-17,2023-05-30,Baeria south,BMSC8,9,standard,F1,0,29.5,29.07,29.44,,
+2023-05-17,2023-05-30,Baeria south,BMSC8,9,standard,F2,50,74.83,75.83,75.95,,
+2023-05-17,2023-05-30,Baeria south,BMSC8,9,standard,F3,100,121.5,123.2,122.3,,
+2023-05-17,2023-05-30,Baeria south,BMSC8,9,standard,F4,300,322.1,324.9,323.7,"329.5, 331.1, 325.9",
+2023-05-17,2023-05-30,Baeria south,BMSC8,9,standard,F5,600,612.4,613.4,615.2,"630.0, 622.5",
+2023-05-17,2023-05-30,Baeria south,BMSC8,9,bf,G12,0,-23.3,-22.77,-22.62,,
+2023-05-17,2023-05-30,Baeria south,BMSC8,9,sample,G04,0,38,37.84,38.96,,
+2023-05-17,2023-05-30,Baeria south,BMSC8,9,sample,H05,0,34.55,34.26,35.26,,

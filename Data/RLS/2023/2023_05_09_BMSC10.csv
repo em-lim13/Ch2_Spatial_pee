@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-09,2023-05-24,Ross_Slug_Island,BMSC10,4.6,standard,D11,0,98.66,97.97,98.59,"95.22, 101.2",
+2023-05-09,2023-05-24,Ross_Slug_Island,BMSC10,4.6,standard,F14,100,209.6,208.8,207.3,,
+2023-05-09,2023-05-24,Ross_Slug_Island,BMSC10,4.6,standard,C12,300,457.1,459.2,457.6,"468.7, 465.6, 462.6, 447.5, 460.9, 438.2, 455.1, 445.9, 450.4",
+2023-05-09,2023-05-24,Ross_Slug_Island,BMSC10,4.6,standard,C13,600,786.3,786.7,785.5,"792.1, 792.6, 796.8",
+2023-05-09,2023-05-24,Ross_Slug_Island,BMSC10,4.6,standard,F21,800,986.8,987.7,989,"978.9, 1001, 979.1, 995.5",
+2023-05-09,2023-05-24,Ross_Slug_Island,BMSC10,4.6,bf,D16,0,-76.99,-77.16,-77.36,,
+2023-05-09,2023-05-24,Ross_Slug_Island,BMSC10,4.6,sample,F23,0,15,15.28,14.74,,
+2023-05-09,2023-05-24,Ross_Slug_Island,BMSC10,4.6,sample,F15,0,25.5,24.58,23.5,,

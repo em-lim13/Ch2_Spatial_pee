@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-16,2023-05-27,Wizard south,BMSC11,7,standard,E1,0,-1.303,-0.047,0.081,,
+2023-05-16,2023-05-27,Wizard south,BMSC11,7,standard,E2,100,106.4,105.7,106.8,101.8,
+2023-05-16,2023-05-27,Wizard south,BMSC11,7,standard,E3,300,295.7,298.2,297.8,,
+2023-05-16,2023-05-27,Wizard south,BMSC11,7,standard,E4,600,630.7,630.7,632.1,"614.1, 622.1",
+2023-05-16,2023-05-27,Wizard south,BMSC11,7,standard,E5,800,755.1,754.2,754.9,"727.1, 745.8, 768.2, 770.1, 764.2",
+2023-05-16,2023-05-27,Wizard south,BMSC11,7,bf,E6,0,-14.14,-14.15,-13.84,,
+2023-05-16,2023-05-27,Wizard south,BMSC11,7,sample,D3,0,4.885,5.778,5.43,,
+2023-05-16,2023-05-27,Wizard south,BMSC11,7,sample,D19,0,-4.921,-4.614,-4.126,,

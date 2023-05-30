@@ -1,0 +1,9 @@
+collection_date,fluoro_date,site,site_code,depth,sample,bottle_number,nh4_vol_uL,FLU1,FLU2,FLU3,extras,notes
+2023-05-19,2023-05-30,Hosie south,BMSC26,7,standard,F11,0,0.676,-0.198,0.197,"7.800, 7.347",
+2023-05-19,2023-05-30,Hosie south,BMSC26,7,standard,F12,50,47.18,50,49.39,,
+2023-05-19,2023-05-30,Hosie south,BMSC26,7,standard,F13,100,97.7,99.35,98.4,,
+2023-05-19,2023-05-30,Hosie south,BMSC26,7,standard,F14,300,292.6,290.1,292.6,"283.4, 288.3",
+2023-05-19,2023-05-30,Hosie south,BMSC26,7,standard,F15,600,593.1,591.3,594,"579.6, 587.6",
+2023-05-19,2023-05-30,Hosie south,BMSC26,7,bf,H02,0,-24.73,-24.47,-24.17,,
+2023-05-19,2023-05-30,Hosie south,BMSC26,7,sample,H01,0,727.7,726.3,727.9,"695, 718.7, 716.3, 720.9",
+2023-05-19,2023-05-30,Hosie south,BMSC26,7,sample,H03,0,-1.997,-2.05,-1.965,,
