@@ -566,13 +566,14 @@ pee <- lm(adj_nh4_conc ~ site * period, data = rls_data)
 
 # Stats -------
 # Does pee vary by site?
-simple_model <- lm(nh4_conc ~ site_ID, data = rls_data)
+simple_model <- lm(nh4_conc ~ site_ID + period, data = rls_data)
 summary(simple_model)
 
-sum_stats_pee <- ggpredict(simple_model, terms = "site_ID") %>% 
+sum_stats_pee <- ggpredict(simple_model, terms = c("site_ID", "period")) %>% 
   #and then we'll just rename one of the columns so it's easier to plot
   rename(site_ID = x,
-         nh4_conc = predicted)
+         nh4_conc = predicted,
+         period = group)
 #View(sum_stats_crabs)
 
 # Graphing ----
@@ -580,19 +581,19 @@ sum_stats_pee <- ggpredict(simple_model, terms = "site_ID") %>%
 # Dot and whisker?
 ggplot() +
   geom_point(data = sum_stats_pee, 
-             aes(y = site_ID, x = nh4_conc, colour = site_ID),
+             aes(y = site_ID, x = nh4_conc, colour = period),
              size = 4) +
   geom_errorbar(data = sum_stats_pee, 
                 aes(y = site_ID,
                     x = nh4_conc,
-                    colour = site_ID,
+                    colour = period,
                     # and you can decide which type of error to show here
                     # we're using 95% CI
                     xmin = conf.low,
                     xmax = conf.high),
                 width = 0.2,
                 size = 1.2)  +
-  geom_point(data = rls_data, aes (y = site_ID, x = nh4_conc, colour = site_ID), alpha = 0.5, height = 0, size = 2) +
+  geom_point(data = rls_data, aes (y = site_ID, x = nh4_conc, colour = period), alpha = 0.5, height = 0, size = 2) +
   labs(x= "Ammonium concentration (umol/L)", y = "Site") +
   theme_black() +
   theme(legend.position="none") 
