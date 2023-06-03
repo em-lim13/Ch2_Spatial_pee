@@ -50,7 +50,6 @@ standard_2f <- standard2 %>%
          #of NH4 in seawater sample
          mean_FLU = (FLU1 + FLU2 + FLU3)/3) #mean FLU reading
 
-
 #linear model between the fluorometer reading and actual concentration of NH4
 sc_mod1 <- lm(nh4_conc_final_umol_L ~ mean_FLU, data = standard_1f)
 #check this summary for the R squared- the relationship should be TIGHT, so if it's lower than like 0.98, there might be some contamination
@@ -80,7 +79,6 @@ int2 <- coef(sc_mod2)[1]
 slope2 <- coef(sc_mod2)[2]
 
 # Calculate matrix effects -
-
 bottles1_a <- bottles1 %>%
   left_join(glow1, by = c("bottle", "site_ID")) %>%
   mutate(Fsm_zero = mean_FLU)
@@ -115,11 +113,13 @@ bottles1_b <- bottles1_a %>%
     Fsm_cor_Taylor = (Fsm_zero / (1- matrix_est/100))
   ) %>%
   mutate(int = int1, #include values for the int and slope in for every column
-         slope = slope1) %>% #to calculate the coversion to NH4 conc
+         slope = slope1) %>% #to calculate the conversion to NH4 conc
   #those values come from our standard curve
   mutate(nh4_conc = ifelse(sample == "sample", (int1 + slope1 * Fsm_cor_Taylor),
                            (int1 + slope1 * (Fsm_cor_Taylor - Fst_spike1))
   ))
+# So I didn't use the matrix spikes to calculate the matrix effects, I just estimated them at 15% and used that for the 2021 bottles
+# And then calculated what the matrix bottles would be if we hadn't spiked them by subtracting the 200 standard FLU from that bottle
 
 #repeat for 2
 Fst_zero2 <- standard_2f$mean_FLU[standard_2f$nh4_vol_uL == "0"]
@@ -145,11 +145,13 @@ bottles2_b <- bottles2_a %>%
 
 
 # merge two dfs
-bottles_f <- rbind(bottles1_b, bottles2_b) %>%
-  mutate(site = factor(site, levels = c("WouwerChannel", "EffinghamW", "RaymondKelpRock", "EffinghamArchipelago", "FaberS", "EussenRock", "BaeriaSouthN", "BaeriaNorthS", "BaeriaNorthN", "Ross", "WizardN", "WizardS", "Ohiat", "Kirby", "EdKingE", "EdKingSWPyramid", "Taylor", "DodgerChannel", "Kiixin", "Scotts", "DixonSW", "DixonInside"))) %>%
+bottles_f_may2021 <- rbind(bottles1_b, bottles2_b) %>%
+  mutate(site = factor(site, levels = c("WouwerChannel", "EffinghamW", "RaymondKelpRock", "EffinghamArchipelago", "FaberS", "EussenRock", "BaeriaSouthN", "BaeriaNorthS", "BaeriaNorthN", "Ross", "WizardN", "WizardS", "Ohiat", "Kirby", "EdKingE", "EdKingSWPyramid", "Taylor", "DodgerChannel", "Kiixin", "Scotts", "DixonSW", "DixonInside")),
+         month = "May",
+         year = "2021") %>%
   select(-dilution)
 
-#write_csv(bottles_f, "Output/Output_data/RSL_fluo_data.csv")
+#write_csv(bottles_f_may2021, "Output/Output_data/RSL_fluo_data.csv")
 
 
 # Calculate NH4+ for the June 2021 RSL surveys --------
@@ -212,7 +214,7 @@ bottles_june_matrix <- bottles_june_zero %>%
     matrix_est = 15) %>%
   select(site_ID, Fsm_spike, Fst_zero, Fst_spike, matrix, matrix_est)
 
-bottles_june_depth2 <- bottles_june_depth %>%
+bottles_june_2021 <- bottles_june_depth %>%
   left_join(bottles_june_matrix, by = "site_ID") %>%
   mutate(
     Fsm_cor_Holmes = Fsm_zero + (Fsm_zero * (matrix/100)),
@@ -223,11 +225,11 @@ bottles_june_depth2 <- bottles_june_depth %>%
   #those values come from our standard curve
   mutate(nh4_conc = int_june + slope_june * Fsm_cor_Taylor) %>%
   filter(sample != "matrix") %>%
-  select(-sample_matrix)
+  select(-sample_matrix) %>%
+  mutate(month = "June",
+         year = "2021")
 
-
-
-ggplot(bottles_june_depth2, aes(site, nh4_conc)) + geom_boxplot()
+ggplot(bottles_june_2021, aes(site, nh4_conc)) + geom_boxplot()
 
 # ALl surface samples are negative
 
@@ -290,7 +292,7 @@ bottles_july_matrix <- bottles_july_zero %>%
     matrix_est = 15) %>%
   select(site_ID, Fsm_spike, Fst_zero, Fst_spike, matrix, matrix_est)
 
-bottles_july3 <- bottles_july2 %>%
+bottles_july_2021 <- bottles_july2 %>%
   left_join(bottles_july_matrix, by = "site_ID") %>%
   mutate(
     Fsm_cor_Holmes = Fsm_zero + (Fsm_zero * (matrix/100)),
@@ -301,11 +303,14 @@ bottles_july3 <- bottles_july2 %>%
   #those values come from our standard curve
   mutate(nh4_conc = int_july + slope_july * Fsm_cor_Taylor) %>%
   filter(sample != "matrix") %>%
-  select(-sample_matrix)
+  select(-sample_matrix) %>%
+  mutate(month = "July",
+         year = "2021")
 
-ggplot(bottles_july3, aes(site, nh4_conc)) + geom_boxplot()
+ggplot(bottles_july_2021, aes(site, nh4_conc)) + geom_boxplot()
 
-# # Calculate NH4+ for the April -May 2022 RLS samples -------
+
+# # Calculate NH4+ for the April-May 2022 RLS samples -------
 # Load bottle data
 # Each row is an individual bottle
 bottles3 <- read_csv("Data/RLS/2022_05_07_RLS_NH4_bottles.csv") %>%
@@ -430,7 +435,7 @@ bottles3_c <- bottles3_b %>%
 min_nh4_3 <- - min(bottles3_c$nh4_conc) # make it positive so I can add it
 
 bottles3_d <- bottles3_c %>%
-  mutate(adj_nh4_conc = nh4_conc + min_nh4_3, # shift all the readings up using hte lowest as the 0
+  mutate(adj_nh4_conc = nh4_conc + min_nh4_3, # shift all the readings up using the lowest as the 0
          fluo_date = "May_17")
 
 
@@ -494,12 +499,14 @@ bottles4_d <- bottles4_c %>%
          fluo_date = "May_18")
 
 # merge all 2022 samples
-bottles2022 <- rbind(bottles3_d, bottles4_d) %>%
-  select(site, site_ID, depth, temp_est, sal_est, date, period, matrix, nh4_conc, adj_nh4_conc)
+bottles_may2022 <- rbind(bottles3_d, bottles4_d) %>%
+  select(site, site_ID, depth, temp_est, sal_est, date, period, matrix, nh4_conc, adj_nh4_conc, fluo_date) %>%
+  mutate(month = "May",
+         year = "2022")
 
   
 # Look at the 2022 samples
-ggplot(bottles2022, aes(adj_nh4_conc, site, fill = site)) +
+ggplot(bottles_may2022, aes(adj_nh4_conc, site, fill = site)) +
   geom_boxplot(colour = "white") +
   theme_black() +
   labs(x= "Ammonium concentration (umol/L)", y = "Site") +
@@ -509,24 +516,19 @@ ggplot(bottles2022, aes(adj_nh4_conc, site, fill = site)) +
 # They're all pretty low.........
 
 # Smoosh three together???? ------
-july_bottles <- bottles_july3 %>%
-  select(site, site_ID, depth, temp_est, sal_est, date, period, matrix, nh4_conc) %>%
-  mutate(nh4_conc = ifelse(nh4_conc <0, 0, nh4_conc),
-         adj_nh4_conc = nh4_conc)
+bottles_july_2021_merge <- bottles_july_2021 %>%
+  select(site, site_ID, depth, temp_est, sal_est, date, month, year, matrix, nh4_conc)
 
-june_bottles <- bottles_june_depth2 %>% 
-  select(site, site_ID, depth, temp_est, sal_est, date, period, matrix, nh4_conc) %>%
-  filter(site != "WizardN") %>% # get rid of the weird negative ammonium Wizard site as it's probably a mistake 
-  mutate(nh4_conc = ifelse(nh4_conc <0, 0, nh4_conc),
-         adj_nh4_conc = nh4_conc)
+bottles_june_2021_merge <- bottles_june_2021 %>%
+  select(site, site_ID, depth, temp_est, sal_est, date, month, year, matrix, nh4_conc)
 
-may_bottles <- bottles_f %>%
-  select(site, site_ID, depth, temp_est, sal_est, date, period, matrix, nh4_conc) %>%
-  mutate(nh4_conc = ifelse(nh4_conc <0, 0, nh4_conc),
-         adj_nh4_conc = nh4_conc)
+  #filter(site != "WizardN") %>% # get rid of the weird negative ammonium Wizard site as it's probably a mistake
+
+bottles_f_may2021_merge <- bottles_f_may2021 %>%
+  select(site, site_ID, depth, temp_est, sal_est, date, month, year, matrix, nh4_conc)
 
 # join 2021 and 2022
-rls_data = rbind(may_bottles, june_bottles, july_bottles, bottles2022) 
+rls_data = rbind(may_bottles, june_bottles, july_bottles, bottles_may2022) 
 
 # Which sites have the lowest and highest pee
 rls_pee_summary <- rls_data %>%
@@ -541,7 +543,7 @@ rls_tide_summary <- rls_data %>%
   arrange(desc(depth))
 
 
-# Correlation analysis
+# Correlation analysis -----
 may_bottles_cor <- may_bottles %>%
   filter(site != "Kirby") %>%
   filter(site != "Kiixin") %>%
@@ -550,7 +552,7 @@ may_bottles_cor <- may_bottles %>%
   slice(-56)%>%
   slice(-52)
 
-bottles2022_cor <- bottles2022 %>%
+bottles2022_cor <- bottles_may2022 %>%
   filter(site != "AguilarPoint") %>%
   slice(4:57)
 
@@ -621,7 +623,7 @@ ggplot(rls_data, aes(nh4_conc, site, fill = site)) +
 #       height = 9, width = 16, dpi = 400)
 
 # Visualize salinity
-ggplot(bottles_f, aes(x = sal_est, y = site)) +
+ggplot(bottles_f_may2021, aes(x = sal_est, y = site)) +
   geom_point() +
   labs(x = "Salinity Estimate", y = "Site")
 
@@ -634,7 +636,7 @@ ggplot(bottles, aes(x = sal_est)) +
              color="red", linetype="dashed", size=1)
 
 # Sal vs pee
-ggplot(bottles_f, aes(sal_est, nh4_conc)) + geom_point() +
+ggplot(bottles_f_may2021, aes(sal_est, nh4_conc)) + geom_point() +
   geom_smooth(method = lm)
 
 # Visualize temperature
@@ -647,7 +649,7 @@ ggplot(bottles, aes(x = temp_est)) +
 
 # stats -------------------------
 
-pee <- lm(nh4_conc ~ site * depth, bottles_f)
+pee <- lm(nh4_conc ~ site * depth, bottles_f_may2021)
 anova(pee)
 summary(pee)
 
