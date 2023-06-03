@@ -41,18 +41,47 @@ samples_bmsc27 <- pee_calc("Data/RLS/2023/2023_05_19_BMSC27.csv")
 # merge all samples
 dfs = sapply(.GlobalEnv, is.data.frame) 
 
-rls2023 <- do.call(rbind, mget(names(dfs)[dfs])) %>%
-  filter(nh4_conc < 3) # remove the rave bottle
+bottles2023 <- do.call(rbind, mget(names(dfs)[dfs])) %>%
+  filter(nh4_conc < 3) %>% # remove the rave bottle 
+  mutate(site_ID = site_code,
+         temp_est = NA,
+         sal_est = NA,
+         date = collection_date,
+         month = "May",
+         year = "2023",
+         matrix = NA) %>%
+  select(site, site_ID, depth, temp_est, sal_est, date, month, year, matrix, nh4_conc)%>%
+  mutate(site = case_when(site_ID == "BMSC1" ~ "DodgerChannel",
+                          site_ID == "BMSC2" ~ "Kirby",
+                          site_ID == "BMSC3" ~ "Ohiat",
+                          site_ID == "BMSC4" ~ "Kiixin",
+                          site_ID == "BMSC5" ~ "Taylor",
+                          site_ID == "BMSC6" ~ "BaeriaSouthN",
+                          site_ID == "BMSC7" ~ "BaeriaNorthS",
+                          site_ID == "BMSC8" ~ "BaeriaNorthN",
+                          site_ID == "BMSC9" ~ "Scotts",
+                          site_ID == "BMSC10" ~ "RossSlug",
+                          site_ID == "BMSC11" ~ "WizardS",
+                          site_ID == "BMSC12" ~ "WizardN",
+                          site_ID == "BMSC13" ~ "EffinghamW",
+                          site_ID == "BMSC14" ~ "EffinghamArchipelago",
+                          site_ID == "BMSC15" ~ "RaymondKelpRock",
+                          site_ID == "BMSC16" ~ "FaberS",
+                          site_ID == "BMSC17" ~ "WouwerChannel",
+                          site_ID == "BMSC18" ~ "EussenRock",
+                          site_ID == "BMSC19" ~ "EdKingSWPyramid",
+                          site_ID == "BMSC20" ~ "EdKingE",
+                          site_ID == "BMSC21" ~ "DixonSW",
+                          site_ID == "BMSC22" ~ "DixonInside",
+                          site_ID == "BMSC23" ~ "AguilarPt",
+                          site_ID == "BMSC24" ~ "SwissBoy",
+                          site_ID == "BMSC25" ~ "GobyTown",
+                          site_ID == "BMSC26" ~ "HosieSouth",
+                          site_ID == "BMSC27" ~ "SanJoseNorth",
+  ))
 
-# summary stats ----
-rls_avg <- rls2023 %>%
-  summarise(avg = mean(nh4_conc),
-            max = max(nh4_conc))
 
+rownames(bottles2023) <- NULL
 
-# Exploring plots ----
-
-ggplot(rls2023, aes(site, nh4_conc)) +
-  geom_boxplot()+ 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-
+# Now write these files to a csv
+write_csv(bottles2023, "Output/Output_data/RLS_nh4_2023")
