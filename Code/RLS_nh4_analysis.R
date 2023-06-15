@@ -17,7 +17,8 @@ source("Code/theme_black.R")
 # This is the spring blitz, the june samples, and the July samples
 # The may samples have estimated matrix effects, not great
 # The June and July samples had a own matrix spike from each site but were still compared to DI
-bottles2021 <- read_csv("Output/Output_data/RLS_nh4_2021")
+bottles2021 <- read_csv("Output/Output_data/RLS_nh4_2021") 
+
 
 # RLS from 2022
 # These had a own matrix spike from each site but were still compared to DI
@@ -37,12 +38,6 @@ rls_nh4 <- rbind(bottles2021, bottles2022, bottles2023) %>%
   mutate(nh4_avg = mean(nh4_conc)) %>%
   ungroup()
 
-# Which sites have the lowest and highest pee
-rls_pee_summary <- rls_nh4_all %>%
-  group_by(site) %>%
-  summarize(mean_nh4 = mean(nh4_conc)) %>%
-  arrange(desc(mean_nh4)) 
-
 
 
 # Plot these data??? ----
@@ -50,7 +45,7 @@ pal <- pnw_palette("Sailboat", 3)
 
 ggplot(rls_nh4) +
   geom_point(aes(x = reorder(site, -nh4_avg), 
-                 nh4_conc, colour = year, pch = month),
+                 nh4_conc, colour = year, fill = year, pch = month),
              size = 3, alpha = 0.75) +
   geom_point(aes(x = reorder(site, -nh4_avg), 
                  nh4_avg),
@@ -59,8 +54,60 @@ ggplot(rls_nh4) +
   labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
   scale_colour_manual(values = pal)
 
+# ggsave("Output/Figures/RLS_nh4_all_years.png", device = "png",
+#        height = 5, width = 8, dpi = 400)
 
-# Summary stats -----
+
+# Plot the ranking of each site year to year
+# Plot rank
+ggplot(rank) +
+  geom_point(aes(reorder(site, -avg_grade), grade2021, colour = "2021"), size = 3) +
+  geom_point(aes(reorder(site, -avg_grade), grade2022, colour = "2022"), size = 3) +
+  geom_point(aes(reorder(site, -avg_grade), grade2023, colour = "2023"), size = 3) +
+  labs(x= "Site", y = "Rank", colour = "Year") +
+  scale_colour_manual(values = pal) + 
+  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) 
+
+# ggsave("Output/Figures/rank_all_years.png", device = "png",
+#        height = 5, width = 8, dpi = 400)
+
+# Data exploration ------
+
+# Which sites have the lowest and highest pee
+rls_pee_summary <- rls_nh4 %>%
+  group_by(site) %>%
+  summarize(mean_nh4 = mean(nh4_conc)) %>%
+  arrange(desc(mean_nh4)) 
+
+# rank each site by the year
+rank_2021 <- bottles2021 %>%
+  group_by(site) %>%
+  summarise(nh4_avg2021 = mean(nh4_conc)) %>%
+  arrange(desc(nh4_avg2021)) %>% 
+  mutate(rank2021 = 1:22,
+         grade2021 = 100 - (100*rank2021/22))
+
+rank_2022 <- bottles2022 %>%
+  group_by(site) %>%
+  summarise(nh4_avg2022 = mean(nh4_conc)) %>%
+  arrange(desc(nh4_avg2022)) %>% 
+  mutate(rank2022 = 1:19,
+         grade2022 = 100 - (100*rank2022/19))
+
+rank_2023 <- bottles2023 %>%
+  group_by(site) %>%
+  summarise(nh4_avg2023 = mean(nh4_conc)) %>%
+  arrange(desc(nh4_avg2023)) %>% 
+  mutate(rank2023 = 1:20,
+         grade2023 = 100 - (100*rank2023/20))
+
+rank <- rank_2021 %>%
+  left_join(rank_2022, by= "site") %>%
+  left_join(rank_2023, by= "site") %>%
+  select(grade2021, grade2022, grade2023, site) %>%
+  rowwise() %>%
+  mutate(avg_grade = mean(c(grade2021, grade2022, grade2023), na.rm = TRUE))
+  
 
 # What were the matrix effects like at the end of 2021 and in 2022?
 rls_nh4 %>%
@@ -113,15 +160,17 @@ cor_data <- b_2021 %>%
 # 2021 vs 2022
 cor.test(cor_data$nh4_2021, cor_data$nh4_2022, 
                 method = "spearman")
+# Yes correlated?
 
 # 2022 vs 2023
 cor.test(cor_data$nh4_2022, cor_data$nh4_2023, 
          method = "spearman")
+# Yes correlated?
 
 # 2023 vs 2021
 cor.test(cor_data$nh4_2023, cor_data$nh4_2021, 
          method = "spearman")
-
+# Yes correlated?
 
 # Stats -------
 # Does pee vary by site?
