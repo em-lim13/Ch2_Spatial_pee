@@ -36,8 +36,8 @@ rls_nh4 <- rbind(bottles2021, bottles2022, bottles2023) %>%
   mutate(year = as.factor(year)) %>%
   group_by(site) %>%
   mutate(nh4_avg = mean(nh4_conc)) %>%
-  ungroup()
-
+  ungroup() %>%
+  filter(month == "May") # just keep the samples from the annual RLS spring surveys
 
 
 # Plot these data??? ----
@@ -259,3 +259,70 @@ anova(pee)
 summary(pee)
 
 visreg(pee, "depth", by = "site")
+
+
+# Make a map -----
+
+# Load coordinates
+coords <- table_data %>%
+  as.data.frame() %>%
+  mutate(lat = Latitude,
+         long = Longitude,
+         site_num = `Site number`) %>%
+  left_join(pie, by = "site_num") %>%
+  st_as_sf(coords = c("long", "lat")) %>%
+  st_set_crs(4326) 
+
+# Load not great shapefile
+potato_map <- sf::st_read("Data/eez.shp") %>%
+  st_sf() %>%
+  st_set_crs(4326)
+
+# Define colours
+blue <- paste("#b9d1df", sep="")
+
+# Make map without pies, just scaling size of point to %
+sf_use_s2(FALSE)
+
+# Dodge certain points
+coords2 <- coords %>%
+  mutate(xjit = ifelse(site_num == 3 | 
+                         site_num == 4 |
+                         site_num == 6 |
+                         site_num == 8, -0.005, 0.005),
+         site_num = as.factor(site_num))
+
+# Create legend
+site_names <- as.list(paste(coords$site_num, coords$`Site name`, sep = ": "))
+
+# Make map
+ggplot() +
+  geom_sf(data = potato_map, fill = blue, colour = "white") +
+  geom_sf(data = coords2, 
+          alpha = 0.6,
+          colour = "black",
+          pch = 21,
+          aes(size = percent,
+              fill = site_num)) +
+  coord_sf(xlim = c(-125.25, -125.08), ylim = c(48.80, 48.9), expand = FALSE)  +
+  theme_bw() +
+  theme(panel.background = element_rect(fill = "white"),
+        axis.text = element_text(size = 12, colour = "black"),
+        axis.title = element_text(size = 13, colour = "black"),
+        legend.title = element_text(size = 12, colour = "black"),
+        legend.text = element_text(size = 11, colour = "black"),
+        panel.grid.major = element_line(color = "white")) +
+  xlab("Longitude") + ylab("Latitude")  +
+  geom_text(data = coords2,
+            aes(x = Longitude, y = Latitude, 
+                label = site_num,
+                colour = site_num),
+            fontface = "bold",
+            nudge_x = coords2$xjit) +
+  scale_size_continuous(name = "Percent abnormal") + 
+  scale_fill_discrete(name = "Site", 
+                      labels = site_names) +
+  scale_colour_discrete(guide = "none")
+
+#ggsave("Pub_figs/Fig.1.png", device = "png",
+#       height = 150, width = 250, units = c("mm"), dpi = 600)
