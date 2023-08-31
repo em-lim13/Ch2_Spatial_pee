@@ -11,6 +11,7 @@ library(PNWColors)
 library(ggeffects)
 library(lubridate)
 library(sf)
+library(lmerTest)
 source("Code/theme_black.R")
 
 # Load data
@@ -241,7 +242,11 @@ new <- rls_new %>%
   filter(year == "2023") %>%
   mutate(seen_this_year = "yes") %>%
   select(-year) %>%
-  left_join(prev, by = "species_name")
+  left_join(prev, by = "species_name") %>%
+  replace_na(list(seen_before = "no")) %>%
+  filter(seen_before == "no") 
+
+#write_csv(new, "Output/Output_data/new_species.csv")
 
 widow <- rls %>%
   filter(species_name == "Sebastes entomelas")
@@ -354,10 +359,22 @@ ggplot(rls_nh4) +
                  size = 3, colour = "black", pch = 20) +
   theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) +
   labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
-  scale_colour_manual(values = pal)
+  scale_colour_manual(values = pal) 
 
-# ggsave("Output/Figures/RLS_nh4_all_years.png", device = "png",
-#        height = 5, width = 8, dpi = 400)
+#black
+ggplot(rls_nh4) +
+  geom_point(aes(y = reorder(site, -nh4_avg), 
+                 x = nh4_conc, colour = year, fill = year),
+             size = 3, alpha = 0.9) +
+  geom_point(aes(y = reorder(site, -nh4_avg), 
+                 x = nh4_avg),
+             size = 4, colour = "white", pch = 20) +
+  labs(y = "Site", x = "NH4+ Concentration (umol/L)") +
+  scale_colour_manual(values = pal) + 
+  theme_black()
+
+ ggsave("Output/Figures/RLS_nh4_all_years_black.png", device = "png",
+        height = 9, width = 16, dpi = 400)
 
 
 # Plot the ranking of each site year to year
@@ -378,8 +395,9 @@ ggplot(rank) +
 ggplot(rls_final, aes(weight_sum, nh4_avg, label = site)) +
   geom_point(aes(colour = site_ID)) +
   geom_smooth(method = lm) +
-  geom_text(check_overlap = TRUE, hjust = 1,  size = 3) +
-  labs(x = "Total fish biomass (g)", y = "Ammonium concentration (umol)")
+  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
+  labs(x = "Total fish biomass (g)", y = "Ammonium concentration (umol)") +
+  theme_classic()
 
 
 
@@ -428,14 +446,22 @@ cor.test(cor_data$nh4_2023, cor_data$nh4_2021,
 
 # Stats -------
 # Does pee vary by site?
-simple_model <- lm(nh4_conc ~ site_ID + period, data = rls_data)
+simple_model <- lm(nh4_conc ~ site_ID + year, data = rls_nh4)
 summary(simple_model)
-
+visreg(simple_model)
 
 # does pee vary with biomass
 model <- lmer(nh4_avg ~ weight_sum + (1|site_ID), rls_final)
 summary(model)
 visreg(model)
+
+pee <- lm(nh4_conc ~ site * depth, rls_nh4)
+anova(pee)
+summary(pee)
+
+visreg(pee, "depth", by = "site")
+
+
 
 sum_stats_pee <- ggpredict(simple_model, terms = c("site_ID", "period")) %>% 
   #and then we'll just rename one of the columns so it's easier to plot
@@ -513,13 +539,6 @@ ggplot(bottles, aes(x = temp_est, y = site)) +
 ggplot(bottles, aes(x = temp_est)) +
   geom_histogram(colour="black", fill="white")
 
-# stats -------------------------
-pee <- lm(nh4_conc ~ site * depth, bottles_f_may2021)
-anova(pee)
-summary(pee)
-
-visreg(pee, "depth", by = "site")
-
 
 # Make a map -----
 # Load not great shapefile
@@ -582,6 +601,8 @@ ggplot() +
                 label = site_ID),
             size = 3,
             nudge_x = rls_coords$xjit)
+
+
             
 #ggsave("Pub_figs/Fig.1.png", device = "png",
 #       height = 150, width = 250, units = c("mm"), dpi = 600)
