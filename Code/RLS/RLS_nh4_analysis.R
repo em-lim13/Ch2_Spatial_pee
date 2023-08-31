@@ -10,6 +10,7 @@ theme_set(theme_bw())
 library(PNWColors)
 library(ggeffects)
 library(lubridate)
+library(sf)
 source("Code/theme_black.R")
 
 # Load data
@@ -52,7 +53,8 @@ fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
                  show_col_types = FALSE)) %>%
   as.data.frame() %>%
   mutate(survey_date = ymd(survey_date),
-         year = as.factor(year(survey_date))) %>%
+         year = as.factor(year(survey_date)),
+         site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code)) %>%
   rename(site_ID = site_code) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
@@ -61,7 +63,12 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
                    show_col_types = FALSE) %>%
   as.data.frame() %>%
   mutate(survey_date = ymd(survey_date),
-         year = as.factor(year(survey_date))) %>%
+         year = as.factor(year(survey_date)),
+         site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code),
+         species_name = case_when(species_name == "Montereina nobilis" ~ "Peltodoris nobilis",
+                        species_name == "Parastichopus californicus" ~ "Apostichopus californicus",
+                        species_name == "Berthella californica" ~ "Berthella chacei",
+                        TRUE ~ as.character(species_name))) %>%
   rename(site_ID = site_code) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
@@ -195,47 +202,6 @@ rls_final <- rls_pee_sum %>%
 # This is probably not the perfect way to join these data
 # currently I have 3 nh4 estimates per site per year, and for some sites I have 2 biomass estimates per site per year. This is just the 
 
-
-# Plot these data??? ----
-pal <- pnw_palette("Sailboat", 3)
-
-ggplot(rls_nh4) +
-  geom_point(aes(x = reorder(site, -nh4_avg), 
-                 nh4_conc, colour = year, fill = year, pch = month),
-             size = 3, alpha = 0.75) +
-  geom_point(aes(x = reorder(site, -nh4_avg), 
-                 nh4_avg),
-                 size = 3, colour = "black", pch = 20) +
-  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) +
-  labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
-  scale_colour_manual(values = pal)
-
-# ggsave("Output/Figures/RLS_nh4_all_years.png", device = "png",
-#        height = 5, width = 8, dpi = 400)
-
-
-# Plot the ranking of each site year to year
-# Plot rank
-ggplot(rank) +
-  geom_point(aes(reorder(site, -avg_grade), grade2021, colour = "2021"), size = 3) +
-  geom_point(aes(reorder(site, -avg_grade), grade2022, colour = "2022"), size = 3) +
-  geom_point(aes(reorder(site, -avg_grade), grade2023, colour = "2023"), size = 3) +
-  labs(x= "Site", y = "Rank", colour = "Year") +
-  scale_colour_manual(values = pal) + 
-  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) 
-
-# ggsave("Output/Figures/rank_all_years.png", device = "png",
-#        height = 5, width = 8, dpi = 400)
-
-
-# Plot biomass vs nh4
-ggplot(rls_final, aes(weight_sum, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_ID)) +
-  geom_smooth(method = lm) +
-  geom_text(check_overlap = TRUE, hjust = 1,  size = 3) +
-  labs(x = "Total fish biomass (g)", y = "Ammonium concentration (umol)")
-
-
 # Data exploration ------
 
 # Data checks
@@ -244,6 +210,49 @@ goby <- fish %>%
   filter(site_name == "Goby Town") %>%
   filter(depth == "5.7") %>%
   select(site_name, depth, method, block, species_name, total, size_class)
+
+# New nudis?
+nudi <- invert %>%
+  filter(class == "Gastropoda") %>%
+  filter(family != "Acmaeidae") %>%
+  filter(family != "Calliostomatidae") %>%
+  filter(family != "Epitoniidae" ) %>%
+  filter(family != "Fissurellidae" ) %>%
+  filter(family != "Haliotidae" ) %>%
+  filter(family != "Lottiidae" ) %>%
+  filter(family != "Muricidae" ) %>%
+  filter(family != "Naticidae" ) %>%
+  filter(family != "Tegulidae" ) %>%
+  filter(family != "Turbinidae") %>%
+  count(species_name, year)
+
+# New RLS species?
+rls_new <- rls %>%
+  count(species_name, year) %>%
+  select(-n)
+
+prev <- rls_new %>%
+  filter(year != "2023") %>%
+  mutate(seen_before = "yes") %>%
+  select(-year) %>%
+  unique()
+
+new <- rls_new %>%
+  filter(year == "2023") %>%
+  mutate(seen_this_year = "yes") %>%
+  select(-year) %>%
+  left_join(prev, by = "species_name")
+
+widow <- rls %>%
+  filter(species_name == "Sebastes entomelas")
+
+# New species
+# Armina californica
+# Berthella californica and Berthella chacei
+# Double check these, I think only one is local 
+# Berthella chacei is the local one
+# Cadlina sylviaearleae
+# Triopha catalinae (we've seen modesta before)
 
 
 # check out goby town aka why it's sooooo fishy
@@ -310,7 +319,7 @@ rank <- rank_2021 %>%
   select(grade2021, grade2022, grade2023, site) %>%
   rowwise() %>%
   mutate(avg_grade = mean(c(grade2021, grade2022, grade2023), na.rm = TRUE))
-  
+
 
 # What were the matrix effects like at the end of 2021 and in 2022?
 rls_nh4 %>%
@@ -326,10 +335,52 @@ rls_nh4 %>%
 # Go back to the 2021 data and set the ME to 7.82
 
 #What is the tide height at those sites
-rls_tide_summary <- rls_data %>%
+rls_tide_summary <- rls_nh4 %>%
   group_by(site) %>%
   summarize(depth = mean(depth)) %>%
   arrange(desc(depth))
+
+
+
+# Plot these data??? ----
+pal <- pnw_palette("Sailboat", 3)
+
+ggplot(rls_nh4) +
+  geom_point(aes(x = reorder(site, -nh4_avg), 
+                 nh4_conc, colour = year, fill = year, pch = month),
+             size = 3, alpha = 0.75) +
+  geom_point(aes(x = reorder(site, -nh4_avg), 
+                 nh4_avg),
+                 size = 3, colour = "black", pch = 20) +
+  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) +
+  labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
+  scale_colour_manual(values = pal)
+
+# ggsave("Output/Figures/RLS_nh4_all_years.png", device = "png",
+#        height = 5, width = 8, dpi = 400)
+
+
+# Plot the ranking of each site year to year
+# Plot rank
+ggplot(rank) +
+  geom_point(aes(reorder(site, -avg_grade), grade2021, colour = "2021"), size = 3) +
+  geom_point(aes(reorder(site, -avg_grade), grade2022, colour = "2022"), size = 3) +
+  geom_point(aes(reorder(site, -avg_grade), grade2023, colour = "2023"), size = 3) +
+  labs(x= "Site", y = "Rank", colour = "Year") +
+  scale_colour_manual(values = pal) + 
+  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) 
+
+# ggsave("Output/Figures/rank_all_years.png", device = "png",
+#        height = 5, width = 8, dpi = 400)
+
+
+# Plot biomass vs nh4
+ggplot(rls_final, aes(weight_sum, nh4_avg, label = site)) +
+  geom_point(aes(colour = site_ID)) +
+  geom_smooth(method = lm) +
+  geom_text(check_overlap = TRUE, hjust = 1,  size = 3) +
+  labs(x = "Total fish biomass (g)", y = "Ammonium concentration (umol)")
+
 
 
 # Correlation analysis -----
@@ -471,19 +522,8 @@ visreg(pee, "depth", by = "site")
 
 
 # Make a map -----
-
-# Load coordinates
-coords <- table_data %>%
-  as.data.frame() %>%
-  mutate(lat = Latitude,
-         long = Longitude,
-         site_num = `Site number`) %>%
-  left_join(pie, by = "site_num") %>%
-  st_as_sf(coords = c("long", "lat")) %>%
-  st_set_crs(4326) 
-
 # Load not great shapefile
-potato_map <- sf::st_read("Data/eez.shp") %>%
+potato_map <- sf::st_read("Data/Shapefiles/eez.shp") %>%
   st_sf() %>%
   st_set_crs(4326)
 
@@ -493,27 +533,39 @@ blue <- paste("#b9d1df", sep="")
 # Make map without pies, just scaling size of point to %
 sf_use_s2(FALSE)
 
-# Dodge certain points
-coords2 <- coords %>%
-  mutate(xjit = ifelse(site_num == 3 | 
-                         site_num == 4 |
-                         site_num == 6 |
-                         site_num == 8, -0.005, 0.005),
-         site_num = as.factor(site_num))
+# coords
+rls_coords <- rls_nh4 %>%
+  group_by(site_ID) %>%
+  summarise(nh4_mean = mean(nh4_conc)) %>%
+  left_join(
+    rls %>% select(site_ID, site_name, latitude, longitude, survey_latitude, survey_longitude,) %>% 
+      unique()
+    ) %>%
+  left_join(fish_biomass %>%
+              group_by(site_ID) %>%
+              summarize(mean_weight = mean(weight_sum/1000)) ) %>%
+  st_as_sf(coords = c("longitude", "latitude")) %>%
+  st_set_crs(4326) %>%
+  mutate(xjit = ifelse(site_ID == "BMSC6" | 
+                         site_ID == "BMSC3" |
+                         site_ID == "BMSC21" |
+                         site_ID == "BMSC15" |
+                         site_ID == "BMSC11" |
+                         site_ID == "BMSC19", -0.015, 0.015))
 
-# Create legend
-site_names <- as.list(paste(coords$site_num, coords$`Site name`, sep = ": "))
+## Create legend
+#site_names <- as.list(paste(coords$site_num, coords$`Site name`, sep = ": "))
 
 # Make map
 ggplot() +
   geom_sf(data = potato_map, fill = blue, colour = "white") +
-  geom_sf(data = coords2, 
-          alpha = 0.6,
+  geom_sf(data = rls_coords, 
           colour = "black",
           pch = 21,
-          aes(size = percent,
-              fill = site_num)) +
-  coord_sf(xlim = c(-125.25, -125.08), ylim = c(48.80, 48.9), expand = FALSE)  +
+          alpha = 0.9,
+          aes(size = mean_weight,
+              fill = nh4_mean)) +
+  coord_sf(xlim = c(-125.4, -125.0), ylim = c(48.80, 49), expand = FALSE)  +
   theme_bw() +
   theme(panel.background = element_rect(fill = "white"),
         axis.text = element_text(size = 12, colour = "black"),
@@ -521,17 +573,15 @@ ggplot() +
         legend.title = element_text(size = 12, colour = "black"),
         legend.text = element_text(size = 11, colour = "black"),
         panel.grid.major = element_line(color = "white")) +
-  xlab("Longitude") + ylab("Latitude")  +
-  geom_text(data = coords2,
-            aes(x = Longitude, y = Latitude, 
-                label = site_num,
-                colour = site_num),
-            fontface = "bold",
-            nudge_x = coords2$xjit) +
-  scale_size_continuous(name = "Percent abnormal") + 
-  scale_fill_discrete(name = "Site", 
-                      labels = site_names) +
-  scale_colour_discrete(guide = "none")
-
+  viridis::scale_fill_viridis(option="magma", direction = -1) +
+  labs(x = "Longitude", y = "Latitude",
+       fill = expression(paste("NH"[4]^" +","(umol)")),
+       size = "Fish biomass (kg)")  +
+  geom_text(data = rls_coords,
+            aes(x = survey_longitude, y = survey_latitude, 
+                label = site_ID),
+            size = 3,
+            nudge_x = rls_coords$xjit)
+            
 #ggsave("Pub_figs/Fig.1.png", device = "png",
 #       height = 150, width = 250, units = c("mm"), dpi = 600)
