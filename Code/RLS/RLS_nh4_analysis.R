@@ -22,7 +22,6 @@ source("Code/theme_black.R")
 # The June and July samples had a own matrix spike from each site but were still compared to DI
 bottles2021 <- read_csv("Output/Output_data/RLS_nh4_2021") 
 
-
 # RLS from 2022
 # These had a own matrix spike from each site but were still compared to DI
 # They came out quite negative maybe because of SFU DI, and maybe because of temperature difference between the standards and samples
@@ -35,13 +34,10 @@ bottles2022 <- read_csv("Output/Output_data/RLS_nh4_2022")
 bottles2023 <- read_csv("Output/Output_data/RLS_nh4_2023")
 
 # combine these three years into one!
-rls_nh4 <- rbind(bottles2021, bottles2022, bottles2023) %>%
+rls_nh4_3years <- rbind(bottles2021, bottles2022, bottles2023) %>%
   mutate(year = as.factor(year)) %>%
-  group_by(site, year) %>%
-  mutate(nh4_avg = mean(nh4_conc),
-         year = as.factor(year)) %>%
-  ungroup() %>%
-  filter(month == "May") # just keep the samples from the annual RLS spring surveys
+  filter(month == "May") %>%
+  select(-matrix) 
 
 
 # Add the RLS data ----
@@ -66,15 +62,23 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
   mutate(survey_date = ymd(survey_date),
          year = as.factor(year(survey_date)),
          site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code),
-         species_name = case_when(species_name == "Montereina nobilis" ~ "Peltodoris nobilis",
-                        species_name == "Parastichopus californicus" ~ "Apostichopus californicus",
-                        species_name == "Berthella californica" ~ "Berthella chacei",
+         species_name = case_when(
+           species_name == "Montereina nobilis" ~ "Peltodoris nobilis",
+           species_name == "Parastichopus californicus" ~ "Apostichopus californicus",
+           species_name == "Berthella californica" ~ "Berthella chacei",
+           species_name == "Henricia leviuscula" ~ "Henricia spp.",
                         TRUE ~ as.character(species_name))) %>%
   rename(site_ID = site_code) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
 # Join all data together
 rls <- rbind(fish, invert)
+
+# extract just one row per survey to join with the pee data
+rls_survey_depths <- rls %>%
+  select(site_ID, year, depth, survey_id, hour) %>%
+  rename(survey_depth = depth) %>%
+  unique()
 
 # Biomass calculations -------
 
@@ -85,7 +89,6 @@ rls <- rbind(fish, invert)
 # Eg if the Siegel paper says a = -4.60517 that corresponds to log(0.01)
 # So some papers will present a already log transformed (a negative value) and some will present a as an untransformed value (positive decimal)
 # log(W) = log(a) + b*log(L) is the same as log10(W) = log10(a) + b*log10(L) so don't worry about the base as long as it's the same across the formula
-
 
 # Use the a and b parameters from FishBase
 # W = a*L^b
@@ -170,7 +173,7 @@ fishes <- fish %>%
   filter(species_name != "Polyorchis penicillatus") %>% # Filter inverts
   filter(species_name != "Phoca vitulina") %>% # Remove seal
   filter(species_name != "Actinopterygii spp.") %>% # Remove unidentif fish
-  filter(species_name != "3)	Myoxocephalus aenaeus") # Remove east coast fish
+  filter(species_name != "Myoxocephalus aenaeus") # Remove east coast fish
 
 # That one huge wolf eel can't be right
 # Fishbase: max size = 240 cm, max weight = 18.4 kg
@@ -184,24 +187,96 @@ fishes <- fish %>%
 # Some people counted M2 fishes on M1, but not always so I don't actually want goby and sculpin counts from M1
 # Figure out what to do here
 
+
+# Join pee + survey data ------
+
+# just keep the surveys where I have a nh4 AND rls survey on the same transect
+rls_nh4 <- rls_nh4_3years %>% # remove BMSC6 for now bc it's hard
+  left_join(rls_survey_depths, by = c("site_ID", "year")) %>%
+  mutate(correct = case_when(
+    site_ID== "BMSC6" &year =="2022" &depth == "8.5" &survey_depth== "6.5" ~ "no",
+    site_ID== "BMSC6" &year =="2022" &depth == "5.5" &survey_depth== "9" ~ "no",
+    site_ID== "BMSC6" &year =="2022" &depth == "6" &survey_depth== "9" ~ "no",
+    site_ID== "BMSC1" &year == "2021" & survey_depth == "6.5" ~ "no",
+    site_ID== "BMSC1" &year == "2022" & survey_depth == "4.7" ~ "no",
+    site_ID== "BMSC5" &year == "2022" & survey_depth == "6.2" ~ "no",
+    site_ID== "BMSC11" &year == "2022" & survey_depth == "8.5" ~ "no",
+    site_ID== "BMSC12" &year == "2022" & survey_depth == "9" ~ "no",
+    site_ID== "BMSC11" &year == "2023" & survey_depth == "5.5" ~ "no",
+    site_ID== "BMSC12" &year == "2023" & survey_depth == "6.5" ~ "no",
+    site_ID== "BMSC24" &year == "2023" & survey_depth == "7.5" ~ "no",
+    site_ID== "BMSC25" &year == "2023" & survey_depth == "5.5" ~ "no",
+    site_ID== "BMSC26" &year == "2023" & survey_depth == "9.5" ~ "no",
+    site_ID== "BMSC27" &year == "2023" & survey_depth == "7" ~ "no",
+    site_ID== "BMSC1" &year == "2023" & survey_depth == "8" ~ "no",
+    site_ID== "BMSC5" &year == "2023" & survey_depth == "8" ~ "no",
+    site_ID== "BMSC6" &year == "2023" & survey_depth == "5.5" ~ "no",
+    site_ID== "BMSC8" &year == "2023" & survey_depth == "7.5" ~ "no",
+    TRUE ~ as.character("yes")
+    # cut out the rls transects I didn't directly measure nh4 on 
+  )) %>%
+  filter(correct == "yes") %>%
+  select(-c(correct, hour))
+
+# tricky ones:
+### BMSC1 2021: two survey depths, one nh4 sample 
+### BMSC6 2022: two nh4 samples at 2 depths
+### BMSC1 2022: two survey depths, one nh4 sample 
+### BMSC5 2022: two surveys at same depth, one nh4 sample
+# I was on the later shallower survey
+### BMSC6 2022: two surveys at same depth, two nh4 samples!
+### BMSC11 2022: two survey depths, one nh4 sample 
+### BMSC12 2022: two survey depths, one nh4 sample 
+### BMSC11 2023: two survey depths, one nh4 sample 
+# I tried to take nh4 samples between the shallower and deeper surveys
+### BMSC12 2023: two survey depths, one nh4 sample 
+# I tried to take nh4 samples between the shallower and deeper surveys
+# BMSC24 2023: two survey depths, one nh4 sample
+# I tried to take nh4 samples between the shallower and deeper surveys
+# BMSC25 2023: two survey depths, one nh4 sample
+# these two were back to back, don't average
+# BMSC26 2023: two survey depths, one nh4  (only 2 pee reps tho)
+# these two were back to back, don't average
+# I was with the 10 m team that got in first
+# BMSC27 2023: two survey depths, one nh4 sample
+# also back to back, don't average
+# BMSC1 2023: two survey depths, one nh4 sample
+# BMSC5 2023: two survey depths, one nh4 sample
+# BMSC6 2023: two survey depths, one nh4 sample
+# the shallower team was way shallower
+# BMSC8 2023: two survey depths, one nh4 sample
+
+# So I need to decide what to do about repeated surveys
+# Is the nh4 sample I took specific to the transect I took it on?
+# Which means I should cut the RLS surveys that aren't the transects where the pee samples were taken
+# Or would I want to average the two transects and take the mean biomass from the two to relate to the overall pee sample
+
+# For simplicity I think I just want to keep the RLS survey from the transect where the pee is from
+
+# so basically I need a better way to join up the pee samples with the transect they were taken on
+
+# Site level averaging -----
+nh4_avg <- rls_nh4 %>%
+group_by(survey_id) %>%
+  mutate(nh4_avg = mean(nh4_conc),
+         year = as.factor(year)) %>%
+  ungroup()  # just keep the samples from the annual RLS spring surveys
+
+
 # How much fish biomass does each site have?
 fish_biomass <- fishes %>%
-  group_by(site_ID, year, depth) %>%
+  group_by(survey_id) %>%
   summarize(weight_sum = sum(weight_size_class_sum))
-
-# Compare depths of pee samples vs surveys...
-rls_pee_sum <- rls_nh4 %>%
-  group_by(year, site_ID, site, nh4_avg) %>%
-  summarize(depth_pee = mean(depth)) 
-
-# some sites were surveyed twice and I only took nh4 samples at one depth/along one transect
+# One row per transect
+  # Per site, per depth, per year
+  # Same as grouping by survey_ID
 
 # Join pee + fish biomass data
-rls_final <- rls_pee_sum %>%
-  left_join(fish_biomass, by = c("site_ID", "year"))
+rls_final <- nh4_avg %>%
+  left_join(fish_biomass, by = c("survey_id"))
 
-# This is probably not the perfect way to join these data
-# currently I have 3 nh4 estimates per site per year, and for some sites I have 2 biomass estimates per site per year. This is just the 
+### EVERYTHING RUNS TO HERE. I CHANGED RLS_FINAL SO MIGHT NEED TO CHANGE FILE NAMES FROM HERE DOWN
+
 
 # Data exploration ------
 
@@ -248,8 +323,15 @@ new <- rls_new %>%
 
 #write_csv(new, "Output/Output_data/new_species.csv")
 
-widow <- rls %>%
-  filter(species_name == "Sebastes entomelas")
+no_sizes <- fish %>%
+  filter(size_class == "0") %>%
+  filter(species_name != "Bolinopsis infundibulum") %>%
+  filter(species_name != "Pleuronichthys coenosus") %>%
+  filter(species_name != "Pleurobrachia bachei") %>%
+  filter(species_name != "Polyorchis penicillatus") %>%
+  select(-year)
+
+#write_csv(no_sizes, "Output/Output_data/missing_fish_sizes.csv")
 
 # New species
 # Armina californica
