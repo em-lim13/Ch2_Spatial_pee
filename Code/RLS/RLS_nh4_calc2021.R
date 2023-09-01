@@ -11,21 +11,21 @@ library(ggplot2)
 # Load bottle data
 # Each row is an individual bottle
 
-bottles1 <- read_csv("Data/RLS/2021_05_11_RLS_NH4_bottles.csv")
-bottles2 <- read_csv("Data/RLS/2021_05_11_RLS_NH4_bottles2.csv")
+bottles1 <- read_csv("Data/RLS/2021/2021_05_11_RLS_NH4_bottles.csv")
+bottles2 <- read_csv("Data/RLS/2021/2021_05_11_RLS_NH4_bottles2.csv")
 
 # load fluorometry data
-glow1 <- read_csv("Data/RLS/2021_05_18_fluorometry.csv") %>%
+glow1 <- read_csv("Data/RLS/2021/2021_05_18_fluorometry.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
-glow2 <- read_csv("Data/RLS/2021_05_21_fluorometry.csv") %>%
+glow2 <- read_csv("Data/RLS/2021/2021_05_21_fluorometry.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
 # load standard curve data
-standard1 <- read_csv("Data/RLS/2021_05_18_standard_curve.csv") %>%
+standard1 <- read_csv("Data/RLS/2021/2021_05_18_standard_curve.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
-standard2 <- read_csv("Data/RLS/2021_05_21_standard_curve.csv") %>%
+standard2 <- read_csv("Data/RLS/2021/2021_05_21_standard_curve.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
 # # STANDARD CURVE-
@@ -100,19 +100,18 @@ bottles1_b <- bottles1_a %>%
   mutate(
     Fst_zero = Fst_zero1,
     Fst_spike = Fst_spike1,
+    int = int1, #include values for the int and slope in for every column
+    slope = slope1, #to calculate the conversion to NH4 conc
     matrix = 100 * ((Fst_spike1 - Fst_zero1 - (Fsm_spike - Fsm_zero))/
                       (Fst_spike1 - Fst_zero1)),
     matrix_est = 7.82,
     Fsm_cor_Holmes = Fsm_zero + (Fsm_zero * (matrix_est/100)),
-    Fsm_cor_Taylor = (Fsm_zero / (1- matrix_est/100))
-  ) %>%
-  mutate(int = int1, #include values for the int and slope in for every column
-         slope = slope1) %>% #to calculate the conversion to NH4 conc
-  #those values come from our standard curve
-  mutate(nh4_conc = ifelse(sample == "sample", (int1 + slope1 * Fsm_cor_Taylor),
-                           (int1 + slope1 * (Fsm_cor_Taylor - Fst_spike1))
+    Fsm_cor_Taylor = (Fsm_zero / (1- matrix_est/100)),
+    Fst_spike_cor = (Fst_spike / (1- matrix_est/100)), # correct for matrix
+    nh4_conc = ifelse(sample == "sample", (int1 + slope1 * Fsm_cor_Taylor),
+                           (int1 + slope1 * (Fsm_cor_Taylor - Fst_spike_cor))
   ))
-# So I didn't use the matrix spikes to calculate the matrix effects, I just estimated them at 15% and used that for the 2021 bottles
+# So I didn't use the matrix spikes to calculate the matrix effects, I just estimated them at 7.82% and used that for the 2021 bottles
 # And then calculated what the matrix bottles would be if we hadn't spiked them by subtracting the 200 standard FLU from that bottle
 
 #repeat for 2
@@ -124,19 +123,27 @@ bottles2_b <- bottles2_a %>%
   mutate(
     Fst_zero = Fst_zero2,
     Fst_spike = Fst_spike2,
+    int = int2, #include values for the int and slope in for every column
+    slope = slope2, 
     matrix = 100 * ((Fst_spike2 - Fst_zero2 - (Fsm_spike - Fsm_zero))/
                       (Fst_spike2 - Fst_zero2)),
-    matrix_est = 7.82,
+    # Set estimated matrix = 7.82 for the sites where I messed up their matrix
+    # But for DixonSW and DixonInside I did it right so keep those
+    matrix_est = case_when(
+      site == "DixonSW" & syringe == "WP1" & sample == "sample" ~ matrix, 
+      site == "DixonInside" & syringe == "WP2" & sample == "sample" ~ matrix, 
+      TRUE ~ as.numeric(7.82)),
     Fsm_cor_Holmes = Fsm_zero + (Fsm_zero * (matrix_est/100)),
-    Fsm_cor_Taylor = (Fsm_zero / (1- matrix_est/100))
-  ) %>%
-  mutate(int = int2, #include values for the int and slope in for every column
-         slope = slope2) %>% #to calculate the coversion to NH4 conc
-  #those values come from our standard curve
-  mutate(nh4_conc = ifelse(sample == "sample", (int2 + slope2 * Fsm_cor_Taylor),
-                           (int2 + slope2 * (Fsm_cor_Taylor - Fst_spike2))
-  ))
-
+    Fsm_cor_Taylor = (Fsm_zero / (1- matrix_est/100)),
+    Fst_spike_cor = (Fst_spike / (1- matrix_est/100)), # correct for matrix
+    nh4_conc = ifelse(sample == "sample", (int2 + slope2 * Fsm_cor_Taylor),
+                           (int2 + slope2 * (Fsm_cor_Taylor - Fst_spike_cor))),
+    cut_out = case_when(
+      site == "DixonSW" & syringe == "WP1" & sample == "matrix" ~ "cut", 
+      site == "DixonInside" & syringe == "WP2" & sample == "matrix" ~ "cut", 
+      TRUE ~ as.character("keep"))) %>%
+  filter(cut_out == "keep") %>% # manually filter out the two Dixon matrix bottles
+  dplyr::select(-cut_out) # hide my manual shame
 
 # merge two dfs
 bottles_f_may2021 <- rbind(bottles1_b, bottles2_b) %>%
@@ -149,14 +156,14 @@ bottles_f_may2021 <- rbind(bottles1_b, bottles2_b) %>%
 
 
 # Calculate NH4+ for the June 2021 RSL surveys --------
-bottles_june <- read_csv("Data/RLS/2021_06_23_RLS_NH4_bottles.csv")
+bottles_june <- read_csv("Data/RLS/2021/2021_06_23_RLS_NH4_bottles.csv")
 
 # load fluorometry data
-glow_june <- read_csv("Data/RLS/2021_06_23_RSL_fluorometry.csv") %>%
+glow_june <- read_csv("Data/RLS/2021/2021_06_23_RSL_fluorometry.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
 # load standard curve data
-standard_june <- read_csv("Data/RLS/2021_06_23_standard_curve_data.csv") %>%
+standard_june <- read_csv("Data/RLS/2021/2021_06_23_standard_curve_data.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
 #do the calculations for the standard curve
@@ -217,7 +224,7 @@ bottles_june_2021 <- bottles_june_depth %>%
   mutate(int = int_june, #include values for the int and slope in for every column
          slope = slope_june) %>% #to calculate the coversion to NH4 conc
   #those values come from our standard curve
-  mutate(nh4_conc = int_june + slope_june * Fsm_cor_Taylor) %>%
+  mutate(nh4_conc = int + slope * Fsm_cor_Taylor) %>%
   filter(sample != "matrix") %>%
   select(-sample_matrix) %>%
   mutate(month = "June",
@@ -228,14 +235,14 @@ ggplot(bottles_june_2021, aes(site, nh4_conc)) + geom_boxplot()
 # ALl surface samples are negative
 
 # Calculate NH4+ for the July 2021 RSL surveys --------
-bottles_july <- read_csv("Data/RLS/2021_07_20_RLS_NH4_bottles.csv")
+bottles_july <- read_csv("Data/RLS/2021/2021_07_20_RLS_NH4_bottles.csv")
 
 # load fluorometry data
-glow_july <- read_csv("Data/RLS/2021_07_20_RSL_fluorometry.csv") %>%
+glow_july <- read_csv("Data/RLS/2021/2021_07_20_RSL_fluorometry.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(flu_1, flu_2, flu_3)))
 
 # load standard curve data
-standard_july <- read_csv("Data/RLS/2021_07_20_standard.csv") %>%
+standard_july <- read_csv("Data/RLS/2021/2021_07_20_standard.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
 #do the calculations for the standard curve
@@ -295,7 +302,7 @@ bottles_july_2021 <- bottles_july2 %>%
   mutate(int = int_july, #include values for the int and slope in for every column
          slope = slope_july) %>% #to calculate the coversion to NH4 conc
   #those values come from our standard curve
-  mutate(nh4_conc = int_july + slope_july * Fsm_cor_Taylor) %>%
+  mutate(nh4_conc = int + slope * Fsm_cor_Taylor) %>%
   filter(sample != "matrix") %>%
   select(-sample_matrix) %>%
   mutate(month = "July",
@@ -304,7 +311,7 @@ bottles_july_2021 <- bottles_july2 %>%
 ggplot(bottles_july_2021, aes(site, nh4_conc)) + geom_boxplot()
 
 # Merge the 2021 samples -----
-# First make the samples comperable
+# First make the samples comparable
 bottles_july_2021_merge <- bottles_july_2021 %>%
   select(site, site_ID, depth, temp_est, sal_est, date, month, year, matrix, nh4_conc)
 

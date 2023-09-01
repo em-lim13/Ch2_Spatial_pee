@@ -10,28 +10,28 @@ library(ggplot2)
 # # Calculate NH4+ for the April-May 2022 RLS samples -------
 # Load bottle data
 # Each row is an individual bottle
-bottles3 <- read_csv("Data/RLS/2022_05_07_RLS_NH4_bottles.csv") %>%
+bottles3 <- read_csv("Data/RLS/2022/2022_05_07_RLS_NH4_bottles.csv") %>%
   unite("site_ID_depth", c(site_ID,survey_depth), sep= "-", 
         remove = FALSE) # give each site a unique code based on the site code and survey depth 
 
-bottles4 <- read_csv("Data/RLS/2022_05_07_RLS_NH4_bottles2.csv") %>%
+bottles4 <- read_csv("Data/RLS/2022/2022_05_07_RLS_NH4_bottles2.csv") %>%
   unite("site_ID_depth", c(site_ID,survey_depth), sep= "-", 
         remove = FALSE)
 
 # load fluorometry data
 #each row is a bottle
-glow3 <- read_csv("Data/RLS/2022_05_17_fluorometry.csv") %>%
+glow3 <- read_csv("Data/RLS/2022/2022_05_17_fluorometry.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
-glow4 <- read_csv("Data/RLS/2022_05_18_fluorometry.csv") %>%
+glow4 <- read_csv("Data/RLS/2022/2022_05_18_fluorometry.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
 # load standard curve data
 # one standard curve for each sampling period
-standard3 <- read_csv("Data/RLS/2022_05_17_RLS_standard.csv") %>%
+standard3 <- read_csv("Data/RLS/2022/2022_05_17_RLS_standard.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
-standard4 <- read_csv("Data/RLS/2022_05_18_RLS_standard.csv") %>%
+standard4 <- read_csv("Data/RLS/2022/2022_05_18_RLS_standard.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(FLU1, FLU2, FLU3)))
 
 #do the calculations for the standard curve
