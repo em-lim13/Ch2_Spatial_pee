@@ -2,46 +2,25 @@
 # June 2, 2023
 # Em Lim
 
-# Load packages and data ----
+# Load packages and functions ----
 library(tidyverse)
 library(visreg)
 library(ggplot2)
-theme_set(theme_bw())
 library(PNWColors)
 library(ggeffects)
 library(lubridate)
 library(sf)
 library(lmerTest)
+
+# Source pretty functions
 source("Code/theme_black.R")
+source("Code/Functions.R") # Length to weight function here!
 
-# Load data
+# Set default plotting
+theme_set(theme_bw())
 
-# RLS nh4 from 2021
-# This is the spring blitz, the june samples, and the July samples
-# The may samples have estimated matrix effects, not great
-# The June and July samples had a own matrix spike from each site but were still compared to DI
-bottles2021 <- read_csv("Output/Output_data/RLS_nh4_2021") 
-
-# RLS from 2022
-# These had a own matrix spike from each site but were still compared to DI
-# They came out quite negative maybe because of SFU DI, and maybe because of temperature difference between the standards and samples
-# I took the lowest nh4 reading and added it to everything else to "set" that sample to 0 and bump everything up
-# Maybe an underestimation
-bottles2022 <- read_csv("Output/Output_data/RLS_nh4_2022")
-
-# RLS from 2023
-# Did the full "proper" Taylor protocol with standard bottles + BF from each site
-bottles2023 <- read_csv("Output/Output_data/RLS_nh4_2023")
-
-# combine these three years into one!
-rls_nh4_3years <- rbind(bottles2021, bottles2022, bottles2023) %>%
-  mutate(year = as.factor(year)) %>%
-  filter(month == "May") %>%
-  select(-matrix) 
-
-
-# Add the RLS data ----
-# Load the RLS data from the website!
+# Load data + manipulate RLS data ------
+# RLS data from the website!
 
 # Just the pelagic and cryptic fish
 fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
@@ -71,16 +50,17 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
   rename(site_ID = site_code) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
-# Join all data together
+# Join all rls data together
 rls <- rbind(fish, invert)
 
-# extract just one row per survey to join with the pee data
-rls_survey_depths <- rls %>%
-  select(site_ID, year, depth, survey_id, hour) %>%
+# extract just one row per survey to join with the pee data and tide data
+rls_survey_info <- rls %>%
+  select(site_ID, year, depth, survey_id, survey_date, hour) %>%
   rename(survey_depth = depth) %>%
-  unique()
+  unique() %>%
+  mutate(date_time = ymd_hms(paste(survey_date, hour)))
 
-# Biomass calculations -------
+# RLS Biomass calculations -------
 
 # A note on length to weight relationships
 # The overall relationship is W = a*L^b
@@ -98,75 +78,8 @@ rls_survey_depths <- rls %>%
 
 # Use WL relationships from fishbase to estimate weight of fish in RLS surveys
 fishes <- fish %>%
-  mutate(size_class = if_else(size_class == 187.5, 87.5, size_class), # shrink that one wolf eel
-    weight_per_fish_g = case_when(
-    # Gobies
-    species_name == "Rhinogobiops nicholsii" ~ exp(log(0.01047) + 3.03*log(size_class)),
-    
-    # Greenlings
-    species_name == "Hexagrammos decagrammus" ~ exp(log(0.00813) + 3.13*log(size_class)),
-    species_name == "Hexagrammos stelleri" ~ exp(log(0.00692) + 3.16*log(size_class)),
-    species_name == "Oxylebius pictus" ~ exp(log(0.01122) + 3.04*log(size_class)),
-    species_name == "Ophiodon elongatus" ~ exp(log(0.00389) + 3.12*log(size_class)),
-    species_name == "Hexagrammos spp." ~ exp(log(0.00813) + 3.13*log(size_class)), #
-    
-    # Rockfish
-    species_name == "Sebastes melanops" ~ exp(log(0.01000) + 3.09*log(size_class)),
-    species_name == "Sebastes caurinus" ~ exp(log(0.01000) + 3.09*log(size_class)),
-    species_name == "Sebastes flavidus" ~ exp(log(0.01000) + 3.09*log(size_class)),
-    species_name == "Sebastes maliger" ~ exp(log(0.01000) + 3.09*log(size_class)),
-    species_name == "Sebastes nebulosus" ~ exp(log(0.01000) + 3.09*log(size_class)),
-    species_name == "Sebastes spp." ~ exp(log(0.01000) + 3.09*log(size_class)),
-    species_name == "Sebastes spp. juv" ~ exp(log(0.01000) + 3.09*log(size_class)),
-    species_name == "Sebastes pinniger" ~ exp(log(0.01000) + 3.09*log(size_class)),
-    
-    # Sculpins
-    species_name == "Jordania zonope" ~ exp(log(0.00389) + 3.12*log(size_class)),
-    species_name == "Artedius harringtoni" ~ exp(log(0.00631) + 3.15*log(size_class)),
-    species_name == "Artedius lateralis" ~ exp(log(0.00631) + 3.15*log(size_class)),
-    species_name == "Artedius fenestralis" ~ exp(log(0.00631) + 3.15*log(size_class)),
-    species_name == "Hemilepidotus hemilepidotus" ~ exp(log(0.00631) + 3.15*log(size_class)),
-    species_name == "Cottidae spp." ~ exp(log(0.00631) + 3.15*log(size_class)),
-    species_name == "Enophrys bison" ~ exp(log(0.00794) + 3.13*log(size_class)),
-    species_name == "Rhamphocottus richardsonii" ~ exp(log(0.01995) + 3.01*log(size_class)),
-    species_name == "Scorpaenichthys marmoratus" ~ exp(log(0.00389) + 3.12*log(size_class)),
-    species_name == "Oligocottus maculosus" ~ exp(log(0.00631) + 3.15*log(size_class)),
-    species_name == "Leptocottus armatus" ~ exp(log(0.01096) + 3.19*log(size_class)),
-    species_name == "Blepsias cirrhosus" ~ exp(log(0.00631) + 3.14*log(size_class)),
-    species_name == "Myoxocephalus polyacanthocephalus" ~ exp(log(0.00832) + 3.14*log(size_class)),
-    species_name == "Myoxocephalus aenaeus" ~ exp(log(0.00832) + 3.14*log(size_class)),
-    species_name == "Asemichthys taylori" ~ exp(log(0.00631) + 3.15*log(size_class)),
-    
-    #Perch
-    species_name == "Embiotoca lateralis" ~ exp(log(0.01950) + 2.97*log(size_class)),
-    species_name == "Rhacochilus vacca" ~ exp(log(0.01950) + 2.97*log(size_class)),
-    species_name == "Brachyistius frenatus" ~ exp(log(0.01318) + 3.05*log(size_class)),
-    species_name == "Cymatogaster aggregata" ~ exp(log(0.01950) + 2.97*log(size_class)),
-    species_name == "Embiotocidae spp." ~ exp(log(0.01950) + 2.97*log(size_class)),
-    species_name == "Percidae spp." ~ exp(log(0.01950) + 2.97*log(size_class)),
-    
-    # Gunnels + gunnel-like fish
-    species_name == "Anarrhichthys ocellatus" ~ exp(log(0.00398) + 3.17*log(size_class)),
-    species_name == "Apodichthys flavidus" ~ exp(log(0.00102) + 3.06*log(size_class)),
-    species_name == "Pholis ornata" ~ exp(log(0.00162) + 3.19*log(size_class)),
-    species_name == "Pholis laeta" ~ exp(log(0.00162) + 3.19*log(size_class)),
-    species_name == "Pholis clemensi" ~ exp(log(0.00162) + 3.19*log(size_class)),
-    species_name == "Pholis spp." ~ exp(log(0.00162) + 3.19*log(size_class)),
-    species_name == "Lumpenus sagitta" ~ exp(log(0.00129) + 2.99*log(size_class)),
-    species_name == "Chirolophis nugator" ~ exp(log(0.00372) + 3.16*log(size_class)),
-    
-    #Misc
-    species_name == "Liparis florae" ~ exp(log(0.00525) + 3.15*log(size_class)), #snailfish
-    species_name == "Aulorhynchus flavidus" ~ exp(log(0.00263) + 3.14*log(size_class)), #tubesnout
-    species_name == "Syngnathus leptorhynchus" ~ exp(log(0.00028) + 3.18*log(size_class)), #pipefish
-    species_name == "Clupea pallasii" ~ exp(log(0.00603) + 3.13*log(size_class)), #herring
-    species_name == "Gasterosteus aculeatus" ~ exp(log(0.00977) + 3.09*log(size_class)), #stickleback
-    species_name == "Porichthys notatus" ~ exp(log(0.00562) + 3.16*log(size_class)), #plainfin
-    species_name == "Gibbonsia metzi" ~ exp(log(0.00513) + 3.06*log(size_class)),
-    species_name == "Citharichthys stigmaeus" ~ exp(log(0.00759) + 3.15*log(size_class)),
-    TRUE ~ as.numeric(NA)),
-    biomass_per_indiv = biomass/total,
-    weight_size_class_sum = weight_per_fish_g*total) %>%
+  mutate(size_class = if_else(size_class == 187.5, 87.5, size_class)) %>% # shrink that one wolf eel
+  length_to_weight() %>% # Use nice length to weight function!
   filter(species_name != "Bolinopsis infundibulum") %>%
   filter(species_name != "Pleuronichthys coenosus") %>%
   filter(species_name != "Pleurobrachia bachei") %>%
@@ -187,95 +100,99 @@ fishes <- fish %>%
 # Some people counted M2 fishes on M1, but not always so I don't actually want goby and sculpin counts from M1
 # Figure out what to do here
 
+# Load + manipulate nh4+ data ----
 
-# Join pee + survey data ------
+# RLS nh4 from 2021
+# This is the spring blitz, the june samples, and the July samples
+# The may samples have estimated matrix effects, not great
+# The June and July samples had a own matrix spike from each site but were still compared to DI
+bottles2021 <- read_csv("Output/Output_data/RLS_nh4_2021") 
 
-# just keep the surveys where I have a nh4 AND rls survey on the same transect
-rls_nh4 <- rls_nh4_3years %>% # remove BMSC6 for now bc it's hard
-  left_join(rls_survey_depths, by = c("site_ID", "year")) %>%
-  mutate(correct = case_when(
-    site_ID== "BMSC6" &year =="2022" &depth == "8.5" &survey_depth== "6.5" ~ "no",
-    site_ID== "BMSC6" &year =="2022" &depth == "5.5" &survey_depth== "9" ~ "no",
-    site_ID== "BMSC6" &year =="2022" &depth == "6" &survey_depth== "9" ~ "no",
-    site_ID== "BMSC1" &year == "2021" & survey_depth == "6.5" ~ "no",
-    site_ID== "BMSC1" &year == "2022" & survey_depth == "4.7" ~ "no",
-    site_ID== "BMSC5" &year == "2022" & survey_depth == "6.2" ~ "no",
-    site_ID== "BMSC11" &year == "2022" & survey_depth == "8.5" ~ "no",
-    site_ID== "BMSC12" &year == "2022" & survey_depth == "9" ~ "no",
-    site_ID== "BMSC11" &year == "2023" & survey_depth == "5.5" ~ "no",
-    site_ID== "BMSC12" &year == "2023" & survey_depth == "6.5" ~ "no",
-    site_ID== "BMSC24" &year == "2023" & survey_depth == "7.5" ~ "no",
-    site_ID== "BMSC25" &year == "2023" & survey_depth == "5.5" ~ "no",
-    site_ID== "BMSC26" &year == "2023" & survey_depth == "9.5" ~ "no",
-    site_ID== "BMSC27" &year == "2023" & survey_depth == "7" ~ "no",
-    site_ID== "BMSC1" &year == "2023" & survey_depth == "8" ~ "no",
-    site_ID== "BMSC5" &year == "2023" & survey_depth == "8" ~ "no",
-    site_ID== "BMSC6" &year == "2023" & survey_depth == "5.5" ~ "no",
-    site_ID== "BMSC8" &year == "2023" & survey_depth == "7.5" ~ "no",
-    TRUE ~ as.character("yes")
-    # cut out the rls transects I didn't directly measure nh4 on 
-  )) %>%
-  filter(correct == "yes") %>%
-  select(-c(correct, hour))
+# RLS from 2022
+# These had a own matrix spike from each site but were still compared to DI
+# They came out quite negative maybe because of SFU DI, and maybe because of temperature difference between the standards and samples
+# I took the lowest nh4 reading and added it to everything else to "set" that sample to 0 and bump everything up
+# Maybe an underestimation
+bottles2022 <- read_csv("Output/Output_data/RLS_nh4_2022")
 
-# tricky ones:
-### BMSC1 2021: two survey depths, one nh4 sample 
-### BMSC6 2022: two nh4 samples at 2 depths
-### BMSC1 2022: two survey depths, one nh4 sample 
-### BMSC5 2022: two surveys at same depth, one nh4 sample
-# I was on the later shallower survey
-### BMSC6 2022: two surveys at same depth, two nh4 samples!
-### BMSC11 2022: two survey depths, one nh4 sample 
-### BMSC12 2022: two survey depths, one nh4 sample 
-### BMSC11 2023: two survey depths, one nh4 sample 
-# I tried to take nh4 samples between the shallower and deeper surveys
-### BMSC12 2023: two survey depths, one nh4 sample 
-# I tried to take nh4 samples between the shallower and deeper surveys
-# BMSC24 2023: two survey depths, one nh4 sample
-# I tried to take nh4 samples between the shallower and deeper surveys
-# BMSC25 2023: two survey depths, one nh4 sample
-# these two were back to back, don't average
-# BMSC26 2023: two survey depths, one nh4  (only 2 pee reps tho)
-# these two were back to back, don't average
-# I was with the 10 m team that got in first
-# BMSC27 2023: two survey depths, one nh4 sample
-# also back to back, don't average
-# BMSC1 2023: two survey depths, one nh4 sample
-# BMSC5 2023: two survey depths, one nh4 sample
-# BMSC6 2023: two survey depths, one nh4 sample
-# the shallower team was way shallower
-# BMSC8 2023: two survey depths, one nh4 sample
+# RLS from 2023
+# Did the full "proper" Taylor protocol with standard bottles + BF from each site
+bottles2023 <- read_csv("Output/Output_data/RLS_nh4_2023")
 
-# So I need to decide what to do about repeated surveys
-# Is the nh4 sample I took specific to the transect I took it on?
-# Which means I should cut the RLS surveys that aren't the transects where the pee samples were taken
-# Or would I want to average the two transects and take the mean biomass from the two to relate to the overall pee sample
+# combine these three years into one!
+rls_nh4_3years <- rbind(bottles2021, bottles2022, bottles2023) %>%
+  mutate(year = as.factor(year)) %>%
+  filter(month == "May") 
 
-# For simplicity I think I just want to keep the RLS survey from the transect where the pee is from
+# just keep the surveys where I have an nh4 AND rls survey on the same transect
+rls_nh4 <- rls_nh4_3years %>% 
+  left_join(rls_survey_info, by = c("site_ID", "year")) %>%
+  depth_function() # only keep the RLS survey from the transect where the pee is from
 
-# so basically I need a better way to join up the pee samples with the transect they were taken on
+
+# Load + manipulate tide exchange data ----
+
+# Downloaded tide height data (m) from http://tbone.biol.sc.edu/tide/tideshow.cgi in 1 min intervals over the two week spanning each RLS spring blitz, in 24 hour time
+# 2021 April 26 start
+# added May 20, 2021 for the two Dixon sites
+# 2022 April 25 start
+# 2023 May 8 start
+
+tide <- read_csv("Data/RLS/tides_1_min.csv") %>%
+  mutate(date_time = ymd_hms(paste(date, time)))
+
+# build an empty dataframe
+# Do this each time you run the for loop!!!
+tide_exchange <- data.frame()
+
+# then write the loop
+for (x in 1:nrow(rls_survey_info)) {
+  
+  survey_start <- ymd_hms(rls_survey_info$date_time[x:x])
+  survey_end <- survey_start + hours(1)
+  
+  output = tide %>%
+    filter(between(date_time, survey_start, survey_end)) %>%
+    mutate(rate = 100 * (tide_m - lag(tide_m))/lag(tide_m)) %>%
+    slice(-1) %>%
+    summarise(avg_exchange_rate = mean(rate)) %>%
+    mutate(survey_id = rls_survey_info$survey_id[x:x])
+  
+  tide_exchange = rbind(tide_exchange, output)
+}
+# Now I have the average rate of change of tide height for each survey!!!
+
 
 # Site level averaging -----
+
+# Average nh4+ for each survey
 nh4_avg <- rls_nh4 %>%
 group_by(survey_id) %>%
   mutate(nh4_avg = mean(nh4_conc),
          year = as.factor(year)) %>%
-  ungroup()  # just keep the samples from the annual RLS spring surveys
+  ungroup() %>%
+  select(c(site, site_ID, survey_id, date_time, nh4_avg)) %>%
+  unique()
 
-
-# How much fish biomass does each site have?
+# Calculate total fish biomass per survey
 fish_biomass <- fishes %>%
   group_by(survey_id) %>%
-  summarize(weight_sum = sum(weight_size_class_sum))
+  summarize(weight_sum = sum(weight_size_class_sum)) %>%
+  left_join(rls %>% # also add overall site species richness
+      group_by(survey_id) %>%
+      summarize(species_richness = n_distinct(species_name))%>%
+      arrange(desc(species_richness))) 
 # One row per transect
   # Per site, per depth, per year
   # Same as grouping by survey_ID
 
-# Join pee + fish biomass data
+# Join nh4 + fish biomass + tide exchange data
 rls_final <- nh4_avg %>%
-  left_join(fish_biomass, by = c("survey_id"))
+  left_join(fish_biomass, by = c("survey_id")) %>%
+  left_join(tide_exchange, by = "survey_id") # add in the tide exchange data
 
-### EVERYTHING RUNS TO HERE. I CHANGED RLS_FINAL SO MIGHT NEED TO CHANGE FILE NAMES FROM HERE DOWN
+# One row per survey
+# Each survey has an average nh4 concentration, total fish biomass, and tide exchange
 
 
 # Data exploration ------
@@ -323,6 +240,7 @@ new <- rls_new %>%
 
 #write_csv(new, "Output/Output_data/new_species.csv")
 
+# missing size data
 no_sizes <- fish %>%
   filter(size_class == "0") %>%
   filter(species_name != "Bolinopsis infundibulum") %>%
@@ -333,34 +251,9 @@ no_sizes <- fish %>%
 
 #write_csv(no_sizes, "Output/Output_data/missing_fish_sizes.csv")
 
-# New species
-# Armina californica
-# Berthella californica and Berthella chacei
-# Double check these, I think only one is local 
-# Berthella chacei is the local one
-# Cadlina sylviaearleae
-# Triopha catalinae (we've seen modesta before)
-
-
-# check out goby town aka why it's sooooo fishy
-goby <- fishes %>%
-  filter(site_name == "Goby Town") %>%
-  filter(depth == "5.7")
-
-
-# Which species of fishes did we see
-fishes_sp <- fish %>% 
-  count(species_name, family)
-
 # What's the most abundant species?
 rls_abundant_species <- rls %>% 
   count(species_name)
-
-# Which site has the most species?
-rls_richness <- rls %>%
-  group_by(site_name) %>%
-  summarize(species_richness = n_distinct(species_name))%>%
-  arrange(desc(species_richness))
 
 # where are the most urchins???
 # Can swap for any species
@@ -372,30 +265,27 @@ rls_urchins <- rls %>%
 
 # So basically you can manipulate the data to summarize whatever thing you're interested in, and then you can join that summarized data with another df of interest by the common site code/site name :)
 
-# Which sites have the lowest and highest pee
-rls_pee_summary <- rls_nh4 %>%
-  group_by(site) %>%
-  summarize(mean_nh4 = mean(nh4_conc)) %>%
-  arrange(desc(mean_nh4)) 
-
 # rank each site by the year
-rank_2021 <- bottles2021 %>%
+rank_2021 <- rls_final %>%
+  filter(year(date_time) == "2021") %>%
   group_by(site) %>%
-  summarise(nh4_avg2021 = mean(nh4_conc)) %>%
+  summarise(nh4_avg2021 = mean(nh4_avg)) %>%
   arrange(desc(nh4_avg2021)) %>% 
   mutate(rank2021 = 1:22,
          grade2021 = 100 - (100*rank2021/22))
 
-rank_2022 <- bottles2022 %>%
+rank_2022 <- rls_final %>%
+  filter(year(date_time) == "2022") %>%
   group_by(site) %>%
-  summarise(nh4_avg2022 = mean(nh4_conc)) %>%
+  summarise(nh4_avg2022 = mean(nh4_avg)) %>%
   arrange(desc(nh4_avg2022)) %>% 
   mutate(rank2022 = 1:19,
          grade2022 = 100 - (100*rank2022/19))
 
-rank_2023 <- bottles2023 %>%
+rank_2023 <- rls_final %>%
+  filter(year(date_time) == "2023") %>%
   group_by(site) %>%
-  summarise(nh4_avg2023 = mean(nh4_conc)) %>%
+  summarise(nh4_avg2023 = mean(nh4_avg)) %>%
   arrange(desc(nh4_avg2023)) %>% 
   mutate(rank2023 = 1:20,
          grade2023 = 100 - (100*rank2023/20))
@@ -408,27 +298,23 @@ rank <- rank_2021 %>%
   mutate(avg_grade = mean(c(grade2021, grade2022, grade2023), na.rm = TRUE))
 
 
-# What were the matrix effects like at the end of 2021 and in 2022?
+# What were the matrix effects like in 2022?
 rls_nh4 %>%
   filter(year == "2022") %>%
   summarise(matrix = mean(matrix))
 # 14.6
 
-rls_nh4 %>%
+# how about the end of 2021?
+rbind(bottles2021, bottles2022, bottles2023) %>%
+  mutate(year = as.factor(year)) %>%
   filter(year == "2021") %>%
   filter(month != "May") %>%
   summarise(matrix = mean(matrix))
 # 7.82
 # Go back to the 2021 data and set the ME to 7.82
 
-#What is the tide height at those sites
-rls_tide_summary <- rls_nh4 %>%
-  group_by(site) %>%
-  summarize(depth = mean(depth)) %>%
-  arrange(desc(depth))
 
-
-
+#### code checking only to here -----
 # Plot these data??? ----
 pal <- pnw_palette("Sailboat", 3)
 
