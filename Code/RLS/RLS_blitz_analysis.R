@@ -106,18 +106,18 @@ fishes <- fish %>%
 # This is the spring blitz, the june samples, and the July samples
 # The may samples have estimated matrix effects, not great
 # The June and July samples had a own matrix spike from each site but were still compared to DI
-bottles2021 <- read_csv("Output/Output_data/RLS_nh4_2021") 
+bottles2021 <- read_csv("Output/Output_data/RLS_nh4_2021.csv") 
 
 # RLS from 2022
 # These had a own matrix spike from each site but were still compared to DI
 # They came out quite negative maybe because of SFU DI, and maybe because of temperature difference between the standards and samples
 # I took the lowest nh4 reading and added it to everything else to "set" that sample to 0 and bump everything up
 # Maybe an underestimation
-bottles2022 <- read_csv("Output/Output_data/RLS_nh4_2022")
+bottles2022 <- read_csv("Output/Output_data/RLS_nh4_2022.csv")
 
 # RLS from 2023
 # Did the full "proper" Taylor protocol with standard bottles + BF from each site
-bottles2023 <- read_csv("Output/Output_data/RLS_nh4_2023")
+bottles2023 <- read_csv("Output/Output_data/RLS_nh4_2023.csv")
 
 # combine these three years into one!
 rls_nh4_3years <- rbind(bottles2021, bottles2022, bottles2023) %>%
