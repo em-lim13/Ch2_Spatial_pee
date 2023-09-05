@@ -222,8 +222,12 @@ length_to_weight <- function(datafile){
              species_name == "Gibbonsia metzi" ~ exp(log(0.00513) + 3.06*log(size_class)),
              species_name == "Citharichthys stigmaeus" ~ exp(log(0.00759) + 3.15*log(size_class)),
              TRUE ~ as.numeric(NA)),
+           # set the really big wolf eel weight manually to largest record weight
+           # otherwise the calc thinks it's MASSSSSIVE
+           weight_per_fish_g = if_else(size_class == 187.5, 18400, weight_per_fish_g),
+           weight_per_fish_kg = weight_per_fish_g/1000,
            biomass_per_indiv = biomass/total,
-           weight_size_class_sum = weight_per_fish_g*total)
+           weight_size_class_sum = weight_per_fish_kg*total)
   
 }
 
