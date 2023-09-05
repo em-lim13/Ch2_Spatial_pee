@@ -11,6 +11,7 @@ library(ggeffects)
 library(lubridate)
 library(sf)
 library(lmerTest)
+library(MuMIn) # for dredge?
 
 # Source pretty functions
 source("Code/theme_black.R")
@@ -78,7 +79,6 @@ rls_survey_info <- rls %>%
 
 # Use WL relationships from fishbase to estimate weight of fish in RLS surveys
 fishes <- fish %>%
-  mutate(size_class = if_else(size_class == 187.5, 87.5, size_class)) %>% # shrink that one wolf eel
   length_to_weight() %>% # Use nice length to weight function!
   filter(species_name != "Bolinopsis infundibulum") %>%
   filter(species_name != "Pleuronichthys coenosus") %>%
@@ -87,7 +87,8 @@ fishes <- fish %>%
   filter(species_name != "Phoca vitulina") %>% # Remove seal
   filter(species_name != "Actinopterygii spp.") %>% # Remove unidentif fish
   filter(species_name != "Myoxocephalus aenaeus") # Remove east coast fish
-
+ # careful, the function shrinks the big wolf eel
+  
 # That one huge wolf eel can't be right
 # Fishbase: max size = 240 cm, max weight = 18.4 kg
 # Ours is apparently 187 cm and 63 kg
@@ -100,35 +101,30 @@ fishes <- fish %>%
 # Some people counted M2 fishes on M1, but not always so I don't actually want goby and sculpin counts from M1
 # Figure out what to do here
 
-# Load + manipulate nh4+ data ----
+# Load + manipulate NH+ data ----
 
 # RLS nh4 from 2021
 # This is the spring blitz, the june samples, and the July samples
 # The may samples have estimated matrix effects, not great
 # The June and July samples had a own matrix spike from each site but were still compared to DI
-bottles2021 <- read_csv("Output/Output_data/RLS_nh4_2021.csv") 
 
 # RLS from 2022
 # These had a own matrix spike from each site but were still compared to DI
 # They came out quite negative maybe because of SFU DI, and maybe because of temperature difference between the standards and samples
 # I took the lowest nh4 reading and added it to everything else to "set" that sample to 0 and bump everything up
 # Maybe an underestimation
-bottles2022 <- read_csv("Output/Output_data/RLS_nh4_2022.csv")
 
 # RLS from 2023
 # Did the full "proper" Taylor protocol with standard bottles + BF from each site
-bottles2023 <- read_csv("Output/Output_data/RLS_nh4_2023.csv")
 
 # combine these three years into one!
-rls_nh4_3years <- rbind(bottles2021, bottles2022, bottles2023) %>%
+rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
+                        read_csv("Output/Output_data/RLS_nh4_2022.csv"),
+                        read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
   mutate(year = as.factor(year)) %>%
-  filter(month == "May") 
-
-# just keep the surveys where I have an nh4 AND rls survey on the same transect
-rls_nh4 <- rls_nh4_3years %>% 
+  filter(month == "May") %>% 
   left_join(rls_survey_info, by = c("site_ID", "year")) %>%
   depth_function() # only keep the RLS survey from the transect where the pee is from
-
 
 # Load + manipulate tide exchange data ----
 
@@ -164,36 +160,36 @@ for (x in 1:nrow(rls_survey_info)) {
 
 
 # Site level averaging -----
-
-# Average nh4+ for each survey
-nh4_avg <- rls_nh4 %>%
-group_by(survey_id) %>%
-  mutate(nh4_avg = mean(nh4_conc),
-         year = as.factor(year)) %>%
-  ungroup() %>%
-  select(c(site, site_ID, survey_id, date_time, nh4_avg)) %>%
-  unique()
-
-# Calculate total fish biomass per survey
-fish_biomass <- fishes %>%
-  group_by(survey_id) %>%
-  summarize(weight_sum = sum(weight_size_class_sum)) %>%
-  left_join(rls %>% # also add overall site species richness
-      group_by(survey_id) %>%
-      summarize(species_richness = n_distinct(species_name))%>%
-      arrange(desc(species_richness))) 
 # One row per transect
   # Per site, per depth, per year
   # Same as grouping by survey_ID
+  # NH4+, fish biomass, richness, abundance, and tide exchange for each survey
 
-# Join nh4 + fish biomass + tide exchange data
-rls_final <- nh4_avg %>%
-  left_join(fish_biomass, by = c("survey_id")) %>%
-  left_join(tide_exchange, by = "survey_id") # add in the tide exchange data
-
-# One row per survey
-# Each survey has an average nh4 concentration, total fish biomass, and tide exchange
-
+rls_final <- 
+  # average nh4 for each site
+  rls_nh4 %>% 
+  group_by(survey_id) %>%
+  mutate(nh4_avg = mean(nh4_conc),
+         year = as.factor(year)) %>%
+  ungroup() %>% 
+  select(c(site, site_ID, survey_id, date_time, nh4_avg)) %>%
+  unique() %>%
+  # rls fish biomass 
+  left_join(fishes %>%
+              group_by(survey_id) %>%
+              summarize(weight_sum = sum(weight_size_class_sum))) %>%
+  # rls survey richness and abundance 
+  left_join(rls %>%
+              group_by(survey_id) %>%
+              summarize(species_richness = n_distinct(species_name),
+                        abundance = sum(total))) %>%
+  # tide exchange 
+  left_join(tide_exchange, by = "survey_id") %>%
+  # now standardize all the continuous predictors!
+  mutate(weight_stand = scale(weight_sum),
+         rich_stand = scale(species_richness),
+         abundance_stand = scale(abundance),
+         tide_stand = scale(avg_exchange_rate))
 
 # Data exploration ------
 
@@ -266,33 +262,31 @@ rls_urchins <- rls %>%
 # So basically you can manipulate the data to summarize whatever thing you're interested in, and then you can join that summarized data with another df of interest by the common site code/site name :)
 
 # rank each site by the year
-rank_2021 <- rls_final %>%
+# I'm sure I can do this a better way but I'll just keep this for now
+rank <- rls_final %>%
+  # 2012
   filter(year(date_time) == "2021") %>%
   group_by(site) %>%
   summarise(nh4_avg2021 = mean(nh4_avg)) %>%
   arrange(desc(nh4_avg2021)) %>% 
   mutate(rank2021 = 1:22,
-         grade2021 = 100 - (100*rank2021/22))
-
-rank_2022 <- rls_final %>%
-  filter(year(date_time) == "2022") %>%
-  group_by(site) %>%
-  summarise(nh4_avg2022 = mean(nh4_avg)) %>%
-  arrange(desc(nh4_avg2022)) %>% 
-  mutate(rank2022 = 1:19,
-         grade2022 = 100 - (100*rank2022/19))
-
-rank_2023 <- rls_final %>%
-  filter(year(date_time) == "2023") %>%
-  group_by(site) %>%
-  summarise(nh4_avg2023 = mean(nh4_avg)) %>%
-  arrange(desc(nh4_avg2023)) %>% 
-  mutate(rank2023 = 1:20,
-         grade2023 = 100 - (100*rank2023/20))
-
-rank <- rank_2021 %>%
-  left_join(rank_2022, by= "site") %>%
-  left_join(rank_2023, by= "site") %>%
+         grade2021 = 100 - (100*rank2021/22)) %>% # 2021
+  #2022
+  left_join(rls_final %>%
+              filter(year(date_time) == "2022") %>%
+              group_by(site) %>%
+              summarise(nh4_avg2022 = mean(nh4_avg)) %>%
+              arrange(desc(nh4_avg2022)) %>% 
+              mutate(rank2022 = 1:19,
+                     grade2022 = 100 - (100*rank2022/19)), by= "site") %>%
+  # 2023
+  left_join(rls_final %>%
+              filter(year(date_time) == "2023") %>%
+              group_by(site) %>%
+              summarise(nh4_avg2023 = mean(nh4_avg)) %>%
+              arrange(desc(nh4_avg2023)) %>% 
+              mutate(rank2023 = 1:20,
+                     grade2023 = 100 - (100*rank2023/20)), by= "site") %>%
   select(grade2021, grade2022, grade2023, site) %>%
   rowwise() %>%
   mutate(avg_grade = mean(c(grade2021, grade2022, grade2023), na.rm = TRUE))
@@ -305,68 +299,15 @@ rls_nh4 %>%
 # 14.6
 
 # how about the end of 2021?
-rbind(bottles2021, bottles2022, bottles2023) %>%
+rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
+      read_csv("Output/Output_data/RLS_nh4_2022.csv"),
+      read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
   mutate(year = as.factor(year)) %>%
   filter(year == "2021") %>%
   filter(month != "May") %>%
   summarise(matrix = mean(matrix))
 # 7.82
 # Go back to the 2021 data and set the ME to 7.82
-
-
-#### code checking only to here -----
-# Plot these data??? ----
-pal <- pnw_palette("Sailboat", 3)
-
-ggplot(rls_nh4) +
-  geom_point(aes(x = reorder(site, -nh4_avg), 
-                 nh4_conc, colour = year, fill = year, pch = month),
-             size = 3, alpha = 0.75) +
-  geom_point(aes(x = reorder(site, -nh4_avg), 
-                 nh4_avg),
-                 size = 3, colour = "black", pch = 20) +
-  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) +
-  labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
-  scale_colour_manual(values = pal) 
-
-#black
-ggplot(rls_nh4) +
-  geom_point(aes(y = reorder(site, -nh4_avg), 
-                 x = nh4_conc, colour = year, fill = year),
-             size = 3, alpha = 0.9) +
-  geom_point(aes(y = reorder(site, -nh4_avg), 
-                 x = nh4_avg),
-             size = 4, colour = "white", pch = 20) +
-  labs(y = "Site", x = "NH4+ Concentration (umol/L)") +
-  scale_colour_manual(values = pal) + 
-  theme_black()
-
- ggsave("Output/Figures/RLS_nh4_all_years_black.png", device = "png",
-        height = 9, width = 16, dpi = 400)
-
-
-# Plot the ranking of each site year to year
-# Plot rank
-ggplot(rank) +
-  geom_point(aes(reorder(site, -avg_grade), grade2021, colour = "2021"), size = 3) +
-  geom_point(aes(reorder(site, -avg_grade), grade2022, colour = "2022"), size = 3) +
-  geom_point(aes(reorder(site, -avg_grade), grade2023, colour = "2023"), size = 3) +
-  labs(x= "Site", y = "Rank", colour = "Year") +
-  scale_colour_manual(values = pal) + 
-  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) 
-
-# ggsave("Output/Figures/rank_all_years.png", device = "png",
-#        height = 5, width = 8, dpi = 400)
-
-
-# Plot biomass vs nh4
-ggplot(rls_final, aes(weight_sum, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_ID)) +
-  geom_smooth(method = lm) +
-  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
-  labs(x = "Total fish biomass (g)", y = "Ammonium concentration (umol)") +
-  theme_classic()
-
 
 
 # Correlation analysis -----
@@ -413,58 +354,102 @@ cor.test(cor_data$nh4_2023, cor_data$nh4_2021,
 # Yes correlated?
 
 # Stats -------
-# Does pee vary by site?
+# Does pee vary by site and year?
 simple_model <- lm(nh4_conc ~ site_ID + year, data = rls_nh4)
 summary(simple_model)
 visreg(simple_model)
 
-# does pee vary with biomass
-model <- lmer(nh4_avg ~ weight_sum + (1|site_ID), rls_final)
-summary(model)
-visreg(model)
 
-pee <- lm(nh4_conc ~ site * depth, rls_nh4)
-anova(pee)
-summary(pee)
+# Put all predictors in a model
+mod_full <- lmer(nh4_avg ~ weight_stand * rich_stand * abundance_stand * tide_stand + (1|site_ID), rls_final)
+summary(mod_full)
 
-visreg(pee, "depth", by = "site")
+# dredge to compare all models
+options(na.action = "na.fail")
+dred <- dredge(mod_full)
+# best model is just the intercept, LOL
+# 2nd best (<delta AIC 2) is just richness
+# 3rd is just weight, but that's > delta AIC 5
+# top 3 models and delta AIC is the same when full mod has all interactions vs when it has none
 
+# look at this "best mod"
+mod_rich <- lmer(nh4_avg ~ rich_stand + (1|site_ID), rls_final)
+summary(mod_rich)
+visreg(mod_rich)
+# Negative relationship between species richness and NH4+...... cool cool cool cool cool
 
-
-sum_stats_pee <- ggpredict(simple_model, terms = c("site_ID", "period")) %>% 
-  #and then we'll just rename one of the columns so it's easier to plot
-  rename(site_ID = x,
-         nh4_conc = predicted,
-         period = group)
-#View(sum_stats_crabs)
 
 # Graphing ----
+pal <- pnw_palette("Sailboat", 3)
 
-# Dot and whisker?
-ggplot() +
-  geom_point(data = sum_stats_pee, 
-             aes(y = site_ID, x = nh4_conc, colour = period),
-             size = 4) +
-  geom_errorbar(data = sum_stats_pee, 
-                aes(y = site_ID,
-                    x = nh4_conc,
-                    colour = period,
-                    # and you can decide which type of error to show here
-                    # we're using 95% CI
-                    xmin = conf.low,
-                    xmax = conf.high),
-                width = 0.2,
-                size = 1.2)  +
-  geom_point(data = rls_data, aes (y = site_ID, x = nh4_conc, colour = period), alpha = 0.5, height = 0, size = 2) +
-  labs(x= "Ammonium concentration (umol/L)", y = "Site") +
-  theme_black() +
-  theme(legend.position="none") 
+rls_nh4 %>%
+  group_by(site) %>%
+  mutate(nh4_avg = mean(nh4_conc)) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_point(aes(x = reorder(site, -nh4_avg), 
+                 nh4_conc, colour = year, fill = year, pch = month),
+             size = 3, alpha = 0.75) +
+  geom_point(aes(x = reorder(site, -nh4_avg), 
+                 nh4_avg),
+             size = 3, colour = "black", pch = 20) +
+  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) +
+  labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
+  scale_colour_manual(values = pal) 
 
-#ggsave("Output/Figures/RLS_pee_black.png", device = "png",
-#       height = 9, width = 16, dpi = 400)
+
+# Plot the ranking of each site year to year
+# Plot rank
+ggplot(rank) +
+  geom_point(aes(reorder(site, -avg_grade), grade2021, colour = "2021"), size = 3) +
+  geom_point(aes(reorder(site, -avg_grade), grade2022, colour = "2022"), size = 3) +
+  geom_point(aes(reorder(site, -avg_grade), grade2023, colour = "2023"), size = 3) +
+  labs(x= "Site", y = "Rank", colour = "Year") +
+  scale_colour_manual(values = pal) + 
+  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) 
+
+# ggsave("Output/Figures/rank_all_years.png", device = "png",
+#        height = 5, width = 8, dpi = 400)
+
+
+# Plot biomass vs nh4
+ggplot(rls_final, aes(weight_sum, nh4_avg, label = site)) +
+  geom_point(aes(colour = site_ID)) +
+  geom_smooth(method = lm) +
+  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
+  labs(x = "Total fish biomass (g)", y = "Ammonium concentration (umol)") +
+  theme_classic() +
+  theme(legend.position = "null")
+
+# richness
+ggplot(rls_final, aes(species_richness, nh4_avg, label = site)) +
+  geom_point(aes(colour = site_ID)) +
+  geom_smooth(method = lm) +
+  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
+  labs(x = "Richness", y = "Ammonium concentration (umol)") +
+  theme_classic() +
+  theme(legend.position = "null")
+
+# abundance
+ggplot(rls_final, aes(abundance, nh4_avg, label = site)) +
+  geom_point(aes(colour = site_ID)) +
+  geom_smooth(method = lm) +
+  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
+  labs(x = "Abundance", y = "Ammonium concentration (umol)") +
+  theme_classic() +
+  theme(legend.position = "null")
+
+# tide exchange
+ggplot(rls_final, aes(avg_exchange_rate, nh4_avg, label = site)) +
+  geom_point(aes(colour = site_ID)) +
+  geom_smooth(method = lm) +
+  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
+  labs(x = "Rate of tidal exchange", y = "Ammonium concentration (umol)") +
+  theme_classic() +
+  theme(legend.position = "null")
 
 # Site vs pee
-ggplot(rls_data, aes(adj_nh4_conc, site, colour = period)) +
+ggplot(rls_nh4, aes(nh4_conc, site, colour = year)) +
   geom_boxplot() +
   theme(axis.text = element_text(size = 15),
         axis.title = element_text(size = 15)) +
@@ -472,35 +457,19 @@ ggplot(rls_data, aes(adj_nh4_conc, site, colour = period)) +
   theme_classic()
 
 # black background
-ggplot(rls_data, aes(nh4_conc, site, fill = site)) +
+ggplot(rls_nh4, aes(nh4_conc, site, fill = site)) +
   geom_boxplot(colour = "white") +
   theme_black() +
   labs(x= "Ammonium concentration (umol/L)", y = "Site") +
-  theme(legend.position = "none") +
-  xlim(c(0, 5))
+  theme(legend.position = "none")
 
 #ggsave("Output/Figures/RLS_sites_pee.png", device = "png",
 #       height = 9, width = 16, dpi = 400)
 
-# Visualize salinity
-ggplot(bottles_f_may2021, aes(x = sal_est, y = site)) +
-  geom_point() +
-  labs(x = "Salinity Estimate", y = "Site")
 
-# histogram
-ggplot(bottles, aes(x = sal_est)) +
-  geom_histogram(colour="black", fill="white") +
-  geom_vline(aes(xintercept = 31.8),
-             color="blue", linetype="dashed", size=1) +
-  geom_vline(aes(xintercept = 27.7),
-             color="red", linetype="dashed", size=1)
-
-# Sal vs pee
-ggplot(bottles_f_may2021, aes(sal_est, nh4_conc)) + geom_point() +
-  geom_smooth(method = lm)
 
 # Visualize temperature
-ggplot(bottles, aes(x = temp_est, y = site)) +
+ggplot(rls_nh4, aes(x = temp_est, y = site)) +
   geom_point() +
   labs(x = "Salinity Estimate", y = "Site")
 
@@ -521,16 +490,11 @@ blue <- paste("#b9d1df", sep="")
 sf_use_s2(FALSE)
 
 # coords
-rls_coords <- rls_nh4 %>%
-  group_by(site_ID) %>%
-  summarise(nh4_mean = mean(nh4_conc)) %>%
+rls_coords <- rls_final %>%
   left_join(
     rls %>% select(site_ID, site_name, latitude, longitude, survey_latitude, survey_longitude,) %>% 
       unique()
     ) %>%
-  left_join(fish_biomass %>%
-              group_by(site_ID) %>%
-              summarize(mean_weight = mean(weight_sum/1000)) ) %>%
   st_as_sf(coords = c("longitude", "latitude")) %>%
   st_set_crs(4326) %>%
   mutate(xjit = ifelse(site_ID == "BMSC6" | 
@@ -538,7 +502,8 @@ rls_coords <- rls_nh4 %>%
                          site_ID == "BMSC21" |
                          site_ID == "BMSC15" |
                          site_ID == "BMSC11" |
-                         site_ID == "BMSC19", -0.015, 0.015))
+                         site_ID == "BMSC19", -0.015, 0.015),
+         weight_kg = weight_sum/1000)
 
 ## Create legend
 #site_names <- as.list(paste(coords$site_num, coords$`Site name`, sep = ": "))
@@ -550,8 +515,8 @@ ggplot() +
           colour = "black",
           pch = 21,
           alpha = 0.9,
-          aes(size = mean_weight,
-              fill = nh4_mean)) +
+          aes(size = weight_kg,
+              fill = nh4_avg)) +
   coord_sf(xlim = c(-125.4, -125.0), ylim = c(48.80, 49), expand = FALSE)  +
   theme_bw() +
   theme(panel.background = element_rect(fill = "white"),
@@ -570,7 +535,37 @@ ggplot() +
             size = 3,
             nudge_x = rls_coords$xjit)
 
-
             
 #ggsave("Pub_figs/Fig.1.png", device = "png",
 #       height = 150, width = 250, units = c("mm"), dpi = 600)
+
+
+# Graveyward -----
+# Dot and whisker?
+sum_stats_pee <- ggpredict(simple_model, terms = c("site_ID", "year")) %>% 
+  #and then we'll just rename one of the columns so it's easier to plot
+  rename(site_ID = x,
+         nh4_conc = predicted,
+         year = group)
+# plot
+ggplot() +
+  geom_point(data = sum_stats_pee, 
+             aes(y = site_ID, x = nh4_conc, colour = year),
+             size = 4) +
+  geom_errorbar(data = sum_stats_pee, 
+                aes(y = site_ID,
+                    x = nh4_conc,
+                    colour = year,
+                    # and you can decide which type of error to show here
+                    # we're using 95% CI
+                    xmin = conf.low,
+                    xmax = conf.high),
+                width = 0.2,
+                size = 1.2)  +
+  geom_point(data = rls_nh4, aes (y = site_ID, x = nh4_conc, colour = year), alpha = 0.5, height = 0, size = 2) +
+  labs(x= "Ammonium concentration (umol/L)", y = "Site") +
+  theme_black() +
+  theme(legend.position="none") 
+
+#ggsave("Output/Figures/RLS_pee_black.png", device = "png",
+#       height = 9, width = 16, dpi = 400)
