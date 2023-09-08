@@ -159,7 +159,6 @@ length_to_weight <- function(datafile){
     mutate(weight_per_fish_g = case_when(
              # Gobies
              species_name == "Rhinogobiops nicholsii" ~ exp(log(0.01047) + 3.03*log(size_class)),
-             
              # Greenlings
              species_name == "Hexagrammos decagrammus" ~ exp(log(0.00813) + 3.13*log(size_class)),
              species_name == "Hexagrammos stelleri" ~ exp(log(0.00692) + 3.16*log(size_class)),
@@ -226,7 +225,6 @@ length_to_weight <- function(datafile){
            # otherwise the calc thinks it's MASSSSSIVE
            weight_per_fish_g = if_else(size_class == 187.5, 18400, weight_per_fish_g),
            weight_per_fish_kg = weight_per_fish_g/1000,
-           biomass_per_indiv = biomass/total,
            weight_size_class_sum = weight_per_fish_kg*total)
   
 }
