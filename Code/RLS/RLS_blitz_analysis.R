@@ -20,13 +20,13 @@ source("Code/Functions.R") # Length to weight function here!
 # Set default plotting
 theme_set(theme_bw())
 
-# Load data + manipulate RLS data ------
+# RLS data: Load data + manipulate  ------
 # RLS data from the website!
 
 # Just the pelagic and cryptic fish
 fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
                  show_col_types = FALSE) %>%
-  rbind(read_csv("Data/RLS/RLS_data/cryptobenthic_fish_abundance.csv",
+  rbind(read_csv("Data/RLS/RLS_data/cryptobenthic_fish_abundance_sizes_added.csv",
                  show_col_types = FALSE)) %>%
   as.data.frame() %>%
   mutate(survey_date = ymd(survey_date),
@@ -101,7 +101,7 @@ fishes <- fish %>%
 # Some people counted M2 fishes on M1, but not always so I don't actually want goby and sculpin counts from M1
 # Figure out what to do here
 
-# Load + manipulate NH+ data ----
+# NH+ data: Load + manipulate  ----
 
 # RLS nh4 from 2021
 # This is the spring blitz, the june samples, and the July samples
@@ -126,9 +126,9 @@ rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   left_join(rls_survey_info, by = c("site_ID", "year")) %>%
   depth_function() # only keep the RLS survey from the transect where the pee is from
 
-# Load + manipulate tide exchange data ----
+# Tide exchange: Load + manipulate data ----
 
-# Downloaded tide height data (m) from http://tbone.biol.sc.edu/tide/tideshow.cgi in 1 min intervals over the two week spanning each RLS spring blitz, in 24 hour time
+# Downloaded tide height data (m) from http://tbone.biol.sc.edu/tide/tideshow.cgi?site=Bamfield%2C+British+Columbia in 1 min intervals over the two week spanning each RLS spring blitz, in 24 hour time
 # 2021 April 26 start
 # added May 20, 2021 for the two Dixon sites
 # 2022 April 25 start
@@ -149,14 +149,18 @@ for (x in 1:nrow(rls_survey_info)) {
   
   output = tide %>%
     filter(between(date_time, survey_start, survey_end)) %>%
-    mutate(rate = 100 * (tide_m - lag(tide_m))/lag(tide_m)) %>%
+    mutate(rate = 100 * (tide_m - lag(tide_m))/lag(tide_m),
+           max = rate[which.max(abs(rate))]) %>%
     slice(-1) %>%
-    summarise(avg_exchange_rate = mean(rate)) %>%
+    summarise(avg_exchange_rate = mean(rate),
+              max_exchange_rate = mean(max)
+              ) %>%
     mutate(survey_id = rls_survey_info$survey_id[x:x])
   
   tide_exchange = rbind(tide_exchange, output)
 }
-# Now I have the average rate of change of tide height for each survey!!!
+# Now I have the average and max rate of change of tide height for each survey!!!
+# no diff in models between avg and max tide exchange, just use avg
 
 
 # Site level averaging -----
@@ -170,9 +174,11 @@ rls_final <-
   rls_nh4 %>% 
   group_by(survey_id) %>%
   mutate(nh4_avg = mean(nh4_conc),
+         temp_avg = mean(temp_est),
+         depth_avg = mean(depth),
          year = as.factor(year)) %>%
   ungroup() %>% 
-  select(c(site, site_ID, survey_id, date_time, nh4_avg)) %>%
+  select(c(site, site_ID, survey_id, date_time, nh4_avg, temp_avg, depth_avg)) %>%
   unique() %>%
   # rls fish biomass 
   left_join(fishes %>%
@@ -189,12 +195,61 @@ rls_final <-
   mutate(weight_stand = scale(weight_sum),
          rich_stand = scale(species_richness),
          abundance_stand = scale(abundance),
-         tide_stand = scale(avg_exchange_rate))
+         tide_stand = scale(avg_exchange_rate),
+         temp_stand = scale(temp_avg),
+         depth_stand = scale(depth_avg))
 
-# Data exploration ------
 
-# Data checks
-goby <- fish %>%
+# Stats -------
+# Does pee vary by site and year?
+simple_model <- lm(nh4_conc ~ site_ID + year, data = rls_nh4)
+summary(simple_model)
+visreg(simple_model)
+
+# Just look at temp 
+temp_df <- rls_final %>%
+  drop_na(temp_stand)
+
+mod_temp <- lm(nh4_avg ~ weight_stand + rich_stand + abundance_stand + tide_stand + temp_stand + depth_stand, temp_df)
+summary(mod_temp)
+# Interesting. In 2021, there was a slightly negative relationship between temperature and nh4+ concentration
+
+# Put all predictors in a model
+mod_full <- lmer(nh4_avg ~ weight_stand * rich_stand * abundance_stand * tide_stand + (1|site_ID), rls_final)
+summary(mod_full)
+
+# Put all predictors in a model + depth
+# Cut the triple + interactions
+mod_fuller <- lmer(nh4_avg ~ weight_stand + rich_stand + abundance_stand + tide_stand + depth_stand +
+                   weight_stand:rich_stand + weight_stand:abundance_stand + 
+                   weight_stand:tide_stand + weight_stand:depth_stand +
+                   rich_stand:abundance_stand + rich_stand:tide_stand + rich_stand:depth_stand +
+                   abundance_stand:tide_stand + abundance_stand:depth_stand +
+                   tide_stand:depth_stand +
+                   (1|site_ID), rls_final)
+summary(mod_fuller)
+
+
+# dredge to compare all models
+options(na.action = "na.fail")
+dred <- dredge(mod_full)
+# best model is just the intercept, LOL
+# 2nd best (<delta AIC 2) is just richness
+# 3rd is just weight, but that's > delta AIC 5
+# top 3 models and delta AIC is the same when full mod has all interactions vs when it has none
+
+# When I add depth and only the 2-way interactions top mod = intercept, 2nd = richness (delta 0.73), 3rd is just depth (delta 5.6)
+
+# look at this "best mod"
+mod_rich <- lmer(nh4_avg ~ rich_stand + (1|site_ID), rls_final)
+summary(mod_rich)
+visreg(mod_rich)
+# Negative relationship between species richness and NH4+...... cool cool cool cool cool
+
+Data exploration ------
+  
+  # Data checks
+  goby <- fish %>%
   filter(species_name == "Rhinogobiops nicholsii") %>%
   filter(site_name == "Goby Town") %>%
   filter(depth == "5.7") %>%
@@ -340,7 +395,7 @@ cor_data <- b_2021 %>%
 
 # 2021 vs 2022
 cor.test(cor_data$nh4_2021, cor_data$nh4_2022, 
-                method = "spearman")
+         method = "spearman")
 # Yes correlated?
 
 # 2022 vs 2023
@@ -352,32 +407,6 @@ cor.test(cor_data$nh4_2022, cor_data$nh4_2023,
 cor.test(cor_data$nh4_2023, cor_data$nh4_2021, 
          method = "spearman")
 # Yes correlated?
-
-# Stats -------
-# Does pee vary by site and year?
-simple_model <- lm(nh4_conc ~ site_ID + year, data = rls_nh4)
-summary(simple_model)
-visreg(simple_model)
-
-
-# Put all predictors in a model
-mod_full <- lmer(nh4_avg ~ weight_stand * rich_stand * abundance_stand * tide_stand + (1|site_ID), rls_final)
-summary(mod_full)
-
-# dredge to compare all models
-options(na.action = "na.fail")
-dred <- dredge(mod_full)
-# best model is just the intercept, LOL
-# 2nd best (<delta AIC 2) is just richness
-# 3rd is just weight, but that's > delta AIC 5
-# top 3 models and delta AIC is the same when full mod has all interactions vs when it has none
-
-# look at this "best mod"
-mod_rich <- lmer(nh4_avg ~ rich_stand + (1|site_ID), rls_final)
-summary(mod_rich)
-visreg(mod_rich)
-# Negative relationship between species richness and NH4+...... cool cool cool cool cool
-
 
 # Graphing ----
 pal <- pnw_palette("Sailboat", 3)
