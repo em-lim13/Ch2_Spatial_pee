@@ -73,11 +73,14 @@ kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
 
 # Pivot longer
 kelp_rls <- kelp_rls1 %>%
-  rename(`0` = Inverts) %>%
+  rename(`0` = Inverts,
+         species_name = Species) %>%
   pivot_longer( cols = `0`:`400`, names_to = "size_class", values_to = "total") %>%
+  mutate(size_class = as.numeric(size_class)) %>%
   drop_na(total) %>%
   filter(total > 0) %>%
-  select(-Total)
+  select(-Total) %>%
+  length_to_weight()
 
 # extract just one row per survey to join with the pee data and tide data
 # Only keep the surveys I have pee samples for!
