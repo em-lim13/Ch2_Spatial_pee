@@ -296,3 +296,19 @@ depth_function <- function(datafile){
     filter(correct == "yes") %>%
     select(-c(correct, hour))
 }
+
+
+# Invert length to weight
+
+# Mean cuke wet weight = 829 g
+# Mean cuke dry weight = 39
+
+invert_length_to_weight <- function(datafile){
+  new_data <- datafile %>%
+    mutate(weight_per_invert_g = case_when(
+      # Cuke avg from my measurements
+      species_name == "Apostichopus californicus" ~ 829,
+      TRUE ~ as.numeric("1")
+    ))
+}
+
