@@ -86,8 +86,10 @@ fishes <- fish %>%
   filter(species_name != "Polyorchis penicillatus") %>% # Filter inverts
   filter(species_name != "Phoca vitulina") %>% # Remove seal
   filter(species_name != "Actinopterygii spp.") %>% # Remove unidentif fish
-  filter(species_name != "Myoxocephalus aenaeus") # Remove east coast fish
+  filter(species_name != "Myoxocephalus aenaeus") %>%# Remove east coast fish
  # careful, the function shrinks the big wolf eel
+  mutate(biomass_per_indiv = biomass/total) # see how the RLS biomass calc estimated each fish size
+
   
 # That one huge wolf eel can't be right
 # Fishbase: max size = 240 cm, max weight = 18.4 kg
