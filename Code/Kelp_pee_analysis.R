@@ -49,11 +49,94 @@ site <- read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv") %>%
 # BiomassM is the average biomass/m2 at each site across all 4 transects
 # DensityM is the average density at each site across all 4 transects
 
-# Put them all together!
+
+# Load RLS data
+kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
+  as.data.frame() %>%
+  filter(Method != 0) %>% # get rid of all method 0's
+  slice(2:n()) %>% # cuts the first blank row
+  rename(
+    site_code = `Site No.`,
+    site_name = `Site Name`, 
+    common_name = `Common name`
+  )  %>% # Rename columns with spaces
+  mutate(Species = str_to_sentence(Species),
+         common_name = str_to_sentence(common_name),
+         Date = dmy(Date),
+         date_time = ymd_hms(paste(Date, Time))) %>% 
+  filter(Species != "Debris - Metal") %>%
+  filter(Species != "Debris - Other") %>%
+  filter(Species != "Debris - Wood") %>%
+  filter(Species != "Debris - Glass") %>%
+  filter(Species != "Debris - Fishing Gear") %>%
+  filter(Species != "Debris - Zero")  # Cut the non-animal species
+
+# Pivot longer
+kelp_rls <- kelp_rls1 %>%
+  rename(`0` = Inverts) %>%
+  pivot_longer( cols = `0`:`400`, names_to = "size_class", values_to = "total") %>%
+  drop_na(total) %>%
+  filter(total > 0) %>%
+  select(-Total)
+
+# extract just one row per survey to join with the pee data and tide data
+# Only keep the surveys I have pee samples for!
+kcca_survey_info <- pee %>%
+  transmute(Date = date,
+            site_code = site_code) %>%
+  unique() %>%
+  left_join(kelp_rls %>%
+              select(site_code, site_name, Date, date_time) %>%
+              unique() %>%
+              mutate(survey_id = 101:127), by = c("Date", "site_code"))
+  
+# Tide data ------
+# July 7, 4 days
+# July 24, 4 days
+# Aug 3, 4 days
+# Aug 7, 1 day
+# Aug 18, 4 days
+# Aug 22, 1 day
+# Sept 1 + 5, each 1 day
+
+tide_kcca <- read_csv("Data/Team_kelp/kcca_tide_data.csv") %>%
+  mutate(date_time = ymd_hms(paste(date, time)))
+
+# build an empty dataframe
+# Do this each time you run the for loop!!!
+tide_exchange_kcca <- data.frame()
+
+# then write the loop
+for (x in 1:nrow(kcca_survey_info)) {
+  
+  survey_start <- ymd_hms(kcca_survey_info$date_time[x:x])
+  survey_end <- survey_start + hours(1)
+  
+  output = tide_kcca %>%
+    filter(between(date_time, survey_start, survey_end)) %>%
+    mutate(rate = 100 * (tide_m - lag(tide_m))/lag(tide_m),
+           max = rate[which.max(abs(rate))]) %>%
+    slice(-1) %>%
+    summarise(avg_exchange_rate = mean(rate),
+              max_exchange_rate = mean(max)
+    ) %>%
+    mutate(survey_id = kcca_survey_info$survey_id[x:x])
+  
+  tide_exchange_kcca = rbind(tide_exchange_kcca, output)
+}
+# Now I have the average and max rate of change of tide height for each survey!!!
+# no diff in models between avg and max tide exchange, just use avg
+
+
+# Put them all together! ----
 data <- pee %>%
   left_join(den, by = c("site_code", "sample")) %>%
   left_join(bio, by = c("site_code", "sample")) %>%
   left_join(site, by = "SiteName") %>%
+  left_join(kcca_survey_info %>%
+              select(-c(Date, site_name)), by = "site_code"
+            ) %>%
+  left_join(tide_exchange_kcca, by = "survey_id") %>%
   replace(is.na(.), 0) %>% # replace NA with 0 bc those sites had no kelp
   mutate(forest_biomass = BiomassM*Area_m2,
          nh4_avg = mean(c(nh4_outside, nh4_inside)),
