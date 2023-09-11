@@ -82,6 +82,12 @@ kelp_rls <- kelp_rls1 %>%
   select(-Total) %>%
   length_to_weight()
 
+# are we missing many fish sizes
+no_size <- kelp_rls %>%
+  filter(size_class == 0) %>%
+  count(species_name, size_class)
+# Just a couple sculpins and gobies, nothing major
+
 # extract just one row per survey to join with the pee data and tide data
 # Only keep the surveys I have pee samples for!
 kcca_survey_info <- pee %>%
