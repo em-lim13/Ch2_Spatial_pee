@@ -33,7 +33,17 @@ fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
          year = as.factor(year(survey_date)),
          site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code)) %>%
   rename(site_ID = site_code) %>%
-  filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
+  filter(month(survey_date) == 4 | month(survey_date) == 5) %>% # Just the RLS blitz data for now
+  mutate(size_class = case_when(
+    species_name == "Rhinogobiops nicholsii" & size_class == 0 ~ 7.5,
+    species_name == "Artedius harringtoni" & size_class == 0 ~ 5,
+    species_name == "Jordania zonope" & size_class == 0 ~ 5,
+    species_name == "Oxylebius pictus" & size_class == 0 ~ 12.5,
+    TRUE ~ as.numeric(size_class)))
+
+# Rhinogobiops nicholsii 7.5 avg
+# Artedius harringtoni avg 5
+# Jordania zonope avg 5
 
 # Just the mobile inverts
 invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
@@ -248,7 +258,7 @@ summary(mod_rich)
 visreg(mod_rich)
 # Negative relationship between species richness and NH4+...... cool cool cool cool cool
 
-Data exploration ------
+#Data exploration ------
   
   # Data checks
   goby <- fish %>%
@@ -294,7 +304,7 @@ new <- rls_new %>%
 #write_csv(new, "Output/Output_data/new_species.csv")
 
 # missing size data
-no_sizes <- fish %>%
+no_sizes <- fishes %>%
   filter(size_class == "0") %>%
   filter(species_name != "Bolinopsis infundibulum") %>%
   filter(species_name != "Pleuronichthys coenosus") %>%
@@ -302,6 +312,19 @@ no_sizes <- fish %>%
   filter(species_name != "Polyorchis penicillatus") %>%
   select(-year)
 
+# just look at goby sizes
+goby <- fishes %>%
+  filter(species_name == "Oxylebius pictus") %>%
+  summarize(mean = mean(size_class))
+
+hist(goby$size_class) 
+
+# Gobies 7.5 avg
+# Artedius harringtoni avg 5
+# Jordania zonope avg 5
+# Oxylebius pictus avg 12.5
+
+  
 #write_csv(no_sizes, "Output/Output_data/missing_fish_sizes.csv")
 
 # What's the most abundant species?
