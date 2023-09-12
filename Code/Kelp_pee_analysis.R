@@ -31,17 +31,23 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
          kelp_sp = ifelse(Kelp == 0, "none",
                           ifelse(Macro_5m2 == 0, "nereo", 
                                  ifelse(Nereo_5m2 == "0", "macro", "mixed")))) %>%
-  left_join(names, by = "SiteName") %>%
-  rename(kelp_den = Kelp) %>% 
+  left_join(names, by = "SiteName") %>% 
   replace(is.na(.), 0) %>%
   # Add the averaged site level variables from Claire!
   left_join(read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv"), by = "SiteName") %>%
   group_by(SiteName) %>%
-  mutate(BiomassM = mean(Biomassm2kg)) %>% 
+  mutate(BiomassM = mean(Biomassm2kg)) %>%
+  ungroup() %>%
+  rename(kelp_den = Kelp,
+         site_name = SiteName) %>% 
   filter(Transect != "15") 
     #select(site_code, SiteName, HeightT, BiomassTkg, Biomassm2kg, sample) 
-# BiomassTkg is kelp density x average biomass for each transect
-# Biomassm2kg is just that number / 5 bc the transect was 5 m2
+
+# Transect level variables:
+  # BiomassTkg is kelp density x average biomass for each transect
+  # Biomassm2kg is just that number / 5 bc the transect was 5 m2
+
+# Site level variables
 # BiomassM is the average biomass/m2 at each site across all 4 transects
 # DensityM is the average density at each site across all 4 transects
 
@@ -50,17 +56,9 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
 # kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
 pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
 
-# extract just one row per survey to join with the pee data and tide data
-# Only keep the surveys I have pee samples for!
-kcca_survey_info <- pee %>%
-  transmute(Date = date,
-            site_code = site_code) %>%
-  unique() %>%
-  left_join(kelp_rls %>%
-              select(site_code, site_name, Date, date_time) %>%
-              unique() %>%
-              mutate(survey_id = 101:127), by = c("Date", "site_code"))
 
+max(data$nh4_avg)
+min(data$nh4_avg) #[rls_nh4$nh4_conc > 0])
 
 # RLS data ----
 kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
@@ -75,7 +73,7 @@ kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
   mutate(Species = str_to_sentence(Species),
          common_name = str_to_sentence(common_name),
          Date = dmy(Date),
-         date_time = ymd_hms(paste(Date, Time))) %>% 
+         date_time_survey = ymd_hms(paste(Date, Time))) %>% 
   filter(Species != "Debris - Metal") %>%
   filter(Species != "Debris - Other") %>%
   filter(Species != "Debris - Wood") %>%
@@ -94,7 +92,21 @@ kelp_rls <- kelp_rls1 %>%
   select(-Total) %>%
   length_to_weight() # length to weight function
 
-  
+# extract just one row per survey to join with the pee data and tide data
+# Only keep the surveys I have pee samples for!
+kcca_survey_info <- pee %>%
+  transmute(Date = date,
+            site_code = site_code) %>%
+  unique() %>%
+  left_join(kelp_rls %>%
+              select(site_code, site_name, Date, date_time_survey) %>%
+              unique() %>%
+              mutate(survey_id = 101:127), by = c("Date", "site_code")) %>%
+  left_join((kelp %>%
+              select(c(site_code, Time_start)) %>%
+              unique()), by = "site_code") %>%
+  mutate(date_time_kelp = ymd_hms(paste(Date, Time_start)))
+
 # Tide data ------
 # July 7, 4 days
 # July 24, 4 days
@@ -114,7 +126,8 @@ tide_exchange_kcca <- data.frame()
 # then write the loop
 for (x in 1:nrow(kcca_survey_info)) {
   
-  survey_start <- ymd_hms(kcca_survey_info$date_time[x:x])
+  survey_start <- ymd_hms(kcca_survey_info$date_time_kelp[x:x]) 
+    # tie the times to the time the nh4 samples were collected, during kelp surveys
   survey_end <- survey_start + hours(1)
   
   output = tide_kcca %>%
@@ -139,6 +152,7 @@ data <- pee %>%
   group_by(site_code) %>%
   mutate(nh4_avg = mean(c(nh4_outside, nh4_inside)),
          nh4_in_avg = mean(nh4_inside),
+         nh4_out_avg = mean(nh4_outside),
          in_out_avg = mean(in_minus_out),
          depth_avg = mean(depth_m)) %>%
   ungroup() %>%
@@ -174,7 +188,7 @@ data <- pee %>%
          abundance_stand = scale(abundance),
          tide_stand = scale(avg_exchange_rate),
          depth_stand = scale(depth_avg)) %>%
-  filter(SiteName != "Second Beach South")
+  filter(site_name != "Second Beach South")
 
 # Each row is a mini transect into the kelp forest
   # That has an individual kelp density + biomass estimate + inside vs outside ammonium value
@@ -182,7 +196,14 @@ data <- pee %>%
 # new df for one row per site
 
 data_s <- data %>%
-  select(site, site_code, survey_id, nh4_in_avg, nh4_avg, depth_avg, avg_exchange_rate, BiomassM)
+  select(site, site_code, survey_id, nh4_in_avg, nh4_out_avg, nh4_avg, depth_avg, avg_exchange_rate, BiomassM, bio_mean_scale, weight_stand, rich_stand, abundance_stand, tide_stand,  depth_stand) %>%
+  unique()
+
+data_s_reduced <- data %>%
+  select(site, site_code, survey_id, nh4_in_avg, depth_avg, avg_exchange_rate, BiomassM, weight_sum, species_richness, abundance, avg_exchange_rate,  depth_avg) %>%
+  unique() %>%
+  rename(nh4_avg = nh4_in_avg)
+  
 
 # Stats -----
 
@@ -256,10 +277,32 @@ plot(mod_cont_resids)
 AIC(bio_mod, bio_mod2, mod1)
 # Yes bio_mod2 is preferred, taking the log of the response variable helps a lot
 
-# Ok let's plot this
 
 
+# Site level model!
 
+kelp_mod_full <- lm(nh4_out_avg ~ weight_stand + rich_stand + abundance_stand + tide_stand + depth_stand + bio_mean_scale + 
+                      weight_stand:tide_stand + weight_stand:bio_mean_scale +
+                      rich_stand:tide_stand + rich_stand:bio_mean_scale +
+                      abundance_stand:tide_stand +
+                      abundance_stand:bio_mean_scale +
+                       tide_stand:bio_mean_scale, data_s)
+summary(kelp_mod_full)
+
+options(na.action = "na.fail")
+dredge <- as.data.frame(dredge(kelp_mod_full)) %>%
+  filter(delta < 3)
+# nh4 avg second best mod was just tide
+# nh4 inside avg second best mod was just bio mean, then just tide
+# nh4 outside avg second best mod just tide
+
+kelp_mod_mean <- lm(nh4_avg ~ weight_stand + tide_stand  + bio_mean_scale + 
+                      weight_stand:tide_stand + weight_stand:bio_mean_scale, data_s)
+
+
+summary(kelp_mod_best)
+
+visreg(kelp_mod_best)
 # Plots ----
 
 
