@@ -138,6 +138,9 @@ rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   left_join(rls_survey_info, by = c("site_ID", "year")) %>%
   depth_function() # only keep the RLS survey from the transect where the pee is from
 
+max(rls_final$nh4_avg)
+min(rls_final$nh4_avg) #[rls_nh4$nh4_conc > 0])
+
 # Tide exchange: Load + manipulate data ----
 
 # Downloaded tide height data (m) from http://tbone.biol.sc.edu/tide/tideshow.cgi?site=Bamfield%2C+British+Columbia in 1 min intervals over the two week spanning each RLS spring blitz, in 24 hour time
@@ -211,6 +214,19 @@ rls_final <-
          temp_stand = scale(temp_avg),
          depth_stand = scale(depth_avg))
 
+rls_final_reduced <- rls_final %>%
+  mutate(BiomassM = 0) %>%
+  select(site, site_ID, survey_id, nh4_avg, depth_avg, avg_exchange_rate, BiomassM, weight_sum, species_richness, abundance, avg_exchange_rate,  depth_avg) %>%
+  rename(site_code = site_ID)
+
+big_rls <- rbind(rls_final_reduced, data_s_reduced) %>%
+  mutate(weight_stand = scale(weight_sum),
+         rich_stand = scale(species_richness),
+         abundance_stand = scale(abundance),
+         tide_stand = scale(avg_exchange_rate),
+         depth_stand = scale(depth_avg),
+         biomass_mean_stand = scale(BiomassM))
+
 
 # Stats -------
 # Does pee vary by site and year?
@@ -257,6 +273,15 @@ mod_rich <- lmer(nh4_avg ~ rich_stand + (1|site_ID), rls_final)
 summary(mod_rich)
 visreg(mod_rich)
 # Negative relationship between species richness and NH4+...... cool cool cool cool cool
+
+
+
+# What if I put allll the data together?????
+mod_all <- lm(nh4_avg ~ weight_stand + tide_stand  + biomass_mean_stand + 
+                   weight_stand:tide_stand + weight_stand:biomass_mean_stand, big_rls)
+
+summary(kelp_mod_best)
+visreg(kelp_mod_best)
 
 #Data exploration ------
   
