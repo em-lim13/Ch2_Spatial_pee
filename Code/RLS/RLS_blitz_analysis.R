@@ -454,7 +454,7 @@ rls_nh4 %>%
 
 # Plot the ranking of each site year to year
 # Plot rank
-ggplot(rank) +
+ggplot(data = rank) +
   geom_point(aes(reorder(site, -avg_grade), grade2021, colour = "2021"), size = 3) +
   geom_point(aes(reorder(site, -avg_grade), grade2022, colour = "2022"), size = 3) +
   geom_point(aes(reorder(site, -avg_grade), grade2023, colour = "2023"), size = 3) +
