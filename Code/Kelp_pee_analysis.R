@@ -2,55 +2,67 @@
 # March 3, 2023
 # Em Lim
 
-# Load packages
+# Load packages and functions -----
 library(tidyverse)
 library(MuMIn)
 library(visreg)
 library(ggplot2)
 library(lmerTest)
 library(lme4)
+library(lubridate)
+library(DHARMa)
+
+# set theme and load functions
 theme_set(theme_bw())
 source("Code/theme_black.R")
+source("Code/Functions.R")
 
-# Load data
+# Kelp data ----
 
 # load site names
 names <- read_csv("Data/Team_kelp/Output_data/site_names.csv")
 
-# kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
-pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
 
-# kelp density data from Claire
-den <- read_csv("Data/Team_kelp/Output_data/kelp_density_2022_KDC_CMA.csv") %>%
+# transect level kelp biomass + density data from Claire
+kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   as.data.frame() %>%
-  filter(Transect_dist != "15") %>% # Remove the transect that's not paired with a pee sample
-  mutate(sample = ifelse(Transect_dist == 0, 1, 
-                  ifelse(Transect_dist == 5, 2, 3)),
-         kelp_den = Macro_5m2 + Nereo_5m2,
-         kelp_sp = ifelse(kelp_den == 0, "none",
-                   ifelse(Macro_5m2 == 0, "nereo", 
-                   ifelse(Nereo_5m2 == "0", "macro", "mixed"))))%>%
-  select(site_code, sample, kelp_sp, kelp_den)
-
-# kelp biomass data from Claire
-bio <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
-  as.data.frame() %>%
-  filter(Transect != "15") %>% 
   mutate(sample = ifelse(Transect == 0, 1, 
-                  ifelse(Transect == 5, 2, 3))) %>%
+                  ifelse(Transect == 5, 2, 3)),
+         kelp_sp = ifelse(Kelp == 0, "none",
+                          ifelse(Macro_5m2 == 0, "nereo", 
+                                 ifelse(Nereo_5m2 == "0", "macro", "mixed")))) %>%
   left_join(names, by = "SiteName") %>%
-  select(site_code, SiteName, HeightT, BiomassTkg, Biomassm2kg, sample)
+  rename(kelp_den = Kelp) %>% 
+  replace(is.na(.), 0) %>%
+  # Add the averaged site level variables from Claire!
+  left_join(read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv"), by = "SiteName") %>%
+  group_by(SiteName) %>%
+  mutate(BiomassM = mean(Biomassm2kg)) %>% 
+  filter(Transect != "15") 
+    #select(site_code, SiteName, HeightT, BiomassTkg, Biomassm2kg, sample) 
 # BiomassTkg is kelp density x average biomass for each transect
 # Biomassm2kg is just that number / 5 bc the transect was 5 m2
-
-# Site level stuff from Claire
-site <- read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv") %>%
-  select(SiteName, BiomassM, DensityM, Composition, Area_m2)
 # BiomassM is the average biomass/m2 at each site across all 4 transects
 # DensityM is the average density at each site across all 4 transects
 
 
-# Load RLS data
+# NH4+ data -----
+# kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
+pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
+
+# extract just one row per survey to join with the pee data and tide data
+# Only keep the surveys I have pee samples for!
+kcca_survey_info <- pee %>%
+  transmute(Date = date,
+            site_code = site_code) %>%
+  unique() %>%
+  left_join(kelp_rls %>%
+              select(site_code, site_name, Date, date_time) %>%
+              unique() %>%
+              mutate(survey_id = 101:127), by = c("Date", "site_code"))
+
+
+# RLS data ----
 kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
   as.data.frame() %>%
   filter(Method != 0) %>% # get rid of all method 0's
@@ -71,7 +83,7 @@ kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
   filter(Species != "Debris - Fishing Gear") %>%
   filter(Species != "Debris - Zero")  # Cut the non-animal species
 
-# Pivot longer
+# Pivot longer for biomass
 kelp_rls <- kelp_rls1 %>%
   rename(`0` = Inverts,
          species_name = Species) %>%
@@ -80,24 +92,8 @@ kelp_rls <- kelp_rls1 %>%
   drop_na(total) %>%
   filter(total > 0) %>%
   select(-Total) %>%
-  length_to_weight()
+  length_to_weight() # length to weight function
 
-# are we missing many fish sizes
-no_size <- kelp_rls %>%
-  filter(size_class == 0) %>%
-  count(species_name, size_class)
-# Just a couple sculpins and gobies, nothing major
-
-# extract just one row per survey to join with the pee data and tide data
-# Only keep the surveys I have pee samples for!
-kcca_survey_info <- pee %>%
-  transmute(Date = date,
-            site_code = site_code) %>%
-  unique() %>%
-  left_join(kelp_rls %>%
-              select(site_code, site_name, Date, date_time) %>%
-              unique() %>%
-              mutate(survey_id = 101:127), by = c("Date", "site_code"))
   
 # Tide data ------
 # July 7, 4 days
@@ -139,28 +135,65 @@ for (x in 1:nrow(kcca_survey_info)) {
 
 # Put them all together! ----
 data <- pee %>%
-  left_join(den, by = c("site_code", "sample")) %>%
-  left_join(bio, by = c("site_code", "sample")) %>%
-  left_join(site, by = "SiteName") %>%
+  # so some site level averaging
+  group_by(site_code) %>%
+  mutate(nh4_avg = mean(c(nh4_outside, nh4_inside)),
+         nh4_in_avg = mean(nh4_inside),
+         in_out_avg = mean(in_minus_out),
+         depth_avg = mean(depth_m)) %>%
+  ungroup() %>%
+  # join kelp data with both transect + site avgs
+  left_join(kelp, by = c("site_code", "sample")) %>%
+  # join site survey info for the survey ID
   left_join(kcca_survey_info %>%
               select(-c(Date, site_name)), by = "site_code"
             ) %>%
+  # join tide exchange data
   left_join(tide_exchange_kcca, by = "survey_id") %>%
-  replace(is.na(.), 0) %>% # replace NA with 0 bc those sites had no kelp
+  # Join fish biomass
+  left_join(kelp_rls %>%
+              drop_na(weight_size_class_sum) %>%
+              group_by(site_code) %>%
+              summarize(weight_sum = sum(weight_size_class_sum))) %>%
+  # Join richness and abundance
+  left_join(kelp_rls %>%
+              group_by(site_code) %>%
+              summarize(species_richness = n_distinct(species_name),
+                        abundance = sum(total))) %>%
+  # 
   mutate(forest_biomass = BiomassM*Area_m2,
-         nh4_avg = mean(c(nh4_outside, nh4_inside)),
          percent_diff = 100*(nh4_inside-nh4_outside)/nh4_outside,
-         den_scale = base::scale(kelp_den),
-         bio_tran_scale = base::scale(Biomassm2kg),
-         bio_mean_scale = base::scale(BiomassM),
-         forest_bio_scale = base::scale(forest_biomass),
-         area_scale = base::scale(Area_m2),
-         log_pee_diff = log(in_minus_out + 1)) %>%
+         den_scale = scale(kelp_den), # make sure density is right
+         bio_tran_scale = scale(Biomassm2kg),
+         bio_mean_scale = scale(BiomassM),
+         forest_bio_scale = scale(forest_biomass),
+         area_scale = scale(Area_m2),
+         log_pee_diff = log(in_minus_out + 1),
+         weight_stand = scale(weight_sum),
+         rich_stand = scale(species_richness),
+         abundance_stand = scale(abundance),
+         tide_stand = scale(avg_exchange_rate),
+         depth_stand = scale(depth_avg)) %>%
   filter(SiteName != "Second Beach South")
 
+# Each row is a mini transect into the kelp forest
+  # That has an individual kelp density + biomass estimate + inside vs outside ammonium value
 
-# OK let's do some friggin model dredging -----
+# new df for one row per site
 
+data_s <- data %>%
+  select(site, site_code, survey_id, nh4_in_avg, nh4_avg, depth_avg, avg_exchange_rate, BiomassM)
+
+# Stats -----
+
+# I don't think this is linear I'm going to have to fit some kind of curve to it.....
+
+# linear model though for fun
+kelp_pee_mod <- lmer(in_minus_out ~ kelp_den + (1|site), data = data)
+summary(kelp_pee_mod)
+visreg(kelp_pee_mod)
+
+# full model for dredging
 model_all <- lmer(in_minus_out ~ den_scale + bio_tran_scale + bio_mean_scale + area_scale + forest_bio_scale + kelp_sp + (1|site), data = data, na.action = na.fail)
 summary(model_all)
 visreg(model_all)
@@ -177,6 +210,14 @@ bio_mod <- lmer(in_minus_out ~ bio_mean_scale + (1|site), data = data)
 summary(bio_mod)
 visreg(bio_mod)
 # Forests with more mean biomass/m2 retain more pee!
+
+# redo dredge with the rest of the vars
+model_all <- lmer(in_minus_out ~ den_scale + bio_tran_scale + bio_mean_scale + area_scale + forest_bio_scale + kelp_sp +
+                    weight_stand + rich_stand + abundance_stand + tide_stand + depth_stand + (1|site), data = data, na.action = na.fail)
+summary(model_all)
+
+dredge <- as.data.frame(dredge(model_all)) %>%
+  filter(delta < 3)
 
 # plot?
 ggplot(data, aes(bio_mean_scale, in_minus_out)) +
@@ -200,9 +241,16 @@ visreg(mod1, "bio_tran_scale", by = "bio_mean_scale")
 
 
 # go back to the preferred model with just mean biomass
-bio_mod2 <- lmer(log_pee_diff ~ bio_mean_scale + (1|site), data = data)
+bio_mod2 <- lmer(log_pee_diff ~ bio_mean_scale  + (1|site), data = data)
 summary(bio_mod2)
 visreg(bio_mod2)
+
+# check resid
+mod_cont_resids <- simulateResiduals(bio_mod)
+plot(mod_cont_resids)
+# weight fucking shit
+
+
 
 # Use AIC to see if this improves things
 AIC(bio_mod, bio_mod2, mod1)
@@ -212,19 +260,16 @@ AIC(bio_mod, bio_mod2, mod1)
 
 
 
-
-# Old Kelp density data -----
-
-# Also Claire's biomass estimates
-# Basically it would be nice to have a single metric of how much kelp is in each forest
-kcca_summary <- kcca_final %>%
-  group_by(site_code) %>%
-  summarise(kelp_den = mean(kelp_den),
-            in_minus_out = mean(in_minus_out),
-            kelp_sp = kelp_sp)
-
-
 # Plots ----
+
+
+ggplot(data, aes(bio_mean_scale, log_pee_diff)) +
+  geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
+  geom_smooth(method = lm, colour = "blue")+
+  geom_smooth(method = loess, colour = "red")+
+  
+labs(y = "Inside - outside kelp forest ammonium (log(uM))", x = "Forest biomass") 
+  
 
 # boxplot site vs pee diff
 ggplot(data, aes(site, in_minus_out)) +
@@ -277,17 +322,17 @@ data %>%
                        guide = "legend")
 # Ok this is sort of neat, you can see the base ammonium levels and then how different they are, by site. might be neat to arrange these with kelp density instead of site on the x
 
-# stats! ----
-# I don't think this is linear I'm going to have to fit some kind of curve to it.....
-
-# linear model though for fun
-kelp_pee_mod <- lmer(in_minus_out ~ kelp_den + (1|site), data = data)
-summary(kelp_pee_mod)
-visreg(kelp_pee_mod)
-
 
 
 # Claire has area, density, biomass
 # Got average individual biomass for each kelp, which you can scale up to the average biomass of each transect
 
 
+# Old Kelp density data -----
+# Also Claire's biomass estimates
+# Basically it would be nice to have a single metric of how much kelp is in each forest
+kcca_summary <- kcca_final %>%
+  group_by(site_code) %>%
+  summarise(kelp_den = mean(kelp_den),
+            in_minus_out = mean(in_minus_out),
+            kelp_sp = kelp_sp)
