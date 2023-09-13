@@ -156,7 +156,7 @@ pee_calc2 <- function(data_path) {
 
 length_to_weight <- function(datafile){
   new_data <- datafile %>%
-    mutate(weight_per_fish_g = case_when(
+    mutate(weight_per_indiv_g = case_when(
              # Gobies
              species_name == "Rhinogobiops nicholsii" ~ exp(log(0.01047) + 3.03*log(size_class)),
              # Greenlings
@@ -223,9 +223,9 @@ length_to_weight <- function(datafile){
              TRUE ~ as.numeric(NA)),
            # set the really big wolf eel weight manually to largest record weight
            # otherwise the calc thinks it's MASSSSSIVE
-           weight_per_fish_g = if_else(size_class == 187.5, 18400, weight_per_fish_g),
-           weight_per_fish_kg = weight_per_fish_g/1000,
-           weight_size_class_sum = weight_per_fish_kg*total)
+           weight_per_indiv_g = if_else(size_class == 187.5, 18400, weight_per_indiv_g),
+           weight_per_indiv_kg = weight_per_indiv_g/1000,
+           weight_size_class_sum = weight_per_indiv_kg*total)
   
 }
 
@@ -296,17 +296,84 @@ depth_function <- function(datafile){
 }
 
 
-# Invert length to weight
+# Invert length to weight ------
 
 # Mean cuke wet weight = 829 g
 # Mean cuke dry weight = 39
 
+# scallops length to weight
+# scallop <- read_csv("Data/RLS/scallop_l_w.csv")
+
+# mod <- lm(log(body_weight) ~ log(shell_height), data = scallop)
+# summary(mod)
+# intercept = log(a) = -8.77259
+# slope = b = 2.39442
+
+
 invert_length_to_weight <- function(datafile){
   new_data <- datafile %>%
-    mutate(weight_per_invert_g = case_when(
-      # Cuke avg from my measurements
-      species_name == "Apostichopus californicus" ~ 829,
-      TRUE ~ as.numeric("1")
-    ))
+    mutate(weight_per_indiv_g = case_when(
+      # Echinoderms
+      species_name == "Apostichopus californicus" ~ 829, # Cuke avg from my measurements
+      # Urchins
+      species_name == "Mesocentrotus franciscanus" ~ 209, # 19.38 dry Peters
+      species_name == "Strongylocentrotus purpuratus" ~ 104, # 10.71 dry Peters 
+      species_name == "Strongylocentrotus droebachiensis" ~ 51, # 2.2 gonad weight Siikavuopio
+      # stars
+      species_name == "Patiria miniata" ~ 63, # 6.83 g dry weight Peters
+      species_name == "Dermasterias imbricata" ~ 63, # 6.83 g dry weight Peters (bat star)
+      species_name == "Orthasterias koehleri" ~ 5.5, # Menge 1975 (Leptastarias)
+      species_name == "Pisaster ochraceus" ~ 73, # Sanford + p_ochraceus 2019
+      species_name == "Evasterias troschelii" ~ 63, # guess Sanford + p_ochraceus 2019
+      species_name == "Pycnopodia helianthoides" ~ size_class*0.5, # size data, guess for now!!
+                      # pycno size is a guess, careful
+      species_name == "Stylasterias forreri" ~ 63, # Sanford + p_ochraceus 2019
+      species_name == "Mediaster aequalis" ~ 5.5, # Menge 1975 (Leptastarias)
+      species_name == "Leptasterias hexactis" ~ 5.5, # Menge 1975
+      species_name == "Henricia pumila" ~ 5.5, # Menge 1975 (Leptastarias)
+      species_name == "Henricia spp." ~ 5.5, # Menge 1975 (Leptastarias)
+      
+      # Snails
+      species_name == "Pomaulax gibberosus" ~ 255, # 6.85 dry Peters (Wavy snail)
+      species_name == "Haliotis kamtschatkana" ~ 0.0000578*(size_class*10)^3.2, # Zhang 2007
+      species_name == "Ceratostoma foliatum" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Calliostoma ligatum" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Nucella lamellosa" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Tegula funebralis" ~ 1, # ROUGH from Palmer 1982 + 1988
+      # Limpets + scallop
+      species_name == "Lottia scutum" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Acmaea mitra" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Megathura crenulata" ~ 60, # 16.7 dry Peters
+      species_name == "Crassadoma gigantea" ~ exp(-8.77259 + 2.39442*log(size_class)), #McDonald
+      # Nudis
+      species_name == "Hermissenda crassicornis" ~ 1, # Megina 2007, also AVILA 1997
+      species_name == "Peltodoris nobilis" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Dirona albolineata" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Doris montereyensis" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Dendronotus iris" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Diaulula odonoghuei" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Polycera tricolor" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Triopha modesta" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Doris odhneri" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Acanthodoris hudsoni" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Diodora aspera" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Limacia cockerelli" ~ 1, # ROUGH from Palmer 1982 + 1988
+      species_name == "Cadlina luteomarginata" ~ 1, # ROUGH from Palmer 1982 + 1988
+      # Crabs
+      species_name == "Paguroidea spp." ~ 5, # Rough from Griggiths and Gosselin
+      species_name == "Pagurus hemphilli" ~ 5, # Rough from Griggiths and Gosselin
+      species_name == "Scyra acutifrons" ~ 1, # Hines
+      species_name == "Cancer productus" ~ 200, # rough from my data
+      species_name == "Glebocarcinus oregonensis" ~ 5, # Hines H. nudus
+      species_name == "Pugettia producta" ~ 46, # Hines
+      species_name == "Pagurus beringanus" ~ 5, # Rough from Griggiths and Gosselin
+      TRUE ~ as.numeric("1")),
+      weight_per_indiv_kg = weight_per_indiv_g/1000,
+      weight_size_class_sum = weight_per_indiv_kg*total)
 }
+
+# just the top 89-45 inverts.... anything that was seen more than 9 times
+
+
+
 
