@@ -61,15 +61,6 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
   rename(site_ID = site_code) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
-# Join all rls data together
-rls <- rbind(fish, invert)
-
-# extract just one row per survey to join with the pee data and tide data
-rls_survey_info <- rls %>%
-  select(site_ID, year, depth, survey_id, survey_date, hour) %>%
-  rename(survey_depth = depth) %>%
-  unique() %>%
-  mutate(date_time = ymd_hms(paste(survey_date, hour)))
 
 # RLS Biomass calculations -------
 
@@ -96,7 +87,7 @@ fishes <- fish %>%
   filter(species_name != "Polyorchis penicillatus") %>% # Filter inverts
   filter(species_name != "Phoca vitulina") %>% # Remove seal
   filter(species_name != "Actinopterygii spp.") %>% # Remove unidentif fish
-  filter(species_name != "Myoxocephalus aenaeus") %>%# Remove east coast fish
+  filter(species_name != "Myoxocephalus aenaeus") %>% # Remove east coast fish
  # careful, the function shrinks the big wolf eel
   mutate(biomass_per_indiv = biomass/total) # see how the RLS biomass calc estimated each fish size
 
@@ -107,11 +98,26 @@ fishes <- fish %>%
 # That formula must be off
 # I also have size data for inverts "Haliotis kamtschatkana", "Crassadoma gigantea", "Pycnopodia helianthoides", "Polyorchis penicillatus", "Bolinopsis infundibulum", Pleurobrachia bachei, Pleuronichthys coenosus
 
-# We also measured sea cucumbers a few times???? Where did that data go?
-# We also have urchin size data from this year
 
 # Some people counted M2 fishes on M1, but not always so I don't actually want goby and sculpin counts from M1
 # Figure out what to do here
+
+# now calc invert weights
+inverts <- invert %>%
+  invert_length_to_weight() %>%
+  mutate(biomass_per_indiv = biomass/total) # see how the RLS biomass calc estimated each fish size
+
+
+# Join all rls data together
+rls <- rbind(fishes, inverts)
+
+# extract just one row per survey to join with the pee data and tide data
+rls_survey_info <- rls %>%
+  select(site_ID, year, depth, survey_id, survey_date, hour) %>%
+  rename(survey_depth = depth) %>%
+  unique() %>%
+  mutate(date_time = ymd_hms(paste(survey_date, hour)))
+
 
 # NH+ data: Load + manipulate  ----
 
@@ -138,8 +144,6 @@ rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   left_join(rls_survey_info, by = c("site_ID", "year")) %>%
   depth_function() # only keep the RLS survey from the transect where the pee is from
 
-max(rls_final$nh4_avg)
-min(rls_final$nh4_avg) #[rls_nh4$nh4_conc > 0])
 
 # Tide exchange: Load + manipulate data ----
 
@@ -619,7 +623,7 @@ ggplot() +
 #       height = 150, width = 250, units = c("mm"), dpi = 600)
 
 
-# Graveyward -----
+# Graveyard -----
 # Dot and whisker?
 sum_stats_pee <- ggpredict(simple_model, terms = c("site_ID", "year")) %>% 
   #and then we'll just rename one of the columns so it's easier to plot
