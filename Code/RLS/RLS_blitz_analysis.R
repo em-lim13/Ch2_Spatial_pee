@@ -11,6 +11,7 @@ library(ggeffects)
 library(lubridate)
 library(sf)
 library(lmerTest)
+library(vegan) # for diversity indexes
 library(MuMIn) # for dredge?
 
 # Source pretty functions
@@ -32,7 +33,6 @@ fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
   mutate(survey_date = ymd(survey_date),
          year = as.factor(year(survey_date)),
          site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code)) %>%
-  rename(site_ID = site_code) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) %>% # Just the RLS blitz data for now
   mutate(size_class = case_when(
     species_name == "Rhinogobiops nicholsii" & size_class == 0 ~ 7.5,
@@ -58,7 +58,6 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
            species_name == "Berthella californica" ~ "Berthella chacei",
            species_name == "Henricia leviuscula" ~ "Henricia spp.",
                         TRUE ~ as.character(species_name))) %>%
-  rename(site_ID = site_code) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
 
@@ -67,20 +66,16 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
 # A note on length to weight relationships
 # The overall relationship is W = a*L^b
 # log form of the above formula is log(W) = log(a) + b*log(L)
-# The Siegel paper presents the log transformed a value
-# Eg if the Siegel paper says a = -4.60517 that corresponds to log(0.01)
-# So some papers will present a already log transformed (a negative value) and some will present a as an untransformed value (positive decimal)
 # log(W) = log(a) + b*log(L) is the same as log10(W) = log10(a) + b*log10(L) so don't worry about the base as long as it's the same across the formula
 
 # Use the a and b parameters from FishBase
-# W = a*L^b
-# log form of the above formula is log(W) = log(a) + b*log(L)
 # W = exp(log(a) + b*log(L))
 # Cite Froese R, Thorson JT, Reyes Jr RB. A Bayesian approach for estimating length‐weight relationships in fishes. Journal of Applied Ichthyology. 2014 Feb;30(1):78-85.
 
 # Use WL relationships from fishbase to estimate weight of fish in RLS surveys
 fishes <- fish %>%
   length_to_weight() %>% # Use nice length to weight function!
+          # careful, the function shrinks the big wolf eel
   filter(species_name != "Bolinopsis infundibulum") %>%
   filter(species_name != "Pleuronichthys coenosus") %>%
   filter(species_name != "Pleurobrachia bachei") %>%
@@ -88,8 +83,10 @@ fishes <- fish %>%
   filter(species_name != "Phoca vitulina") %>% # Remove seal
   filter(species_name != "Actinopterygii spp.") %>% # Remove unidentif fish
   filter(species_name != "Myoxocephalus aenaeus") %>% # Remove east coast fish
- # careful, the function shrinks the big wolf eel
-  mutate(biomass_per_indiv = biomass/total) # see how the RLS biomass calc estimated each fish size
+  home_range() %>% # calculate each fish's home range
+  mutate(biomass_per_indiv = biomass/total, # see how the RLS biomass calc estimated each fish size
+         range_weight = 1/(range*100), # scale smallest range to a weight of 1, everything else is fraction
+         weight_weighted = weight_size_class_sum*range_weight) # weight weights by range
 
   
 # That one huge wolf eel can't be right
@@ -105,7 +102,11 @@ fishes <- fish %>%
 # now calc invert weights
 inverts <- invert %>%
   invert_length_to_weight() %>%
-  mutate(biomass_per_indiv = biomass/total) # see how the RLS biomass calc estimated each fish size
+  mutate(biomass_per_indiv = biomass/total, # see how the RLS biomass calc estimated each fish size
+         range = 0,
+         range_weight = 1, 
+         weight_weighted = weight_size_class_sum*range_weight) 
+    # For now the invert ranges are just NAs, because I'm pretty sure they'll all be really small ranges and also the biomass estimates are already so vague
 
 
 # Join all rls data together
@@ -113,10 +114,33 @@ rls <- rbind(fishes, inverts)
 
 # extract just one row per survey to join with the pee data and tide data
 rls_survey_info <- rls %>%
-  select(site_ID, year, depth, survey_id, survey_date, hour) %>%
+  select(site_code, year, depth, survey_id, survey_date, hour) %>%
   rename(survey_depth = depth) %>%
   unique() %>%
   mutate(date_time = ymd_hms(paste(survey_date, hour)))
+
+
+# Pivot the data wider for diversity metrics
+# currently the df I want to tack the metrics onto is sorted by date, oldest at top
+# Spreading long data for taxa abundance to columns for each species
+
+rls_wider <- rls %>% # Spreading the data to wide format
+  dplyr::select(survey_id, species_name, total) %>% 
+  group_by(survey_id, species_name) %>%
+  summarise(total = sum(total)) %>%
+  ungroup() %>%
+  # Removing any columns not needed
+  spread(key = species_name, value = total) %>%
+  replace(is.na(.), 0)
+
+
+rls_wide <- rls_wider %>%
+  select(-survey_id) %>%
+  mutate(shannon = (diversity(rls_wide, index = "shannon")),
+         simpson = (diversity(rls_wide, index = "simpson"))) %>%
+  cbind(rls_wider %>%
+          select(survey_id)) %>%
+  select(survey_id, shannon, simpson)
 
 
 # NH+ data: Load + manipulate  ----
@@ -141,7 +165,8 @@ rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
                         read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
   mutate(year = as.factor(year)) %>%
   filter(month == "May") %>% 
-  left_join(rls_survey_info, by = c("site_ID", "year")) %>%
+  rename(site_code = site_ID) %>%
+  left_join(rls_survey_info, by = c("site_code", "year")) %>%
   depth_function() # only keep the RLS survey from the transect where the pee is from
 
 
@@ -197,31 +222,30 @@ rls_final <-
          depth_avg = mean(depth),
          year = as.factor(year)) %>%
   ungroup() %>% 
-  select(c(site, site_ID, survey_id, date_time, nh4_avg, temp_avg, depth_avg)) %>%
+  select(c(site, site_code, survey_id, date_time, nh4_avg, temp_avg, depth_avg)) %>%
   unique() %>%
   # rls fish biomass 
   left_join(fishes %>%
               group_by(survey_id) %>%
-              summarize(weight_sum = sum(weight_size_class_sum))) %>%
-  # rls survey richness and abundance 
+              summarize(fish_weight_sum = sum(weight_size_class_sum),
+                        fish_weight_weighted = sum(weight_weighted))) %>%
+  # rls survey richness and abundance and total biomass
   left_join(rls %>%
               group_by(survey_id) %>%
-              summarize(species_richness = n_distinct(species_name),
+              summarize(weight_sum = sum(weight_size_class_sum),
+                        species_richness = n_distinct(species_name),
                         abundance = sum(total))) %>%
+  # diversity indexes
+  left_join(rls_wide, by = "survey_id") %>%
   # tide exchange 
-  left_join(tide_exchange, by = "survey_id") %>%
-  # now standardize all the continuous predictors!
-  mutate(weight_stand = scale(weight_sum),
-         rich_stand = scale(species_richness),
-         abundance_stand = scale(abundance),
-         tide_stand = scale(avg_exchange_rate),
-         temp_stand = scale(temp_avg),
-         depth_stand = scale(depth_avg))
+  left_join(tide_exchange, by = "survey_id") 
 
+
+# reduce the df so i can join it with kelp rls data
 rls_final_reduced <- rls_final %>%
   mutate(BiomassM = 0) %>%
-  select(site, site_ID, survey_id, nh4_avg, depth_avg, avg_exchange_rate, BiomassM, weight_sum, species_richness, abundance, avg_exchange_rate,  depth_avg) %>%
-  rename(site_code = site_ID)
+  select(site, site_code, survey_id, nh4_avg, depth_avg, avg_exchange_rate, BiomassM, weight_sum, species_richness, abundance, avg_exchange_rate,  depth_avg) %>%
+  rename(site_code = site_code)
 
 big_rls <- rbind(rls_final_reduced, data_s_reduced) %>%
   mutate(weight_stand = scale(weight_sum),
@@ -233,38 +257,53 @@ big_rls <- rbind(rls_final_reduced, data_s_reduced) %>%
 
 
 # Stats -------
+
+# Response variable: nh4_avg
+  # this is the mean of 3 measurements, how do I incorperate that error in the models?
+
+# Possible biological predictors:
+  # 1) Biomass
+    # a) weight_sum = total wet weight of all the animals observed on RLS transects
+    # b) fish_weight_sum = total wet weight of just the fishes (kg)
+    # c) fish_weight_weighted = total weight of fishes weighted by home range size
+  # 3) Biodiversity
+    # a) species_richness = total # species on each transect
+    # b) shannon = shannon diversity of each transect
+    # c) simpson = simpson diversity of each transect
+          # simpson > 100 AIC units lower which I compare "full" models
+
+# Possible abiotic predictors
+  # 1) depth_avg = average nh4 sample depths
+  # 2) avg_exchange_rate = average rate of change of the tide height over the 1 hour survey
+  # 3) year = 2021, 2022, or 2023
+  # 4) site_code = each unique site, probably a random effect?
+  # 3) time of survey???
+
 # Does pee vary by site and year?
-simple_model <- lm(nh4_conc ~ site_ID + year, data = rls_nh4)
+simple_model <- lm(nh4_conc ~ site_code + year, data = rls_nh4)
 summary(simple_model)
 visreg(simple_model)
 
-# Just look at temp 
-temp_df <- rls_final %>%
-  drop_na(temp_stand)
-
-mod_temp <- lm(nh4_avg ~ weight_stand + rich_stand + abundance_stand + tide_stand + temp_stand + depth_stand, temp_df)
-summary(mod_temp)
-# Interesting. In 2021, there was a slightly negative relationship between temperature and nh4+ concentration
 
 # Put all predictors in a model
-mod_full <- lmer(nh4_avg ~ weight_stand * rich_stand * abundance_stand * tide_stand + (1|site_ID), rls_final)
+mod_full <- lmer(nh4_avg ~ scale(weight_sum) * scale(shannon) * scale(abundance) * scale(avg_exchange_rate) + (1|site_code), rls_final)
 summary(mod_full)
 
 # Put all predictors in a model + depth
 # Cut the triple + interactions
-mod_fuller <- lmer(nh4_avg ~ weight_stand + rich_stand + abundance_stand + tide_stand + depth_stand +
-                   weight_stand:rich_stand + weight_stand:abundance_stand + 
-                   weight_stand:tide_stand + weight_stand:depth_stand +
-                   rich_stand:abundance_stand + rich_stand:tide_stand + rich_stand:depth_stand +
-                   abundance_stand:tide_stand + abundance_stand:depth_stand +
-                   tide_stand:depth_stand +
-                   (1|site_ID), rls_final)
+mod_fuller <- lmer(nh4_avg ~ scale(weight_sum) + scale(simpson) + scale(abundance) + scale(avg_exchange_rate) + scale(depth_avg) +
+                   scale(weight_sum):scale(simpson) + scale(weight_sum):scale(abundance) + 
+                   scale(weight_sum):scale(avg_exchange_rate) + scale(weight_sum):scale(depth_avg) +
+                   scale(simpson):scale(abundance) + scale(simpson):scale(avg_exchange_rate) + scale(simpson):scale(depth_avg) +
+                   scale(abundance):scale(avg_exchange_rate) + scale(abundance):scale(depth_avg) +
+                   scale(avg_exchange_rate):scale(depth_avg) +
+                   (1|site_code), rls_final)
 summary(mod_fuller)
 
 
 # dredge to compare all models
 options(na.action = "na.fail")
-dred <- dredge(mod_full)
+dred <- dredge(mod_fuller)
 # best model is just the intercept, LOL
 # 2nd best (<delta AIC 2) is just richness
 # 3rd is just weight, but that's > delta AIC 5
@@ -273,7 +312,7 @@ dred <- dredge(mod_full)
 # When I add depth and only the 2-way interactions top mod = intercept, 2nd = richness (delta 0.73), 3rd is just depth (delta 5.6)
 
 # look at this "best mod"
-mod_rich <- lmer(nh4_avg ~ rich_stand + (1|site_ID), rls_final)
+mod_rich <- lmer(nh4_avg ~ species_richness + (1|site_code), rls_final)
 summary(mod_rich)
 visreg(mod_rich)
 # Negative relationship between species richness and NH4+...... cool cool cool cool cool
@@ -281,11 +320,12 @@ visreg(mod_rich)
 
 
 # What if I put allll the data together?????
-mod_all <- lm(nh4_avg ~ weight_stand + tide_stand  + biomass_mean_stand + 
-                   weight_stand:tide_stand + weight_stand:biomass_mean_stand, big_rls)
+mod_all <- lm(nh4_avg ~ scale(weight_sum) + scale(avg_exchange_rate)  + scale(BiomassM) + 
+                scale(weight_sum):avg_exchange_rate + scale(weight_sum):scale(BiomassM), big_rls)
 
 summary(kelp_mod_best)
 visreg(kelp_mod_best)
+
 
 #Data exploration ------
   
@@ -497,7 +537,7 @@ ggplot(data = rank) +
 
 # Plot biomass vs nh4
 ggplot(rls_final, aes(weight_sum, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_ID)) +
+  geom_point(aes(colour = site_code)) +
   geom_smooth(method = lm) +
   geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
   labs(x = "Total fish biomass (g)", y = "Ammonium concentration (umol)") +
@@ -506,7 +546,25 @@ ggplot(rls_final, aes(weight_sum, nh4_avg, label = site)) +
 
 # richness
 ggplot(rls_final, aes(species_richness, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_ID)) +
+  geom_point(aes(colour = site_code)) +
+  geom_smooth(method = lm) +
+  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
+  labs(x = "Richness", y = "Ammonium concentration (umol)") +
+  theme_classic() +
+  theme(legend.position = "null")
+
+# shannon
+ggplot(rls_final, aes(shannon, nh4_avg, label = site)) +
+  geom_point(aes(colour = site_code)) +
+  geom_smooth(method = lm) +
+  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
+  labs(x = "Richness", y = "Ammonium concentration (umol)") +
+  theme_classic() +
+  theme(legend.position = "null")
+
+# simpson
+ggplot(rls_final, aes(simpson, nh4_avg, label = site)) +
+  geom_point(aes(colour = site_code)) +
   geom_smooth(method = lm) +
   geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
   labs(x = "Richness", y = "Ammonium concentration (umol)") +
@@ -515,7 +573,7 @@ ggplot(rls_final, aes(species_richness, nh4_avg, label = site)) +
 
 # abundance
 ggplot(rls_final, aes(abundance, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_ID)) +
+  geom_point(aes(colour = site_code)) +
   geom_smooth(method = lm) +
   geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
   labs(x = "Abundance", y = "Ammonium concentration (umol)") +
@@ -524,7 +582,7 @@ ggplot(rls_final, aes(abundance, nh4_avg, label = site)) +
 
 # tide exchange
 ggplot(rls_final, aes(avg_exchange_rate, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_ID)) +
+  geom_point(aes(colour = site_code)) +
   geom_smooth(method = lm) +
   geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
   labs(x = "Rate of tidal exchange", y = "Ammonium concentration (umol)") +
@@ -575,17 +633,17 @@ sf_use_s2(FALSE)
 # coords
 rls_coords <- rls_final %>%
   left_join(
-    rls %>% select(site_ID, site_name, latitude, longitude, survey_latitude, survey_longitude,) %>% 
+    rls %>% select(site_code, site_name, latitude, longitude, survey_latitude, survey_longitude,) %>% 
       unique()
     ) %>%
   st_as_sf(coords = c("longitude", "latitude")) %>%
   st_set_crs(4326) %>%
-  mutate(xjit = ifelse(site_ID == "BMSC6" | 
-                         site_ID == "BMSC3" |
-                         site_ID == "BMSC21" |
-                         site_ID == "BMSC15" |
-                         site_ID == "BMSC11" |
-                         site_ID == "BMSC19", -0.015, 0.015),
+  mutate(xjit = ifelse(site_code == "BMSC6" | 
+                         site_code == "BMSC3" |
+                         site_code == "BMSC21" |
+                         site_code == "BMSC15" |
+                         site_code == "BMSC11" |
+                         site_code == "BMSC19", -0.015, 0.015),
          weight_kg = weight_sum/1000)
 
 ## Create legend
@@ -614,7 +672,7 @@ ggplot() +
        size = "Fish biomass (kg)")  +
   geom_text(data = rls_coords,
             aes(x = survey_longitude, y = survey_latitude, 
-                label = site_ID),
+                label = site_code),
             size = 3,
             nudge_x = rls_coords$xjit)
 
@@ -624,19 +682,29 @@ ggplot() +
 
 
 # Graveyard -----
+
+# Just look at temp 
+temp_df <- rls_final %>%
+  drop_na(temp_avg)
+
+mod_temp <- lm(nh4_avg ~ scale(weight_sum) + scale(species_richness) + scale(abundance) + scale(avg_exchange_rate) + scale(temp_avg) + scale(depth_avg), temp_df)
+summary(mod_temp)
+# Interesting. In 2021, there was a slightly negative relationship between temperature and nh4+ concentration
+
+
 # Dot and whisker?
-sum_stats_pee <- ggpredict(simple_model, terms = c("site_ID", "year")) %>% 
+sum_stats_pee <- ggpredict(simple_model, terms = c("site_code", "year")) %>% 
   #and then we'll just rename one of the columns so it's easier to plot
-  rename(site_ID = x,
+  rename(site_code = x,
          nh4_conc = predicted,
          year = group)
 # plot
 ggplot() +
   geom_point(data = sum_stats_pee, 
-             aes(y = site_ID, x = nh4_conc, colour = year),
+             aes(y = site_code, x = nh4_conc, colour = year),
              size = 4) +
   geom_errorbar(data = sum_stats_pee, 
-                aes(y = site_ID,
+                aes(y = site_code,
                     x = nh4_conc,
                     colour = year,
                     # and you can decide which type of error to show here
@@ -645,7 +713,7 @@ ggplot() +
                     xmax = conf.high),
                 width = 0.2,
                 size = 1.2)  +
-  geom_point(data = rls_nh4, aes (y = site_ID, x = nh4_conc, colour = year), alpha = 0.5, height = 0, size = 2) +
+  geom_point(data = rls_nh4, aes (y = site_code, x = nh4_conc, colour = year), alpha = 0.5, height = 0, size = 2) +
   labs(x= "Ammonium concentration (umol/L)", y = "Site") +
   theme_black() +
   theme(legend.position="none") 
