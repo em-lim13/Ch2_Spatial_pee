@@ -152,7 +152,7 @@ pee_calc2 <- function(data_path) {
 }
 
 
-# Biomass function ----
+# Fish length to weight ----
 
 length_to_weight <- function(datafile){
   new_data <- datafile %>%
@@ -230,72 +230,6 @@ length_to_weight <- function(datafile){
 }
 
 
-# Joining surveys up by depth -----
-
-# tricky ones:
-### BMSC1 2021: two survey depths, one nh4 sample 
-### BMSC6 2022: two nh4 samples at 2 depths
-### BMSC1 2022: two survey depths, one nh4 sample 
-### BMSC5 2022: two surveys at same depth, one nh4 sample
-# I was on the later shallower survey
-### BMSC6 2022: two surveys at same depth, two nh4 samples!
-### BMSC11 2022: two survey depths, one nh4 sample 
-### BMSC12 2022: two survey depths, one nh4 sample 
-### BMSC11 2023: two survey depths, one nh4 sample 
-# I tried to take nh4 samples between the shallower and deeper surveys
-### BMSC12 2023: two survey depths, one nh4 sample 
-# I tried to take nh4 samples between the shallower and deeper surveys
-# BMSC24 2023: two survey depths, one nh4 sample
-# I tried to take nh4 samples between the shallower and deeper surveys
-# BMSC25 2023: two survey depths, one nh4 sample
-# these two were back to back, don't average
-# BMSC26 2023: two survey depths, one nh4  (only 2 pee reps tho)
-# these two were back to back, don't average
-# I was with the 10 m team that got in first
-# BMSC27 2023: two survey depths, one nh4 sample
-# also back to back, don't average
-# BMSC1 2023: two survey depths, one nh4 sample
-# BMSC5 2023: two survey depths, one nh4 sample
-# BMSC6 2023: two survey depths, one nh4 sample
-# the shallower team was way shallower
-# BMSC8 2023: two survey depths, one nh4 sample
-
-# So I need to decide what to do about repeated surveys
-# Is the nh4 sample I took specific to the transect I took it on?
-# Which means I should cut the RLS surveys that aren't the transects where the pee samples were taken
-# Or would I want to average the two transects and take the mean biomass from the two to relate to the overall pee sample
-
-# For simplicity I think I just want to keep the RLS survey from the transect where the pee is from
-
-depth_function <- function(datafile){
-  new_data <- datafile %>%
-    mutate(correct = case_when(
-    site_ID== "BMSC6" &year =="2022" &depth == "8.5" &survey_depth== "6.5" ~ "no",
-    site_ID== "BMSC6" &year =="2022" &depth == "5.5" &survey_depth== "9" ~ "no",
-    site_ID== "BMSC6" &year =="2022" &depth == "6" &survey_depth== "9" ~ "no",
-    site_ID== "BMSC1" &year == "2021" & survey_depth == "6.5" ~ "no",
-    site_ID== "BMSC1" &year == "2022" & survey_depth == "4.7" ~ "no",
-    site_ID== "BMSC5" &year == "2022" & survey_depth == "6.2" ~ "no",
-    site_ID== "BMSC11" &year == "2022" & survey_depth == "8.5" ~ "no",
-    site_ID== "BMSC12" &year == "2022" & survey_depth == "9" ~ "no",
-    site_ID== "BMSC11" &year == "2023" & survey_depth == "5.5" ~ "no",
-    site_ID== "BMSC12" &year == "2023" & survey_depth == "6.5" ~ "no",
-    site_ID== "BMSC24" &year == "2023" & survey_depth == "7.5" ~ "no",
-    site_ID== "BMSC25" &year == "2023" & survey_depth == "5.5" ~ "no",
-    site_ID== "BMSC26" &year == "2023" & survey_depth == "9.5" ~ "no",
-    site_ID== "BMSC27" &year == "2023" & survey_depth == "7" ~ "no",
-    site_ID== "BMSC1" &year == "2023" & survey_depth == "8" ~ "no",
-    site_ID== "BMSC5" &year == "2023" & survey_depth == "8" ~ "no",
-    site_ID== "BMSC6" &year == "2023" & survey_depth == "5.5" ~ "no",
-    site_ID== "BMSC8" &year == "2023" & survey_depth == "7.5" ~ "no",
-    TRUE ~ as.character("yes")
-    # cut out the rls transects I didn't directly measure nh4 on 
-  )) %>%
-    filter(correct == "yes") %>%
-    select(-c(correct, hour))
-}
-
-
 # Invert length to weight ------
 
 # Mean cuke wet weight = 829 g
@@ -326,7 +260,7 @@ invert_length_to_weight <- function(datafile){
       species_name == "Pisaster ochraceus" ~ 73, # Sanford + p_ochraceus 2019
       species_name == "Evasterias troschelii" ~ 63, # guess Sanford + p_ochraceus 2019
       species_name == "Pycnopodia helianthoides" ~ size_class*0.5, # size data, guess for now!!
-                      # pycno size is a guess, careful
+      # pycno size is a guess, careful
       species_name == "Stylasterias forreri" ~ 63, # Sanford + p_ochraceus 2019
       species_name == "Mediaster aequalis" ~ 5.5, # Menge 1975 (Leptastarias)
       species_name == "Leptasterias hexactis" ~ 5.5, # Menge 1975
@@ -373,6 +307,149 @@ invert_length_to_weight <- function(datafile){
 }
 
 # just the top 89-45 inverts.... anything that was seen more than 9 times
+
+
+
+# Fish home ranges ----
+
+home_range <- function(datafile){
+  new_data <- datafile %>%
+    mutate(range = case_when(
+      # Gobies
+      species_name == "Rhinogobiops nicholsii" ~ 0.05, # guessed from painted greenling
+      # Greenlings
+      species_name == "Hexagrammos decagrammus" ~ 0.3, # 0.1 - 0.5
+      species_name == "Hexagrammos stelleri" ~ 0.3, # from kelp greenling 0.1 - 0.5
+      species_name == "Oxylebius pictus" ~ 0.02,
+      species_name == "Ophiodon elongatus" ~ 28.3, # 3.3 - 498
+      species_name == "Hexagrammos spp." ~ 0.3, # from kelp greenling 0.1 - 0.5
+      
+      # Rockfish
+      species_name == "Sebastes melanops" ~ 0.5,
+      species_name == "Sebastes caurinus" ~ 0.15,
+      species_name == "Sebastes flavidus" ~ 500, # 140-1400 range
+      species_name == "Sebastes maliger" ~ 0.05,
+      species_name == "Sebastes nebulosus" ~ 0.01,
+      species_name == "Sebastes spp." ~ 0.18, # avg of small range rockfish
+      species_name == "Sebastes spp. juv" ~ 0.18, # avg of small range rockfish
+      species_name == "Sebastes pinniger" ~ 700, # up to 700
+      
+      # Sculpins, all guesses based on cabezon + red irish
+      species_name == "Jordania zonope" ~ 0.05,
+      species_name == "Artedius harringtoni" ~ 0.05,
+      species_name == "Artedius lateralis" ~ 0.05,
+      species_name == "Artedius fenestralis" ~ 0.05,
+      species_name == "Hemilepidotus hemilepidotus" ~ 0.05,# actual estimate
+      species_name == "Cottidae spp." ~ 0.05,
+      species_name == "Enophrys bison" ~ 0.05,
+      species_name == "Rhamphocottus richardsonii" ~ 0.05,
+      species_name == "Scorpaenichthys marmoratus" ~ 0.05,# actual estimate
+      species_name == "Oligocottus maculosus" ~ 0.05,
+      species_name == "Leptocottus armatus" ~ 0.05,
+      species_name == "Blepsias cirrhosus" ~0.05,
+      species_name == "Myoxocephalus polyacanthocephalus" ~ 0.05,
+      species_name == "Myoxocephalus aenaeus" ~ 0.05,
+      species_name == "Asemichthys taylori" ~ 0.05,
+      
+      #Perch
+      species_name == "Embiotoca lateralis" ~ 1, # inferred
+      species_name == "Rhacochilus vacca" ~ 1, # unknown, inferred from other perch
+      species_name == "Brachyistius frenatus" ~ 1, # inferred
+      species_name == "Cymatogaster aggregata" ~ 1, # unknown, inferred from other perch
+      species_name == "Embiotocidae spp." ~ 1, # unknown, inferred from other perch
+      species_name == "Percidae spp." ~ 1, # unknown, inferred from other perch
+      
+      # Gunnels + gunnel-like fish
+      species_name == "Anarrhichthys ocellatus" ~ 0.05,
+      species_name == "Apodichthys flavidus" ~ 0.05, # inferred from wolf eel
+      species_name == "Pholis ornata" ~ 0.05, # inferred from wolf eel
+      species_name == "Pholis laeta" ~ 0.05, # inferred from wolf eel
+      species_name == "Pholis clemensi" ~ 0.05, # inferred from wolf eel
+      species_name == "Pholis spp." ~ 0.05, # inferred from wolf eel
+      species_name == "Lumpenus sagitta" ~ 0.05, # inferred from wolf eel
+      species_name == "Chirolophis nugator" ~ 0.05, # inferred from wolf eel
+      
+      #Misc
+      species_name == "Liparis florae" ~ 0.05, # inferred from wolf eel
+      species_name == "Aulorhynchus flavidus" ~ 1, # inferred from perch
+      species_name == "Syngnathus leptorhynchus" ~ 1, # inferred from perch
+      species_name == "Clupea pallasii" ~ 525, # 50 - 1000
+      species_name == "Gasterosteus aculeatus" ~ 1, # inferred from perch
+      species_name == "Porichthys notatus" ~ 300, # midshipman migrate at night 0 - 366 m deep
+      species_name == "Gibbonsia metzi" ~ 1, # inferred from perch
+      species_name == "Citharichthys stigmaeus" ~ 100, # flatfish seem to move a lot, avg from them
+      TRUE ~ as.numeric(NA))
+      )
+  
+}
+
+
+
+# Joining surveys up by depth -----
+
+# tricky ones:
+### BMSC1 2021: two survey depths, one nh4 sample 
+### BMSC6 2022: two nh4 samples at 2 depths
+### BMSC1 2022: two survey depths, one nh4 sample 
+### BMSC5 2022: two surveys at same depth, one nh4 sample
+# I was on the later shallower survey
+### BMSC6 2022: two surveys at same depth, two nh4 samples!
+### BMSC11 2022: two survey depths, one nh4 sample 
+### BMSC12 2022: two survey depths, one nh4 sample 
+### BMSC11 2023: two survey depths, one nh4 sample 
+# I tried to take nh4 samples between the shallower and deeper surveys
+### BMSC12 2023: two survey depths, one nh4 sample 
+# I tried to take nh4 samples between the shallower and deeper surveys
+# BMSC24 2023: two survey depths, one nh4 sample
+# I tried to take nh4 samples between the shallower and deeper surveys
+# BMSC25 2023: two survey depths, one nh4 sample
+# these two were back to back, don't average
+# BMSC26 2023: two survey depths, one nh4  (only 2 pee reps tho)
+# these two were back to back, don't average
+# I was with the 10 m team that got in first
+# BMSC27 2023: two survey depths, one nh4 sample
+# also back to back, don't average
+# BMSC1 2023: two survey depths, one nh4 sample
+# BMSC5 2023: two survey depths, one nh4 sample
+# BMSC6 2023: two survey depths, one nh4 sample
+# the shallower team was way shallower
+# BMSC8 2023: two survey depths, one nh4 sample
+
+# So I need to decide what to do about repeated surveys
+# Is the nh4 sample I took specific to the transect I took it on?
+# Which means I should cut the RLS surveys that aren't the transects where the pee samples were taken
+# Or would I want to average the two transects and take the mean biomass from the two to relate to the overall pee sample
+
+# For simplicity I think I just want to keep the RLS survey from the transect where the pee is from
+
+depth_function <- function(datafile){
+  new_data <- datafile %>%
+    mutate(correct = case_when(
+    site_code== "BMSC6" &year =="2022" &depth == "8.5" &survey_depth== "6.5" ~ "no",
+    site_code== "BMSC6" &year =="2022" &depth == "5.5" &survey_depth== "9" ~ "no",
+    site_code== "BMSC6" &year =="2022" &depth == "6" &survey_depth== "9" ~ "no",
+    site_code== "BMSC1" &year == "2021" & survey_depth == "6.5" ~ "no",
+    site_code== "BMSC1" &year == "2022" & survey_depth == "4.7" ~ "no",
+    site_code== "BMSC5" &year == "2022" & survey_depth == "6.2" ~ "no",
+    site_code== "BMSC11" &year == "2022" & survey_depth == "8.5" ~ "no",
+    site_code== "BMSC12" &year == "2022" & survey_depth == "9" ~ "no",
+    site_code== "BMSC11" &year == "2023" & survey_depth == "5.5" ~ "no",
+    site_code== "BMSC12" &year == "2023" & survey_depth == "6.5" ~ "no",
+    site_code== "BMSC24" &year == "2023" & survey_depth == "7.5" ~ "no",
+    site_code== "BMSC25" &year == "2023" & survey_depth == "5.5" ~ "no",
+    site_code== "BMSC26" &year == "2023" & survey_depth == "9.5" ~ "no",
+    site_code== "BMSC27" &year == "2023" & survey_depth == "7" ~ "no",
+    site_code== "BMSC1" &year == "2023" & survey_depth == "8" ~ "no",
+    site_code== "BMSC5" &year == "2023" & survey_depth == "8" ~ "no",
+    site_code== "BMSC6" &year == "2023" & survey_depth == "5.5" ~ "no",
+    site_code== "BMSC8" &year == "2023" & survey_depth == "7.5" ~ "no",
+    TRUE ~ as.character("yes")
+    # cut out the rls transects I didn't directly measure nh4 on 
+  )) %>%
+    filter(correct == "yes") %>%
+    select(-c(correct, hour))
+}
+
 
 
 
