@@ -13,6 +13,8 @@ library(sf)
 library(lmerTest)
 library(vegan) # for diversity indexes
 library(MuMIn) # for dredge?
+library(TMB)
+library(glmmTMB) # better for random effects?
 
 # Source pretty functions
 source("Code/theme_black.R")
@@ -135,11 +137,8 @@ rls_wider <- rls %>% # Spreading the data to wide format
 
 
 rls_wide <- rls_wider %>%
-  select(-survey_id) %>%
-  mutate(shannon = (diversity(rls_wide, index = "shannon")),
-         simpson = (diversity(rls_wide, index = "simpson"))) %>%
-  cbind(rls_wider %>%
-          select(survey_id)) %>%
+  mutate(shannon = (diversity((rls_wider %>% select(-survey_id)), index = "shannon")),
+         simpson = (diversity((rls_wider %>% select(-survey_id)), index = "simpson"))) %>%
   select(survey_id, shannon, simpson)
 
 
@@ -222,7 +221,7 @@ rls_final <-
          depth_avg = mean(depth),
          year = as.factor(year)) %>%
   ungroup() %>% 
-  select(c(site, site_code, survey_id, date_time, nh4_avg, temp_avg, depth_avg)) %>%
+  select(c(site, site_code, survey_id, date_time, year, nh4_avg, temp_avg, depth_avg)) %>%
   unique() %>%
   # rls fish biomass 
   left_join(fishes %>%
@@ -233,52 +232,230 @@ rls_final <-
   left_join(rls %>%
               group_by(survey_id) %>%
               summarize(weight_sum = sum(weight_size_class_sum),
+                        all_weight_weighted = sum(weight_weighted),
                         species_richness = n_distinct(species_name),
                         abundance = sum(total))) %>%
   # diversity indexes
   left_join(rls_wide, by = "survey_id") %>%
   # tide exchange 
-  left_join(tide_exchange, by = "survey_id") 
+  left_join(tide_exchange, by = "survey_id") %>%
+  # scale and centre variables here
+  mutate(
+    # the biomass + abundance variables
+    weight_sum_stand = c(scale(weight_sum)),
+    fish_weight_sum_stand = c(scale(fish_weight_sum)),
+    fish_weight_weighted_stand = c(scale(fish_weight_weighted)),
+    all_weight_weighted_stand = c(scale(all_weight_weighted)),
+    abundance_stand = c(scale(abundance)),
+    # biodiversity variables
+    species_richness_stand = c(scale(species_richness)),
+    shannon_stand = c(scale(shannon)),
+    simpson_stand = c(scale(simpson)),
+    # abiotic variables I should control for
+    depth_avg_stand = c(scale(depth_avg)),
+    avg_exchange_rate_stand = c(scale(avg_exchange_rate)),
+    tide_cat = case_when(avg_exchange_rate < -0.1958187 ~ "Ebb",
+                         avg_exchange_rate < 0.1958187 ~ "Slack",
+                         avg_exchange_rate > 0.1958187 ~ "Flood")
+  )
 
+# can i make a flood, ebb, slack var for exchange?
+max(rls_final$avg_exchange_rate)
+min(rls_final$avg_exchange_rate)
+hist(rls_final$avg_exchange_rate)
 
-# reduce the df so i can join it with kelp rls data
-rls_final_reduced <- rls_final %>%
-  mutate(BiomassM = 0) %>%
-  select(site, site_code, survey_id, nh4_avg, depth_avg, avg_exchange_rate, BiomassM, weight_sum, species_richness, abundance, avg_exchange_rate,  depth_avg) %>%
-  rename(site_code = site_code)
+# spread/3 = 0.6034917
+# flood = 0.6195273 - 1.223019
+# slack = 0.0160356 - 0.6195273
+# ebb = -0.5874561 - 0.0160356
 
-big_rls <- rbind(rls_final_reduced, data_s_reduced) %>%
-  mutate(weight_stand = scale(weight_sum),
-         rich_stand = scale(species_richness),
-         abundance_stand = scale(abundance),
-         tide_stand = scale(avg_exchange_rate),
-         depth_stand = scale(depth_avg),
-         biomass_mean_stand = scale(BiomassM))
+# but we know slack is actually centered around 0 soooo
+# ebb = < -0.1958187 
+# slack = -0.1958187 - 0.1958187
+# ebb = > 0.1958187
 
 
 # Stats -------
 
-# Response variable: nh4_avg
-  # this is the mean of 3 measurements, how do I incorperate that error in the models?
+# Step 0: Ask my question
+  # Is there a link between biodiversity or biomass and ammonium concentration?
 
-# Possible biological predictors:
-  # 1) Biomass
+# Response variable: nh4_avg
+  # this is the mean of 3 measurements, how do I incorporate that error in the models?
+
+# Step 1: Choose a distribution
+ggplot(rls_final, aes(x = nh4_avg)) +
+  geom_histogram(bins = 30) 
+
+# NH4 is positive only and continuous (not intergers) 
+# Gamma is likely the best bet for this!
+
+# Step 2: Choose your predictors
+
+# Biological predictors:
+# 1) Biomass
     # a) weight_sum = total wet weight of all the animals observed on RLS transects
-    # b) fish_weight_sum = total wet weight of just the fishes (kg)
-    # c) fish_weight_weighted = total weight of fishes weighted by home range size
-  # 3) Biodiversity
+    # b) all_weight_weighted = weighted fish weight + invert weight
+        # Weight sum and weight weighted are barely different
+    # c) fish_weight_sum = total wet weight of just the fishes (kg)
+    # d) fish_weight_weighted = total weight of fishes weighted by home range size
+# I'm going with weight_sum
+
+# 2) Biodiversity
     # a) species_richness = total # species on each transect
     # b) shannon = shannon diversity of each transect
     # c) simpson = simpson diversity of each transect
-          # simpson > 100 AIC units lower which I compare "full" models
+# I'm going with shannon
+    
+# These are the variables I really care about!!!! The abiotics are the things I might need to control for
 
-# Possible abiotic predictors
+# Continuous abiotic predictors
   # 1) depth_avg = average nh4 sample depths
   # 2) avg_exchange_rate = average rate of change of the tide height over the 1 hour survey
-  # 3) year = 2021, 2022, or 2023
-  # 4) site_code = each unique site, probably a random effect?
-  # 3) time of survey???
 
+# Categorical abiotic predictors
+  # 3) year = 2021, 2022, or 2023
+  # 4) site_code = each unique site
+    # should year and site be fixed or random effects?
+      # interested trends across a broad spatial scale (and not site-specific trends) so site should be random
+      # so year should also be random???
+
+# Interactions
+  # I think whatever biomass and biodiversity variable I choose should have an interaction with exchange rate
+
+# Build full model with gaussian distribution
+mod_norm_full <- glmmTMB(nh4_avg ~ weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                         family = 'gaussian',
+                         data = rls_final)
+summary(mod_norm_full)
+
+# Build full model with gamma distribution
+mod_gam_full <- glmmTMB(nh4_avg ~ weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                         family = Gamma(link = 'log'),
+                         data = rls_final)
+summary(mod_gam_full)
+
+# Step 3: Model residuals 
+  # Compare the two distrubutions 
+
+# Gaussian
+mod_norm_full_resids <- simulateResiduals(mod_norm_full)
+plot(mod_norm_full_resids) 
+
+# Gamma
+mod_norm_gam_resids <- simulateResiduals(mod_gam_full)
+plot(mod_norm_gam_resids) 
+
+AIC(mod_norm_full, mod_gam_full)
+
+# Gamma residuals look better and that mod has a lower AIC!
+
+# Step 4: Check for collinearity of predictors
+
+### THIS IS WHERE THE WHEELS FALL OFF THE BUS
+
+# car can't handle random effects so make a simplified mod
+car::vif(lm(nh4_avg ~ weight_sum_stand + avg_exchange_rate_stand + shannon_stand + depth_avg_stand, data = rls_final))
+# Allll goooood
+
+# Double checking my variables!!!
+
+# Would a diff biomass variable would be better than weight sum!
+
+# all weight summed
+mod_weight_sum <- glmmTMB(nh4_avg ~ weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                          family = Gamma(link = 'log'),
+                          data = rls_final)
+
+# all_weight_weighted
+mod_all_weighted_sum <- glmmTMB(nh4_avg ~ all_weight_weighted_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                          family = Gamma(link = 'log'),
+                          data = rls_final)
+
+# fish weight
+mod_fish_weight <- glmmTMB(nh4_avg ~ fish_weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                           family = Gamma(link = 'log'),
+                           data = rls_final)
+
+# fish weight weighted
+mod_fish_weighted <- glmmTMB(nh4_avg ~ fish_weight_weighted_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                           family = Gamma(link = 'log'),
+                           data = rls_final)
+
+
+# abundance
+mod_abund <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = rls_final)
+summary(mod_abund)
+
+# compare
+aic_biomass <- AIC(mod_weight_sum, mod_all_weighted, mod_fish_weight, mod_fish_weighted, mod_abund) %>%
+  mutate(delta = AIC - min(AIC)) # abundance is best, then weight sum 
+
+
+# Which richness variable explains data best
+
+# richness
+mod_rich <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + species_richness_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                    family = Gamma(link = 'log'),
+                    data = rls_final)
+
+# shannon
+mod_shan <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                    family = Gamma(link = 'log'),
+                    data = rls_final)
+
+# simpsons
+mod_simp <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + simpson_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                    family = Gamma(link = 'log'),
+                    data = rls_final)
+
+AIC(mod_rich, mod_shan, mod_simp) # richness is best
+
+
+# So the best mod would be:
+mod_best <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + species_richness_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                    family = Gamma(link = 'log'),
+                    data = rls_final)
+summary(mod_best)
+# I double checked, there's no triple interaction or abundance:richness interaction! Phewwww
+
+# Double check the resids on this
+mod_best_resids <- simulateResiduals(mod_best)
+plot(mod_best_resids) # YEP that's fine!
+
+
+# The model I liked better was
+mod_weight_sum <- glmmTMB(nh4_avg ~ weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                          family = Gamma(link = 'log'),
+                          data = rls_final)
+summary(mod_weight_sum)
+
+# But let's go with mod best!!! 
+
+
+# quick plot to figure out this interaction
+abund_plot <- ggplot(rls_final, aes(abundance, nh4_avg, colour = tide_cat)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  theme(legend.position = "NULL")
+# So nh4 increases a bit with abundance at slack and ebb tide, but at flood the trend flips. neat!
+
+weight_plot <- ggplot(rls_final, aes(weight_sum, nh4_avg, colour = tide_cat)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+abund_plot + weight_plot
+
+# does this mean weight and abundance are the same?
+ggplot(rls_final, aes(abundance, weight_sum)) +
+  geom_point() +
+  geom_smooth(method = lm) # WOOOAH they basically are... 
+# that's a cool result in itself....
+
+
+# Old stats -----
 # Does pee vary by site and year?
 simple_model <- lm(nh4_conc ~ site_code + year, data = rls_nh4)
 summary(simple_model)
@@ -682,6 +859,20 @@ ggplot() +
 
 
 # Graveyard -----
+
+# reduce the df so i can join it with kelp rls data
+rls_final_reduced <- rls_final %>%
+  mutate(BiomassM = 0) %>%
+  select(site, site_code, survey_id, nh4_avg, depth_avg, avg_exchange_rate, BiomassM, weight_sum, species_richness, abundance, avg_exchange_rate,  depth_avg) %>%
+  rename(site_code = site_code)
+
+big_rls <- rbind(rls_final_reduced, data_s_reduced) %>%
+  mutate(weight_stand = scale(weight_sum),
+         rich_stand = scale(species_richness),
+         abundance_stand = scale(abundance),
+         tide_stand = scale(avg_exchange_rate),
+         depth_stand = scale(depth_avg),
+         biomass_mean_stand = scale(BiomassM))
 
 # Just look at temp 
 temp_df <- rls_final %>%
