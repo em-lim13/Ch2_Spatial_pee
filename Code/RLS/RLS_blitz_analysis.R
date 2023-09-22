@@ -436,17 +436,11 @@ summary(mod_weight_sum)
 
 
 # quick plot to figure out this interaction
-abund_plot <- ggplot(rls_final, aes(abundance, nh4_avg, colour = tide_cat)) +
+ggplot(rls_final, aes(abundance, nh4_avg, colour = tide_cat)) +
   geom_point() +
-  geom_smooth(method = lm) +
-  theme(legend.position = "NULL")
+  geom_smooth(method = lm) 
 # So nh4 increases a bit with abundance at slack and ebb tide, but at flood the trend flips. neat!
 
-weight_plot <- ggplot(rls_final, aes(weight_sum, nh4_avg, colour = tide_cat)) +
-  geom_point() +
-  geom_smooth(method = lm)
-
-abund_plot + weight_plot
 
 # does this mean weight and abundance are the same?
 ggplot(rls_final, aes(abundance, weight_sum)) +
@@ -459,49 +453,8 @@ ggplot(rls_final, aes(abundance, weight_sum)) +
 # Does pee vary by site and year?
 simple_model <- lm(nh4_conc ~ site_code + year, data = rls_nh4)
 summary(simple_model)
-visreg(simple_model)
+# Yes it does, but these are my random effects
 
-
-# Put all predictors in a model
-mod_full <- lmer(nh4_avg ~ scale(weight_sum) * scale(shannon) * scale(abundance) * scale(avg_exchange_rate) + (1|site_code), rls_final)
-summary(mod_full)
-
-# Put all predictors in a model + depth
-# Cut the triple + interactions
-mod_fuller <- lmer(nh4_avg ~ scale(weight_sum) + scale(simpson) + scale(abundance) + scale(avg_exchange_rate) + scale(depth_avg) +
-                   scale(weight_sum):scale(simpson) + scale(weight_sum):scale(abundance) + 
-                   scale(weight_sum):scale(avg_exchange_rate) + scale(weight_sum):scale(depth_avg) +
-                   scale(simpson):scale(abundance) + scale(simpson):scale(avg_exchange_rate) + scale(simpson):scale(depth_avg) +
-                   scale(abundance):scale(avg_exchange_rate) + scale(abundance):scale(depth_avg) +
-                   scale(avg_exchange_rate):scale(depth_avg) +
-                   (1|site_code), rls_final)
-summary(mod_fuller)
-
-
-# dredge to compare all models
-options(na.action = "na.fail")
-dred <- dredge(mod_fuller)
-# best model is just the intercept, LOL
-# 2nd best (<delta AIC 2) is just richness
-# 3rd is just weight, but that's > delta AIC 5
-# top 3 models and delta AIC is the same when full mod has all interactions vs when it has none
-
-# When I add depth and only the 2-way interactions top mod = intercept, 2nd = richness (delta 0.73), 3rd is just depth (delta 5.6)
-
-# look at this "best mod"
-mod_rich <- lmer(nh4_avg ~ species_richness + (1|site_code), rls_final)
-summary(mod_rich)
-visreg(mod_rich)
-# Negative relationship between species richness and NH4+...... cool cool cool cool cool
-
-
-
-# What if I put allll the data together?????
-mod_all <- lm(nh4_avg ~ scale(weight_sum) + scale(avg_exchange_rate)  + scale(BiomassM) + 
-                scale(weight_sum):avg_exchange_rate + scale(weight_sum):scale(BiomassM), big_rls)
-
-summary(kelp_mod_best)
-visreg(kelp_mod_best)
 
 
 #Data exploration ------
@@ -859,6 +812,49 @@ ggplot() +
 
 
 # Graveyard -----
+
+# Put all predictors in a model
+mod_full <- lmer(nh4_avg ~ scale(weight_sum) * scale(shannon) * scale(abundance) * scale(avg_exchange_rate) + (1|site_code), rls_final)
+summary(mod_full)
+
+# Put all predictors in a model + depth
+# Cut the triple + interactions
+mod_fuller <- lmer(nh4_avg ~ scale(weight_sum) + scale(simpson) + scale(abundance) + scale(avg_exchange_rate) + scale(depth_avg) +
+                     scale(weight_sum):scale(simpson) + scale(weight_sum):scale(abundance) + 
+                     scale(weight_sum):scale(avg_exchange_rate) + scale(weight_sum):scale(depth_avg) +
+                     scale(simpson):scale(abundance) + scale(simpson):scale(avg_exchange_rate) + scale(simpson):scale(depth_avg) +
+                     scale(abundance):scale(avg_exchange_rate) + scale(abundance):scale(depth_avg) +
+                     scale(avg_exchange_rate):scale(depth_avg) +
+                     (1|site_code), rls_final)
+summary(mod_fuller)
+
+
+# dredge to compare all models
+options(na.action = "na.fail")
+dred <- dredge(mod_fuller)
+# best model is just the intercept, LOL
+# 2nd best (<delta AIC 2) is just richness
+# 3rd is just weight, but that's > delta AIC 5
+# top 3 models and delta AIC is the same when full mod has all interactions vs when it has none
+
+# When I add depth and only the 2-way interactions top mod = intercept, 2nd = richness (delta 0.73), 3rd is just depth (delta 5.6)
+
+# look at this "best mod"
+mod_rich <- lmer(nh4_avg ~ species_richness + (1|site_code), rls_final)
+summary(mod_rich)
+visreg(mod_rich)
+# Negative relationship between species richness and NH4+...... cool cool cool cool cool
+
+
+
+# What if I put allll the data together?????
+mod_all <- lm(nh4_avg ~ scale(weight_sum) + scale(avg_exchange_rate)  + scale(BiomassM) + 
+                scale(weight_sum):avg_exchange_rate + scale(weight_sum):scale(BiomassM), big_rls)
+
+summary(kelp_mod_best)
+visreg(kelp_mod_best)
+
+
 
 # reduce the df so i can join it with kelp rls data
 rls_final_reduced <- rls_final %>%
