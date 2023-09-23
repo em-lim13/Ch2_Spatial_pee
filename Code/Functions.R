@@ -220,7 +220,7 @@ length_to_weight <- function(datafile){
              species_name == "Porichthys notatus" ~ exp(log(0.00562) + 3.16*log(size_class)), #plainfin
              species_name == "Gibbonsia metzi" ~ exp(log(0.00513) + 3.06*log(size_class)),
              species_name == "Citharichthys stigmaeus" ~ exp(log(0.00759) + 3.15*log(size_class)),
-             TRUE ~ as.numeric(NA)),
+             TRUE ~ as.numeric(0.5)),
            # set the really big wolf eel weight manually to largest record weight
            # otherwise the calc thinks it's MASSSSSIVE
            weight_per_indiv_g = if_else(size_class == 187.5, 18400, weight_per_indiv_g),
@@ -301,7 +301,7 @@ invert_length_to_weight <- function(datafile){
       species_name == "Glebocarcinus oregonensis" ~ 5, # Hines H. nudus
       species_name == "Pugettia producta" ~ 46, # Hines
       species_name == "Pagurus beringanus" ~ 5, # Rough from Griggiths and Gosselin
-      TRUE ~ as.numeric("1")),
+      TRUE ~ as.numeric(0.5)),
       weight_per_indiv_kg = weight_per_indiv_g/1000,
       weight_size_class_sum = weight_per_indiv_kg*total)
 }
@@ -378,7 +378,9 @@ home_range <- function(datafile){
       species_name == "Porichthys notatus" ~ 300, # midshipman migrate at night 0 - 366 m deep
       species_name == "Gibbonsia metzi" ~ 1, # inferred from perch
       species_name == "Citharichthys stigmaeus" ~ 100, # flatfish seem to move a lot, avg from them
-      TRUE ~ as.numeric(NA))
+      TRUE ~ as.numeric(0.01)), # to give all the inverts a range weight of 1
+      range_weight = 1/(range*100), # scale smallest range to a weight of 1, everything else is fraction
+      weight_weighted = weight_size_class_sum*range_weight # weight weights by range
       )
   
 }
