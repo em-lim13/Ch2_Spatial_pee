@@ -22,7 +22,6 @@ source("Code/Functions.R")
 # load site names
 names <- read_csv("Data/Team_kelp/Output_data/site_names.csv")
 
-
 # transect level kelp biomass + density data from Claire
 kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   as.data.frame() %>%
@@ -55,7 +54,6 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
 # NH4+ data -----
 # kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
 pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
-
 
 max(data$nh4_avg)
 min(data$nh4_avg) #[rls_nh4$nh4_conc > 0])
@@ -90,7 +88,9 @@ kelp_rls <- kelp_rls1 %>%
   drop_na(total) %>%
   filter(total > 0) %>%
   select(-Total) %>%
-  length_to_weight() # length to weight function
+  invert_length_to_weight() %>% # invert length to weight
+  length_to_weight() %>% # fish length to weight function
+  home_range() # calculate each fish's home range
 
 # extract just one row per survey to join with the pee data and tide data
 # Only keep the surveys I have pee samples for!
@@ -106,6 +106,22 @@ kcca_survey_info <- pee %>%
               select(c(site_code, Time_start)) %>%
               unique()), by = "site_code") %>%
   mutate(date_time_kelp = ymd_hms(paste(Date, Time_start)))
+
+# pivot back to wide for biodiversity
+kelp_rls_wider <- kelp_rls %>% 
+  left_join(kcca_survey_info, by = c("site_code", "date_time_survey")) %>%
+  dplyr::select(survey_id, species_name, total) %>% 
+  group_by(survey_id, species_name) %>%
+  summarise(total = sum(total)) %>%
+  ungroup() %>%
+  spread(key = species_name, value = total) %>%
+  replace(is.na(.), 0)
+
+# then calculate biodiversity metrics
+kelp_rls_wide <- kelp_rls_wider %>%
+  mutate(shannon = (diversity((kelp_rls_wider %>% select(-survey_id)), index = "shannon")),
+         simpson = (diversity((kelp_rls_wider %>% select(-survey_id)), index = "simpson"))) %>%
+  select(survey_id, shannon, simpson)
 
 # Tide data ------
 # July 7, 4 days
@@ -162,51 +178,233 @@ data <- pee %>%
   left_join(kcca_survey_info %>%
               select(-c(Date, site_name)), by = "site_code"
             ) %>%
+  # Join biomass, richness and abundance
+  left_join(kelp_rls %>%
+              group_by(site_code) %>%
+              summarize(weight_sum = sum(weight_size_class_sum),
+                        all_weight_weighted = sum(weight_weighted),
+                        species_richness = n_distinct(species_name),
+                        abundance = sum(total))) %>%
+  # diversity indexes
+  left_join(kelp_rls_wide, by = "survey_id") %>%
   # join tide exchange data
   left_join(tide_exchange_kcca, by = "survey_id") %>%
-  # Join fish biomass
-  left_join(kelp_rls %>%
-              drop_na(weight_size_class_sum) %>%
-              group_by(site_code) %>%
-              summarize(weight_sum = sum(weight_size_class_sum))) %>%
-  # Join richness and abundance
-  left_join(kelp_rls %>%
-              group_by(site_code) %>%
-              summarize(species_richness = n_distinct(species_name),
-                        abundance = sum(total))) %>%
-  # 
-  mutate(forest_biomass = BiomassM*Area_m2,
+  # scale factors
+  mutate(# kelp forest stuff
+         forest_biomass = BiomassM*Area_m2,
          percent_diff = 100*(nh4_inside-nh4_outside)/nh4_outside,
-         den_scale = scale(kelp_den), # make sure density is right
-         bio_tran_scale = scale(Biomassm2kg),
-         bio_mean_scale = scale(BiomassM),
-         forest_bio_scale = scale(forest_biomass),
-         area_scale = scale(Area_m2),
+         den_scale = c(scale(kelp_den)), # make sure density is right
+         bio_tran_scale = c(scale(Biomassm2kg)),
+         bio_mean_scale = c(scale(BiomassM)),
+         forest_bio_scale = c(scale(forest_biomass)),
+         area_scale = c(scale(Area_m2)),
+         # log the pee diff?
          log_pee_diff = log(in_minus_out + 1),
-         weight_stand = scale(weight_sum),
-         rich_stand = scale(species_richness),
-         abundance_stand = scale(abundance),
-         tide_stand = scale(avg_exchange_rate),
-         depth_stand = scale(depth_avg)) %>%
+         # the biomass + abundance variables
+         weight_sum_stand = c(scale(weight_sum)),
+         all_weighted_stand = c(scale(all_weight_weighted)),
+         abundance_stand = c(scale(abundance)),
+         # biodiversity variables
+         rich_stand = c(scale(species_richness)),
+         shannon_stand = c(scale(shannon)),
+         simpson_stand = c(scale(simpson)),
+         # abiotic variables I should control for
+         depth_avg_stand = c(scale(depth_avg)),
+         tide_stand = c(scale(avg_exchange_rate)),
+         tide_cat = case_when(avg_exchange_rate < -0.1897325 ~ "Ebb",
+                              avg_exchange_rate < 0.1897325 ~ "Slack",
+                              avg_exchange_rate > 0.1897325 ~ "Flood") # only slack and flood
+  ) %>%
   filter(site_name != "Second Beach South")
-
 # Each row is a mini transect into the kelp forest
   # That has an individual kelp density + biomass estimate + inside vs outside ammonium value
 
 # new df for one row per site
-
 data_s <- data %>%
-  select(site, site_code, survey_id, nh4_in_avg, nh4_out_avg, nh4_avg, depth_avg, avg_exchange_rate, BiomassM, bio_mean_scale, weight_stand, rich_stand, abundance_stand, tide_stand,  depth_stand) %>%
-  unique()
+  select(site, site_code, survey_id, in_out_avg, nh4_in_avg, nh4_out_avg, nh4_avg, depth_avg, avg_exchange_rate, kelp_sp, BiomassM, bio_mean_scale, weight_sum, weight_sum_stand, all_weighted_stand, abundance_stand, rich_stand, shannon_stand, simpson_stand, tide_stand, depth_avg_stand, tide_cat) %>%
+  unique() %>%
+  filter(site != "Wizard_I_North" | kelp_sp != "none")
 
+# not sure what this is
 data_s_reduced <- data %>%
   select(site, site_code, survey_id, nh4_in_avg, depth_avg, avg_exchange_rate, BiomassM, weight_sum, species_richness, abundance, avg_exchange_rate,  depth_avg) %>%
   unique() %>%
   rename(nh4_avg = nh4_in_avg)
   
 
-# Stats -----
+# Stats for in minus out -----
 
+# Step 0: Ask my question
+  # Does kelp density affect the retention of ammonium in kelp forests?
+
+# Response variable = in_minus_out
+  # how much ammonium is inside the forest vs outside
+
+# Step 1: Choose a distribution
+ggplot(data, aes(x = in_minus_out)) +
+  geom_histogram(bins = 30) 
+# Hey that's roughly Gaussian!
+# Positive and negative values roughly centered around 0
+
+# Step 2: Choose your predictors
+
+# Biological
+  # Kelp forest
+    # forest_bio_scale (site level = area*biomass*density)
+    # area_scale (site level)
+    # bio_mean_scale (site level, density*biomass)
+    # bio_tran_scale (mini transect level)
+    # den_scale (mini transect level)
+    # kelp_sp (site level)
+      
+  # RLS community (site level)
+    # Biomass:
+      # weight_sum_stand 
+      # all_weighted_stand 
+      # abundance 
+    # Biodiversity
+      # rich_stand
+      # shannon_stand
+      # simpson_stand
+
+# Abiotic to control for
+  # depth_avg (depth_avg_stand)
+  # avg_exchange_rate (tide_stand)
+
+# Categorical variables
+  # side_code: if I use mini transect as the level of study than I need a random effect of site
+  # kelp_sp: fixed effect
+
+# Interactions:
+  # interaction between animal community mass:tide_exchange
+  # also interaction between kelp density:tide_exchange
+  # maybe a triple interaction between kelp:animal_biomass:tide??
+
+# Build full model with gaussian distribution
+# choose one transect level kelp variable and one whole forest variable
+# choose one animal community biomass and one biodiversity variable
+
+# Need to think harder about modelling based on site vs mini transect level!!!
+mod_norm_kelp <- glmmTMB(in_minus_out ~ bio_mean_scale*tide_stand + bio_tran_scale + weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + kelp_sp + (1|site_code), 
+                         family = 'gaussian',
+                         data = data)
+summary(mod_norm_kelp)
+
+# Try building one site level model and one transect level model?
+mod_site <- glmmTMB(in_out_avg ~ bio_mean_scale*tide_stand + weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + kelp_sp, 
+                         family = 'gaussian',
+                         data = data_s)
+summary(mod_site)
+
+
+# Step 3: Model residuals 
+# Compare the two distrubutions 
+
+# Gaussian
+mod_kelp_resids <- simulateResiduals(mod_site)
+plot(mod_kelp_resids) # not the best thing I've ever seen but it's not bad!
+
+# Step 4: Check for collinearity of predictors
+
+# car can't handle random effects so make a simplified mod
+car::vif(lm(in_minus_out ~ bio_mean_scale + tide_stand + bio_tran_scale + weight_sum_stand + shannon_stand + depth_avg_stand + kelp_sp, data = data))
+# Bio_mean_scale is 2.6 but I'm not sure what it's correlated to, probably bio_tran_scale
+
+
+# Stats: site to site variation ----
+
+# Step 0: Ask my question
+  # Is there a link between biodiversity or biomass and ammonium concentration? 
+
+# Step 1: Choose a distribution
+
+# response variables:
+  # nh4_avg (average of in and out)
+  # nh4_in_avg (inside kelp avg)
+  # nh4_out_avg (outside kelp avg)
+    # most comperable to the RLS blitz work?
+
+ggplot(data_s, aes(x = nh4_out_avg)) +
+  geom_histogram(bins = 30) 
+# Either way we're using Gamma!
+
+# Step 2: Choose your predictors
+
+# Biological predictors:
+  # 1) Animal biomass
+    # a) weight_sum = total wet weight of all the animals observed on RLS transects
+    # b) all_weight_weighted = weighted fish weight + invert weight
+    # c) abundance
+      # I'm going with weight_sum
+  # 2) Kelp forest
+    # a) forest_bio_scale (site level = area*biomass*density)
+    # b) bio_mean_scale (site level, density*biomass)
+    # c) kelp_sp (site level)
+
+  # 3) Biodiversity
+   # a) species_richness = total # species on each transect
+   # b) shannon = shannon diversity of each transect
+   # c) simpson = simpson diversity of each transect
+     # I'm going with shannon
+
+# Continuous abiotic predictors
+  # 1) depth_avg = average nh4 sample depths
+  # 2) avg_exchange_rate = average rate of change of the tide height over the 1 hour survey
+
+# Interactions
+  # I think whatever biomass and biodiversity variable I choose should have an interaction with exchange rate
+  # maybe triple kelp:biomass:tide interaction
+
+# Build full model with gaussian distribution
+mod_norm_kelp <- glmmTMB(nh4_out_avg ~ weight_sum_stand*bio_mean_scale*tide_stand + shannon_stand + kelp_sp + depth_avg_stand,
+                         family = 'gaussian',
+                         data = data_s)
+summary(mod_norm_kelp)
+
+# Build full model with gamma distribution
+mod_gam_kelp <- glmmTMB(nh4_in_avg ~ weight_sum_stand*bio_mean_scale*tide_stand + shannon_stand + kelp_sp + depth_avg_stand, 
+                        family = Gamma(link = 'log'),
+                        data = data_s)
+summary(mod_gam_kelp)
+
+# Step 3: Model residuals 
+  # Compare the two distrubutions 
+
+# Gaussian
+mod_norm_kelp_resids <- simulateResiduals(mod_norm_kelp)
+plot(mod_norm_kelp_resids) 
+# no signif problems found......
+
+# Gamma
+mod_gam_kelp_resids <- simulateResiduals(mod_gam_kelp)
+plot(mod_gam_kelp_resids) # not technically wrong but a little funky
+
+AIC(mod_norm_kelp, mod_gam_kelp)
+# Gam is better but there's some S-shape stuff going on 
+
+
+# Step 4: Check for collinearity of predictors
+
+# car can't handle random effects so make a simplified mod
+car::vif(lm(nh4_out_avg ~ weight_sum_stand + bio_mean_scale + tide_stand + shannon_stand + kelp_sp + depth_avg_stand, data = data_s))
+# all good
+
+
+# try to plot this to see what the heck is happening
+data_s %>%
+  mutate(kelp_cat = case_when(BiomassM < 0.565827 ~ "Low", # this does include the 1 no kelp site
+                              BiomassM < 1.131654 ~ "Mid",
+                              BiomassM >= 1.131654 ~ "Tons")) %>%
+  
+ggplot(aes(weight_sum, BiomassM, colour = nh4_out_avg)) +
+  geom_point() +
+  geom_smooth(method = lm)
+# In low kelp density when the tide is flooding, instead of getting lower the nh4 outside the kelp forest is increasing? only 2 data points through
+# but for mid kelp density i mean I don't think I can say anything there's only 4 points
+
+
+
+# Old stats -----
 # I don't think this is linear I'm going to have to fit some kind of curve to it.....
 
 # linear model though for fun
