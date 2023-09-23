@@ -41,7 +41,10 @@ fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
     species_name == "Artedius harringtoni" & size_class == 0 ~ 5,
     species_name == "Jordania zonope" & size_class == 0 ~ 5,
     species_name == "Oxylebius pictus" & size_class == 0 ~ 12.5,
-    TRUE ~ as.numeric(size_class)))
+    TRUE ~ as.numeric(size_class))) %>%
+  filter(species_name != "Myoxocephalus aenaeus") %>% # Remove east coast fish
+filter(species_name != "Phoca vitulina") # Remove seal, lets just focus on inverts and fish
+  
 
 # Rhinogobiops nicholsii 7.5 avg
 # Artedius harringtoni avg 5
@@ -78,25 +81,14 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
 fishes <- fish %>%
   length_to_weight() %>% # Use nice length to weight function!
           # careful, the function shrinks the big wolf eel
-  filter(species_name != "Bolinopsis infundibulum") %>%
-  filter(species_name != "Pleuronichthys coenosus") %>%
-  filter(species_name != "Pleurobrachia bachei") %>%
-  filter(species_name != "Polyorchis penicillatus") %>% # Filter inverts
-  filter(species_name != "Phoca vitulina") %>% # Remove seal
-  filter(species_name != "Actinopterygii spp.") %>% # Remove unidentif fish
-  filter(species_name != "Myoxocephalus aenaeus") %>% # Remove east coast fish
   home_range() %>% # calculate each fish's home range
-  mutate(biomass_per_indiv = biomass/total, # see how the RLS biomass calc estimated each fish size
-         range_weight = 1/(range*100), # scale smallest range to a weight of 1, everything else is fraction
-         weight_weighted = weight_size_class_sum*range_weight) # weight weights by range
+  mutate(biomass_per_indiv = biomass/total) # see how the RLS biomass calc estimated each fish size
 
-  
 # That one huge wolf eel can't be right
 # Fishbase: max size = 240 cm, max weight = 18.4 kg
 # Ours is apparently 187 cm and 63 kg
 # That formula must be off
 # I also have size data for inverts "Haliotis kamtschatkana", "Crassadoma gigantea", "Pycnopodia helianthoides", "Polyorchis penicillatus", "Bolinopsis infundibulum", Pleurobrachia bachei, Pleuronichthys coenosus
-
 
 # Some people counted M2 fishes on M1, but not always so I don't actually want goby and sculpin counts from M1
 # Figure out what to do here
@@ -104,12 +96,8 @@ fishes <- fish %>%
 # now calc invert weights
 inverts <- invert %>%
   invert_length_to_weight() %>%
-  mutate(biomass_per_indiv = biomass/total, # see how the RLS biomass calc estimated each fish size
-         range = 0,
-         range_weight = 1, 
-         weight_weighted = weight_size_class_sum*range_weight) 
-    # For now the invert ranges are just NAs, because I'm pretty sure they'll all be really small ranges and also the biomass estimates are already so vague
-
+  mutate(biomass_per_indiv = biomass/total) %>%
+  home_range() # home range + weight, shouldn't change anything
 
 # Join all rls data together
 rls <- rbind(fishes, inverts)
@@ -125,17 +113,15 @@ rls_survey_info <- rls %>%
 # Pivot the data wider for diversity metrics
 # currently the df I want to tack the metrics onto is sorted by date, oldest at top
 # Spreading long data for taxa abundance to columns for each species
-
-rls_wider <- rls %>% # Spreading the data to wide format
+rls_wider <- rls %>% 
   dplyr::select(survey_id, species_name, total) %>% 
   group_by(survey_id, species_name) %>%
   summarise(total = sum(total)) %>%
   ungroup() %>%
-  # Removing any columns not needed
   spread(key = species_name, value = total) %>%
   replace(is.na(.), 0)
 
-
+# then calculate biodiversity metrics
 rls_wide <- rls_wider %>%
   mutate(shannon = (diversity((rls_wider %>% select(-survey_id)), index = "shannon")),
          simpson = (diversity((rls_wider %>% select(-survey_id)), index = "simpson"))) %>%
@@ -202,6 +188,24 @@ for (x in 1:nrow(rls_survey_info)) {
   
   tide_exchange = rbind(tide_exchange, output)
 }
+
+# what's the overall rate of exchange for this period? How to define slack vs ebb vs flood
+tide_overall <- tide %>%
+  mutate(rate = 100 * (tide_m - lag(tide_m))/lag(tide_m)
+         ) %>%
+  group_by(date) %>%
+  slice(-1) %>%
+  ungroup()
+# mean = 0.0003725301
+# sd = 0.379465
+# max = +/- 1.511335
+
+# tide cat:
+# looked at rate of change over whole 6 week period, SD = 0.379465
+# 1/2 SD would make slack period one SD wide
+# that makes slack 1 hour long at low tide (ebb to flood) but 2 hours at high tide
+# but not all high and lows bc some swing more than others
+
 # Now I have the average and max rate of change of tide height for each survey!!!
 # no diff in models between avg and max tide exchange, just use avg
 
@@ -239,25 +243,27 @@ rls_final <-
   left_join(rls_wide, by = "survey_id") %>%
   # tide exchange 
   left_join(tide_exchange, by = "survey_id") %>%
-  # scale and centre variables here
+  # scale and center variables here
   mutate(
     # the biomass + abundance variables
     weight_sum_stand = c(scale(weight_sum)),
     fish_weight_sum_stand = c(scale(fish_weight_sum)),
     fish_weight_weighted_stand = c(scale(fish_weight_weighted)),
-    all_weight_weighted_stand = c(scale(all_weight_weighted)),
+    all_weighted_stand = c(scale(all_weight_weighted)),
     abundance_stand = c(scale(abundance)),
     # biodiversity variables
-    species_richness_stand = c(scale(species_richness)),
+    rich_stand = c(scale(species_richness)),
     shannon_stand = c(scale(shannon)),
     simpson_stand = c(scale(simpson)),
     # abiotic variables I should control for
     depth_avg_stand = c(scale(depth_avg)),
-    avg_exchange_rate_stand = c(scale(avg_exchange_rate)),
-    tide_cat = case_when(avg_exchange_rate < -0.1958187 ~ "Ebb",
-                         avg_exchange_rate < 0.1958187 ~ "Slack",
-                         avg_exchange_rate > 0.1958187 ~ "Flood")
+    tide_stand = c(scale(avg_exchange_rate)),
+    tide_cat = case_when(avg_exchange_rate < -0.1897325 ~ "Ebb",
+                         avg_exchange_rate < 0.1897325 ~ "Slack",
+                         avg_exchange_rate > 0.1897325 ~ "Flood")
   )
+
+
 
 # can i make a flood, ebb, slack var for exchange?
 max(rls_final$avg_exchange_rate)
@@ -270,6 +276,8 @@ hist(rls_final$avg_exchange_rate)
 # ebb = -0.5874561 - 0.0160356
 
 # but we know slack is actually centered around 0 soooo
+  # what's the min value/3
+  # that divides the min - 0 into three parts, two parts = ebb, one part on either side of 0 = slack
 # ebb = < -0.1958187 
 # slack = -0.1958187 - 0.1958187
 # ebb = > 0.1958187
@@ -299,6 +307,7 @@ ggplot(rls_final, aes(x = nh4_avg)) +
         # Weight sum and weight weighted are barely different
     # c) fish_weight_sum = total wet weight of just the fishes (kg)
     # d) fish_weight_weighted = total weight of fishes weighted by home range size
+    # e) abundance
 # I'm going with weight_sum
 
 # 2) Biodiversity
@@ -324,13 +333,13 @@ ggplot(rls_final, aes(x = nh4_avg)) +
   # I think whatever biomass and biodiversity variable I choose should have an interaction with exchange rate
 
 # Build full model with gaussian distribution
-mod_norm_full <- glmmTMB(nh4_avg ~ weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_norm_full <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                          family = 'gaussian',
                          data = rls_final)
 summary(mod_norm_full)
 
 # Build full model with gamma distribution
-mod_gam_full <- glmmTMB(nh4_avg ~ weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_gam_full <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                          family = Gamma(link = 'log'),
                          data = rls_final)
 summary(mod_gam_full)
@@ -343,8 +352,8 @@ mod_norm_full_resids <- simulateResiduals(mod_norm_full)
 plot(mod_norm_full_resids) 
 
 # Gamma
-mod_norm_gam_resids <- simulateResiduals(mod_gam_full)
-plot(mod_norm_gam_resids) 
+mod_gam_resids <- simulateResiduals(mod_gam_full)
+plot(mod_gam_resids) 
 
 AIC(mod_norm_full, mod_gam_full)
 
@@ -355,7 +364,7 @@ AIC(mod_norm_full, mod_gam_full)
 ### THIS IS WHERE THE WHEELS FALL OFF THE BUS
 
 # car can't handle random effects so make a simplified mod
-car::vif(lm(nh4_avg ~ weight_sum_stand + avg_exchange_rate_stand + shannon_stand + depth_avg_stand, data = rls_final))
+car::vif(lm(nh4_avg ~ weight_sum_stand + tide_stand + shannon_stand + depth_avg_stand, data = rls_final))
 # Allll goooood
 
 # Double checking my variables!!!
@@ -363,51 +372,51 @@ car::vif(lm(nh4_avg ~ weight_sum_stand + avg_exchange_rate_stand + shannon_stand
 # Would a diff biomass variable would be better than weight sum!
 
 # all weight summed
-mod_weight_sum <- glmmTMB(nh4_avg ~ weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_weight_sum <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                           family = Gamma(link = 'log'),
                           data = rls_final)
 
 # all_weight_weighted
-mod_all_weighted_sum <- glmmTMB(nh4_avg ~ all_weight_weighted_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_all_weighted_sum <- glmmTMB(nh4_avg ~ all_weighted_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                           family = Gamma(link = 'log'),
                           data = rls_final)
 
 # fish weight
-mod_fish_weight <- glmmTMB(nh4_avg ~ fish_weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_fish_weight <- glmmTMB(nh4_avg ~ fish_weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                            family = Gamma(link = 'log'),
                            data = rls_final)
 
 # fish weight weighted
-mod_fish_weighted <- glmmTMB(nh4_avg ~ fish_weight_weighted_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_fish_weighted <- glmmTMB(nh4_avg ~ fish_weight_weighted_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                            family = Gamma(link = 'log'),
                            data = rls_final)
 
 
 # abundance
-mod_abund <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_abund <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = rls_final)
 summary(mod_abund)
 
 # compare
 aic_biomass <- AIC(mod_weight_sum, mod_all_weighted, mod_fish_weight, mod_fish_weighted, mod_abund) %>%
-  mutate(delta = AIC - min(AIC)) # abundance is best, then weight sum 
+  mutate(delta = AIC - min(AIC)) # abundance is best, but weight sum is NOT far behind
 
 
 # Which richness variable explains data best
 
 # richness
-mod_rich <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + species_richness_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_rich <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + rich_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                     family = Gamma(link = 'log'),
                     data = rls_final)
 
 # shannon
-mod_shan <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_shan <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                     family = Gamma(link = 'log'),
                     data = rls_final)
 
 # simpsons
-mod_simp <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + simpson_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_simp <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + simpson_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                     family = Gamma(link = 'log'),
                     data = rls_final)
 
@@ -415,24 +424,36 @@ AIC(mod_rich, mod_shan, mod_simp) # richness is best
 
 
 # So the best mod would be:
-mod_best <- glmmTMB(nh4_avg ~ abundance_stand*avg_exchange_rate_stand + species_richness_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_best <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + rich_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                     family = Gamma(link = 'log'),
                     data = rls_final)
 summary(mod_best)
 # I double checked, there's no triple interaction or abundance:richness interaction! Phewwww
+
+# What if year is absent or fixed
+  # Year = fixed no change, years are diff from 2021
+  # Drop year = interaction still signif but species richness is now signif negative slope
+# What if site is absent or fixed
+  # Site = fixed no change, some sites are diff from each other
+  # Drop site no change
+# What if both are fixed or dropped?
+  # Both fixed = no change.
+  # Both dropped = interaction still there but species richness is now signif negative slope
 
 # Double check the resids on this
 mod_best_resids <- simulateResiduals(mod_best)
 plot(mod_best_resids) # YEP that's fine!
 
 
-# The model I liked better was
-mod_weight_sum <- glmmTMB(nh4_avg ~ weight_sum_stand*avg_exchange_rate_stand + shannon_stand*avg_exchange_rate_stand + depth_avg_stand + (1|year) + (1|site_code), 
+# The model I liked better was:
+# I prefer biomass over abundance bc that's theoretically more linked to NH4
+# But abundance is a straight up recorded measure, no biomass proxy BS
+mod_weight_sum <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
                           family = Gamma(link = 'log'),
                           data = rls_final)
 summary(mod_weight_sum)
 
-# But let's go with mod best!!! 
+
 
 
 # quick plot to figure out this interaction
@@ -442,7 +463,7 @@ ggplot(rls_final, aes(abundance, nh4_avg, colour = tide_cat)) +
 # So nh4 increases a bit with abundance at slack and ebb tide, but at flood the trend flips. neat!
 
 
-# does this mean weight and abundance are the same?
+# weight and abundance give very similar results + figs, does that mean they're super linear?
 ggplot(rls_final, aes(abundance, weight_sum)) +
   geom_point() +
   geom_smooth(method = lm) # WOOOAH they basically are... 
@@ -813,6 +834,14 @@ ggplot() +
 
 # Graveyard -----
 
+# filter inverts and weirdos for rls
+filter(species_name != "Bolinopsis infundibulum") %>%
+  filter(species_name != "Pleuronichthys coenosus") %>%
+  filter(species_name != "Pleurobrachia bachei") %>%
+  filter(species_name != "Polyorchis penicillatus") %>% # Filter inverts
+  filter(species_name != "Actinopterygii spp.") %>% # Remove unidentif fish
+  
+  
 # Put all predictors in a model
 mod_full <- lmer(nh4_avg ~ scale(weight_sum) * scale(shannon) * scale(abundance) * scale(avg_exchange_rate) + (1|site_code), rls_final)
 summary(mod_full)
