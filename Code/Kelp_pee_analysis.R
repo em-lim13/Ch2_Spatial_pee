@@ -368,7 +368,7 @@ mod_gam_kelp <- glmmTMB(nh4_in_avg ~ weight_sum_stand*bio_mean_scale*tide_stand 
 summary(mod_gam_kelp)
 
 # Step 3: Model residuals 
-  # Compare the two distrubutions 
+  # Compare the two distributions 
 
 # Gaussian
 mod_norm_kelp_resids <- simulateResiduals(mod_norm_kelp)
