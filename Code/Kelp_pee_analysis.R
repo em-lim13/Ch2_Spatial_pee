@@ -55,8 +55,6 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
 # kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
 pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
 
-max(data$nh4_avg)
-min(data$nh4_avg) #[rls_nh4$nh4_conc > 0])
 
 # RLS data ----
 kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
@@ -119,8 +117,8 @@ kelp_rls_wider <- kelp_rls %>%
 
 # then calculate biodiversity metrics
 kelp_rls_wide <- kelp_rls_wider %>%
-  mutate(shannon = (diversity((kelp_rls_wider %>% select(-survey_id)), index = "shannon")),
-         simpson = (diversity((kelp_rls_wider %>% select(-survey_id)), index = "simpson"))) %>%
+  mutate(shannon = (vegan::diversity((kelp_rls_wider %>% select(-survey_id)), index = "shannon")),
+         simpson = (vegan::diversity((kelp_rls_wider %>% select(-survey_id)), index = "simpson"))) %>%
   select(survey_id, shannon, simpson)
 
 # Tide data ------
@@ -501,7 +499,59 @@ kelp_mod_mean <- lm(nh4_avg ~ weight_stand + tide_stand  + bio_mean_scale +
 summary(kelp_mod_best)
 
 visreg(kelp_mod_best)
+
+
 # Plots ----
+# Make a map -----
+# Load not great shapefile
+potato_map <- sf::st_read("Data/Shapefiles/eez.shp") %>%
+  st_sf() %>%
+  st_set_crs(4326)
+
+# Define colours
+blue <- paste("#b9d1df", sep="")
+
+# Make map without pies, just scaling size of point to %
+sf_use_s2(FALSE)
+
+# coords
+kelp_coords <- data_s %>%
+  select(site_code, nh4_in_avg, nh4_out_avg, nh4_avg, kelp_sp, tide_cat) %>%
+  left_join(
+    kelp_rls %>%
+      transmute(site_code = site_code,
+                latitude = Latitude,
+                longitude = Longitude) %>%
+      unique()
+  ) %>%
+  st_as_sf(coords = c("longitude", "latitude")) %>%
+  st_set_crs(4326) %>%
+  group_by(site_code)
+
+# Make maps
+# shows avg for each site including all data
+map_daddy(kelp_coords, nh4_avg) 
+
+#ggsave("Output/Figures/nh4_kelp_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+# Can I put everything together?
+# will need to have coordinates from rls blitz to run this
+all_coords <- rls_coords %>%
+  transmute(site_code = site_code,
+            nh4_avg = nh4_overall_avg,
+            geometry = geometry,
+            Habitat = "Reef") %>%
+  unique() %>%
+  rbind(
+    (kelp_coords %>% transmute(nh4_avg = nh4_out_avg,
+                               geometry = geometry,
+                               Habitat = "Kelp")) 
+    ) %>%
+  mutate(nh4_avg = ifelse(site_code == "KCCA21", 1.5, nh4_avg))
+
+map_daddy(all_coords, nh4_avg, Habitat) 
+
+ggsave("Output/Figures/nh4_all_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 ggplot(data, aes(bio_mean_scale, log_pee_diff)) +
