@@ -18,7 +18,7 @@ theme_black = function(base_size = 12, base_family = "") {
       legend.key.size = unit(1.2, "lines"),  
       legend.key.height = NULL,  
       legend.key.width = NULL,      
-      legend.text = element_text(size = base_size*1.5, color = "white"),  
+      legend.text = element_text(size = base_size*2, color = "white"),  
       legend.title = element_text(size = base_size*2.5, face = "bold", hjust = 0, color = "white"),  
       legend.position = "right",  
       legend.text.align = NULL,  
