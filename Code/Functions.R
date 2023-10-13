@@ -453,6 +453,32 @@ depth_function <- function(datafile){
 }
 
 
+# Plotting -----
+
+map_daddy <- function(coord_data, nh4_var, kelp_var) {
+  ggplot() +
+    geom_sf(data = potato_map, fill = blue, colour = "white") +
+    geom_sf(data = {{coord_data}}, 
+            colour = "black",
+            alpha = 0.9,
+            size = 9,
+            aes(fill = {{nh4_var}},
+                pch = {{kelp_var}})) +
+    coord_sf(xlim = c(-125.4, -125.0), ylim = c(48.80, 49), expand = FALSE)  +
+    theme_black() +
+    theme(panel.background = element_rect(fill = "white"),
+          panel.grid.major = element_line(color = "white")) +
+    viridis::scale_fill_viridis(option="magma", direction = -1,
+            guide = guide_colorbar(frame.colour = "white", ticks.colour = "white")) +
+    labs(x = "Longitude", y = "Latitude",
+         fill = expression(paste("NH"[4]^" +",(mu*M)))) +
+    scale_x_continuous(breaks = seq(-125.4, -125.0, by = 0.1)) +
+    scale_shape_manual(values = c(25, 21)) +
+    guides(pch = guide_legend(override.aes = 
+                                 list(colour = "white")))
+}
 
 
-
+#axis.text = element_text(size = 12, colour = "black"),
+#axis.title = element_text(size = 13, colour = "black"),
+#legend.text = element_text(size = 11, colour = "black"),
