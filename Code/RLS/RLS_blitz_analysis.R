@@ -15,6 +15,7 @@ library(vegan) # for diversity indexes
 library(MuMIn) # for dredge?
 library(TMB)
 library(glmmTMB) # better for random effects?
+library(patchwork)
 
 # Source pretty functions
 source("Code/theme_black.R")
@@ -348,11 +349,11 @@ summary(mod_gam_full)
   # Compare the two distrubutions 
 
 # Gaussian
-mod_norm_full_resids <- simulateResiduals(mod_norm_full)
+mod_norm_full_resids <- DHARMa::simulateResiduals(mod_norm_full)
 plot(mod_norm_full_resids) 
 
 # Gamma
-mod_gam_resids <- simulateResiduals(mod_gam_full)
+mod_gam_resids <- DHARMa::simulateResiduals(mod_gam_full)
 plot(mod_gam_resids) 
 
 AIC(mod_norm_full, mod_gam_full)
@@ -399,7 +400,7 @@ mod_abund <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand*tide_s
 summary(mod_abund)
 
 # compare
-aic_biomass <- AIC(mod_weight_sum, mod_all_weighted, mod_fish_weight, mod_fish_weighted, mod_abund) %>%
+aic_biomass <- AIC(mod_weight_sum, mod_all_weighted_sum, mod_fish_weight, mod_fish_weighted, mod_abund) %>%
   mutate(delta = AIC - min(AIC)) # abundance is best, but weight sum is NOT far behind
 
 
@@ -441,7 +442,7 @@ summary(mod_best)
   # Both dropped = interaction still there but species richness is now signif negative slope
 
 # Double check the resids on this
-mod_best_resids <- simulateResiduals(mod_best)
+mod_best_resids <- DHARMa::simulateResiduals(mod_best)
 plot(mod_best_resids) # YEP that's fine!
 
 
@@ -452,7 +453,6 @@ mod_weight_sum <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand*
                           family = Gamma(link = 'log'),
                           data = rls_final)
 summary(mod_weight_sum)
-
 
 
 
@@ -470,16 +470,8 @@ ggplot(rls_final, aes(abundance, weight_sum)) +
 # that's a cool result in itself....
 
 
-# Old stats -----
-# Does pee vary by site and year?
-simple_model <- lm(nh4_conc ~ site_code + year, data = rls_nh4)
-summary(simple_model)
-# Yes it does, but these are my random effects
-
-
 
 #Data exploration ------
-  
   # Data checks
   goby <- fish %>%
   filter(species_name == "Rhinogobiops nicholsii") %>%
@@ -655,18 +647,33 @@ cor.test(cor_data$nh4_2023, cor_data$nh4_2021,
 
 # Graphing ----
 pal <- pnw_palette("Sailboat", 3)
+pal2 <- viridis::viridis(3)
+csee_pal <- pnw_palette("Starfish", n = 3)
 
+# Plot abundance vs nh4
+ggplot(rls_final, aes(abundance, nh4_avg, colour = tide_cat, fill = tide_cat)) +
+  geom_point(size = 3) +
+  geom_smooth(method = lm, alpha = 0.15) +
+  labs(x = "Animal abundance", y = expression(paste("NH"[4]^" +",(mu*M))),
+       colour = "Tide", fill = "Tide") +
+  scale_colour_manual(values = (csee_pal)) +
+  scale_fill_manual(values = (csee_pal)) +
+  theme_black()
+
+# try to plot the actual model output another time!
+
+#ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+# plot mean for each year
 rls_nh4 %>%
-  group_by(site) %>%
+  group_by(site, year) %>%
   mutate(nh4_avg = mean(nh4_conc)) %>%
   ungroup() %>%
   ggplot() +
   geom_point(aes(x = reorder(site, -nh4_avg), 
-                 nh4_conc, colour = year, fill = year, pch = month),
+                 nh4_avg, colour = year, fill = year, pch = month),
              size = 3, alpha = 0.75) +
-  geom_point(aes(x = reorder(site, -nh4_avg), 
-                 nh4_avg),
-             size = 3, colour = "black", pch = 20) +
   theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) +
   labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
   scale_colour_manual(values = pal) 
@@ -686,69 +693,7 @@ ggplot(data = rank) +
 #        height = 5, width = 8, dpi = 400)
 
 
-# Plot biomass vs nh4
-ggplot(rls_final, aes(weight_sum, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_code)) +
-  geom_smooth(method = lm) +
-  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
-  labs(x = "Total fish biomass (g)", y = "Ammonium concentration (umol)") +
-  theme_classic() +
-  theme(legend.position = "null")
-
-# richness
-ggplot(rls_final, aes(species_richness, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_code)) +
-  geom_smooth(method = lm) +
-  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
-  labs(x = "Richness", y = "Ammonium concentration (umol)") +
-  theme_classic() +
-  theme(legend.position = "null")
-
-# shannon
-ggplot(rls_final, aes(shannon, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_code)) +
-  geom_smooth(method = lm) +
-  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
-  labs(x = "Richness", y = "Ammonium concentration (umol)") +
-  theme_classic() +
-  theme(legend.position = "null")
-
-# simpson
-ggplot(rls_final, aes(simpson, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_code)) +
-  geom_smooth(method = lm) +
-  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
-  labs(x = "Richness", y = "Ammonium concentration (umol)") +
-  theme_classic() +
-  theme(legend.position = "null")
-
-# abundance
-ggplot(rls_final, aes(abundance, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_code)) +
-  geom_smooth(method = lm) +
-  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
-  labs(x = "Abundance", y = "Ammonium concentration (umol)") +
-  theme_classic() +
-  theme(legend.position = "null")
-
-# tide exchange
-ggplot(rls_final, aes(avg_exchange_rate, nh4_avg, label = site)) +
-  geom_point(aes(colour = site_code)) +
-  geom_smooth(method = lm) +
-  geom_text(check_overlap = TRUE, hjust = 1,  size = 3, ) +
-  labs(x = "Rate of tidal exchange", y = "Ammonium concentration (umol)") +
-  theme_classic() +
-  theme(legend.position = "null")
-
 # Site vs pee
-ggplot(rls_nh4, aes(nh4_conc, site, colour = year)) +
-  geom_boxplot() +
-  theme(axis.text = element_text(size = 15),
-        axis.title = element_text(size = 15)) +
-  labs(x= "Ammonium concentration (umol)", y = "Site") +
-  theme_classic()
-
-# black background
 ggplot(rls_nh4, aes(nh4_conc, site, fill = site)) +
   geom_boxplot(colour = "white") +
   theme_black() +
@@ -757,16 +702,6 @@ ggplot(rls_nh4, aes(nh4_conc, site, fill = site)) +
 
 #ggsave("Output/Figures/RLS_sites_pee.png", device = "png",
 #       height = 9, width = 16, dpi = 400)
-
-
-
-# Visualize temperature
-ggplot(rls_nh4, aes(x = temp_est, y = site)) +
-  geom_point() +
-  labs(x = "Salinity Estimate", y = "Site")
-
-ggplot(bottles, aes(x = temp_est)) +
-  geom_histogram(colour="black", fill="white")
 
 
 # Make a map -----
@@ -783,56 +718,105 @@ sf_use_s2(FALSE)
 
 # coords
 rls_coords <- rls_final %>%
+  select(site_code, survey_id, year, nh4_avg, abundance, tide_cat) %>%
   left_join(
-    rls %>% select(site_code, site_name, latitude, longitude, survey_latitude, survey_longitude,) %>% 
-      unique()
+    # use real coordinates not the RLS rounded ones
+    read_csv("Data/RLS/RLS_data/true_coords.csv") 
     ) %>%
   st_as_sf(coords = c("longitude", "latitude")) %>%
   st_set_crs(4326) %>%
-  mutate(xjit = ifelse(site_code == "BMSC6" | 
-                         site_code == "BMSC3" |
-                         site_code == "BMSC21" |
-                         site_code == "BMSC15" |
-                         site_code == "BMSC11" |
-                         site_code == "BMSC19", -0.015, 0.015),
-         weight_kg = weight_sum/1000)
+  group_by(site_code) %>%
+  mutate(nh4_overall_avg = mean(nh4_avg),
+         nh4_min = min(nh4_avg),
+         nh4_max = max(nh4_avg)) %>%
+  ungroup()
 
-## Create legend
-#site_names <- as.list(paste(coords$site_num, coords$`Site name`, sep = ": "))
+# use full nh4 data
+coords_nh4 <- rls_nh4 %>%
+  select(site_code, year, nh4_conc) %>%
+  left_join(
+    # use real coordinates not the RLS rounded ones
+    read_csv("Data/RLS/RLS_data/true_coords.csv") 
+  ) %>%
+  st_as_sf(coords = c("longitude", "latitude")) %>%
+  st_set_crs(4326) %>%
+  group_by(site_code) %>%
+  mutate(nh4_avg = mean(nh4_conc),
+         nh4_min = min(nh4_conc),
+         nh4_max = max(nh4_conc)) %>%
+  ungroup()
 
-# Make map
+# just slack and ebb
+coords_slack <- rls_coords %>%
+  filter(tide_cat != "Flood") %>%
+  group_by(site_code) %>%
+  mutate(nh4_avg = mean(nh4_avg)) %>%
+  ungroup()
+
+# Make maps
+# shows avg for each site including all data
+map_daddy(rls_coords, nh4_overall_avg) 
+
+#ggsave("Output/Figures/nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+# just avg of the slack and ebb measurements
+map_daddy(coords_slack, nh4_avg) 
+
+#ggsave("Output/Figures/nh4_slack_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+# Can I do something cursed? 
 ggplot() +
   geom_sf(data = potato_map, fill = blue, colour = "white") +
-  geom_sf(data = rls_coords, 
+  geom_sf(data = coords_nh4, 
           colour = "black",
           pch = 21,
           alpha = 0.9,
-          aes(size = weight_kg,
-              fill = nh4_avg)) +
+          size = 13.5,
+          aes(fill = nh4_min)) +
+  geom_sf(data = coords_nh4, 
+          colour = "black",
+          pch = 21,
+          alpha = 0.9,
+          size = 11,
+          aes(fill = nh4_avg)) +
+  geom_sf(data = coords_nh4, 
+          colour = "black",
+          pch = 21,
+          alpha = 0.9,
+          size = 4.5,
+          aes(fill = nh4_max)) +
   coord_sf(xlim = c(-125.4, -125.0), ylim = c(48.80, 49), expand = FALSE)  +
-  theme_bw() +
+  theme_black() +
   theme(panel.background = element_rect(fill = "white"),
-        axis.text = element_text(size = 12, colour = "black"),
-        axis.title = element_text(size = 13, colour = "black"),
-        legend.title = element_text(size = 12, colour = "black"),
-        legend.text = element_text(size = 11, colour = "black"),
         panel.grid.major = element_line(color = "white")) +
-  viridis::scale_fill_viridis(option="magma", direction = -1) +
+  viridis::scale_fill_viridis(option="magma", direction = -1,
+                              guide = guide_colorbar(frame.colour = "white", ticks.colour = "white")) +
   labs(x = "Longitude", y = "Latitude",
-       fill = expression(paste("NH"[4]^" +","(umol)")),
-       size = "Fish biomass (kg)")  +
-  geom_text(data = rls_coords,
-            aes(x = survey_longitude, y = survey_latitude, 
-                label = site_code),
-            size = 3,
-            nudge_x = rls_coords$xjit)
+       fill = expression(paste("NH"[4]^" +",(mu*M)))) +
+  scale_x_continuous(breaks = seq(-125.4, -125.0, by = 0.1))
 
-            
-#ggsave("Pub_figs/Fig.1.png", device = "png",
-#       height = 150, width = 250, units = c("mm"), dpi = 600)
+#ggsave("Output/Figures/cursed_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Graveyard -----
+
+#  mutate(xjit = ifelse(site_code == "BMSC6" | 
+#                         site_code == "BMSC3" |
+#                         site_code == "BMSC21" |
+#                         site_code == "BMSC15" |
+#                         site_code == "BMSC11" |
+#                         site_code == "BMSC19", -0.015, 0.015))
+#
+## Create legend
+#site_names <- as.list(paste(coords$site_num, coords$`Site name`, sep = ": "))
+
+
+#  + geom_text(data = rls_coords,
+#            aes(x = survey_longitude, y = survey_latitude, 
+#                label = site_code),
+#            size = 3,
+#            nudge_x = rls_coords$xjit)
+
 
 # filter inverts and weirdos for rls
 filter(species_name != "Bolinopsis infundibulum") %>%
