@@ -562,12 +562,12 @@ map_daddy <- function(coord_data, nh4_var, kelp_var) {
     theme(panel.background = element_rect(fill = "white"),
           panel.grid.major = element_line(color = "white")) +
     viridis::scale_fill_viridis(option="magma", direction = -1,
-                                limits = c(0, 2.87),
+                                limits = c(0, 2),
             guide = guide_colorbar(frame.colour = "white", ticks.colour = "white")) +
     labs(x = "Longitude", y = "Latitude",
          fill = expression(paste("NH"[4]^" +",(mu*M)))) +
     scale_x_continuous(breaks = seq(-125.4, -125.0, by = 0.1)) +
-    scale_shape_manual(values = c(25, 21), drop = F) +
+    scale_shape_manual(values = c(21, 25), drop = F) +
     guides(pch = guide_legend(override.aes = 
                                  list(colour = "white")))
 }

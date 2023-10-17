@@ -71,6 +71,7 @@ kelp_coords <- data_s %>%
   st_set_crs(4326) %>%
   group_by(site_code)
 
+
 # Both sets of coords ----
 all_coords <- rls_coords %>%
   transmute(site_code = site_code,
@@ -82,11 +83,12 @@ all_coords <- rls_coords %>%
     (kelp_coords %>% transmute(nh4_avg = nh4_out_avg,
                                geometry = geometry,
                                Habitat = Habitat)) ) %>%
-  # shrink the two sites over 1.5 to 1.5 so the scale is nicer
-  mutate(Habitat = as.factor(Habitat))
+  # shrink the two sites over 1 uM to 2 uM so the scale is nicer
+  mutate(Habitat = factor(as.factor(Habitat), levels = c("Reef", "Kelp")),
+         nh4_avg = ifelse(nh4_avg > 2, 2, nh4_avg)) 
 
 
-    #nh4_avg = ifelse(nh4_avg > 1.5, 1.5, nh4_avg)) 
+    #
 
 
 
@@ -99,11 +101,6 @@ all_coords %>%
 
 #ggsave("Output/Figures/rls_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
-# just avg of the slack and ebb measurements for RLS sites
-map_daddy(coords_slack, nh4_avg, Habitat) 
-
-#ggsave("Output/Figures/nh4_slack_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
 
 # Kelp only map
 all_coords %>%
@@ -112,10 +109,18 @@ all_coords %>%
 
 #ggsave("Output/Figures/kelp_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
+
 # Kelp + RLS map -----
 map_daddy(all_coords, nh4_avg, Habitat) 
 
 #ggsave("Output/Figures/all_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+
+# just avg of the slack and ebb measurements for RLS sites
+map_daddy(coords_slack, nh4_avg, Habitat) 
+
+#ggsave("Output/Figures/nh4_slack_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Cursed pimple map -----
