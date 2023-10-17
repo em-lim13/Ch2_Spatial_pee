@@ -645,10 +645,44 @@ cor.test(cor_data$nh4_2023, cor_data$nh4_2021,
 
 # Graphing ----
 pal <- pnw_palette("Sailboat", 3)
-pal2 <- viridis::viridis(3)
+pal3 <- viridis::viridis(3)
+pal7 <- viridis::viridis(7)
+
 csee_pal <- pnw_palette("Starfish", n = 3)
 
-# Plot abundance vs nh4
+
+# Coefficient plot of the model ----
+
+# generate df for plotting
+df <- confint(mod_best, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  rename(variable = rowname,
+         lower_CI = `2.5 %`,
+         upper_CI = `97.5 %`,
+         estimate = Estimate) %>%
+  slice(1:7) %>%
+  mutate(variable = factor(as.factor(variable), 
+         levels = c("(Intercept)", "abundance_stand", "rich_stand", "tide_stand", "depth_avg_stand","abundance_stand:tide_stand", "tide_stand:rich_stand"),
+         labels = c("Intercept", "Abundance", "Richness", "Tide", "Depth", "Abundance:Tide", "Richness:Tide"))
+         )
+
+# Coefficient plot
+ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
+    geom_point(size = 10) +
+    geom_errorbar(width = 0, linewidth = 3) +
+    geom_vline(xintercept=0, color="white", linetype="dashed") +
+    labs(x = "Coefficient (log-link)", y = " ") +
+  scale_y_discrete(limits = rev(levels(df$variable))) +
+  theme_black() +
+  theme(legend.position = "none") + 
+  scale_colour_manual(values = pal7)
+
+#ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+
+# Plot abundance vs nh4 -----
 ggplot(rls_final, aes(abundance, nh4_avg, colour = tide_cat, fill = tide_cat)) +
   geom_point(size = 3) +
   geom_smooth(method = lm, alpha = 0.15) +
