@@ -9,7 +9,6 @@ library(ggplot2)
 library(PNWColors)
 library(ggeffects)
 library(lubridate)
-library(lmerTest)
 library(vegan) # for diversity indexes
 library(MuMIn) # for dredge?
 library(TMB)
@@ -17,7 +16,6 @@ library(glmmTMB) # better for random effects?
 library(patchwork)
 
 # Source pretty functions
-source("Code/theme_black.R")
 source("Code/Functions.R") # Length to weight function here!
 
 # Set default plotting
@@ -264,6 +262,7 @@ rls_final <-
   )
 
 
+#write_csv(rls_final, "Output/Output_data/rls_final.csv")
 
 # can i make a flood, ebb, slack var for exchange?
 #max(rls_final$avg_exchange_rate)

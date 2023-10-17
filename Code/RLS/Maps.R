@@ -7,25 +7,32 @@ library(tidyverse)
 library(ggplot2)
 library(sf)
 
-
 # Load functions ----
-source("Code/theme_black.R")
 source("Code/Functions.R") # Length to weight function here!
-source("Code/")
 
-# Make a map -----
-# Load not great shapefile
+# Load data ----
+# these are csv files created by the rls and kelp analysis files
+
+data_s <- read_csv("Output/Output_data/kelp_final.csv")
+
+rls_final <- read_csv("Output/Output_data/rls_final.csv")
+
+kelp_rls <- read_csv("Output/Output_data/kelp_rls.csv")
+ 
+
+# Load not great shapefile ----
 potato_map <- sf::st_read("Data/Shapefiles/eez.shp") %>%
   st_sf() %>%
   st_set_crs(4326)
 
-# Define colours
-blue <- paste("#b9d1df", sep="")
-
 # Make map without pies, just scaling size of point to %
 sf_use_s2(FALSE)
 
-# coords
+# Define colours
+blue <- paste("#b9d1df", sep="")
+
+
+# RLS coords ------
 rls_coords <- rls_final %>%
   select(site_code, survey_id, year, nh4_avg, abundance, tide_cat) %>%
   left_join(
@@ -38,9 +45,82 @@ rls_coords <- rls_final %>%
   mutate(nh4_overall_avg = mean(nh4_avg),
          nh4_min = min(nh4_avg),
          nh4_max = max(nh4_avg)) %>%
+  ungroup() %>%
+  mutate(Habitat = "Reef")
+
+# just slack and ebb
+coords_slack <- rls_coords %>%
+  filter(tide_cat != "Flood") %>%
+  group_by(site_code) %>%
+  mutate(nh4_avg = mean(nh4_avg)) %>%
   ungroup()
 
-# use full nh4 data
+
+# Kelp data coords -----
+kelp_coords <- data_s %>%
+  select(site_code, nh4_in_avg, nh4_out_avg, nh4_avg, kelp_sp, tide_cat) %>%
+  left_join(
+    kelp_rls %>%
+      transmute(site_code = site_code,
+                latitude = Latitude,
+                longitude = Longitude,
+                Habitat = "Kelp") %>%
+      unique()
+  ) %>%
+  st_as_sf(coords = c("longitude", "latitude")) %>%
+  st_set_crs(4326) %>%
+  group_by(site_code)
+
+# Both sets of coords ----
+all_coords <- rls_coords %>%
+  transmute(site_code = site_code,
+            nh4_avg = nh4_overall_avg,
+            geometry = geometry,
+            Habitat = Habitat) %>%
+  unique() %>%
+  rbind(
+    (kelp_coords %>% transmute(nh4_avg = nh4_out_avg,
+                               geometry = geometry,
+                               Habitat = Habitat)) ) %>%
+  # shrink the two sites over 1.5 to 1.5 so the scale is nicer
+  mutate(Habitat = as.factor(Habitat))
+
+
+    #nh4_avg = ifelse(nh4_avg > 1.5, 1.5, nh4_avg)) 
+
+
+
+# Make maps! ------
+
+# RLS site averages including all data
+all_coords %>%
+  filter(Habitat == "Reef") %>%
+  map_daddy(nh4_avg, Habitat)
+
+#ggsave("Output/Figures/rls_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+# just avg of the slack and ebb measurements for RLS sites
+map_daddy(coords_slack, nh4_avg, Habitat) 
+
+#ggsave("Output/Figures/nh4_slack_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+# Kelp only map
+all_coords %>%
+  filter(Habitat == "Kelp") %>%
+  map_daddy(nh4_avg, Habitat)
+
+#ggsave("Output/Figures/kelp_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+# Kelp + RLS map -----
+map_daddy(all_coords, nh4_avg, Habitat) 
+
+#ggsave("Output/Figures/all_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+# Cursed pimple map -----
+
+# need to use full nh4 data, go run the rls analysis script to generate "rls_nh4"
 coords_nh4 <- rls_nh4 %>%
   select(site_code, year, nh4_conc) %>%
   left_join(
@@ -55,23 +135,6 @@ coords_nh4 <- rls_nh4 %>%
          nh4_max = max(nh4_conc)) %>%
   ungroup()
 
-# just slack and ebb
-coords_slack <- rls_coords %>%
-  filter(tide_cat != "Flood") %>%
-  group_by(site_code) %>%
-  mutate(nh4_avg = mean(nh4_avg)) %>%
-  ungroup()
-
-# Make maps
-# shows avg for each site including all data
-map_daddy(rls_coords, nh4_overall_avg) 
-
-#ggsave("Output/Figures/nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
-# just avg of the slack and ebb measurements
-map_daddy(coords_slack, nh4_avg) 
-
-#ggsave("Output/Figures/nh4_slack_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 # Can I do something cursed? 
 ggplot() +
@@ -105,4 +168,3 @@ ggplot() +
   scale_x_continuous(breaks = seq(-125.4, -125.0, by = 0.1))
 
 #ggsave("Output/Figures/cursed_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
-

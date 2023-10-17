@@ -9,12 +9,13 @@ library(visreg)
 library(ggplot2)
 library(lmerTest)
 library(lme4)
+library(TMB)
+library(glmmTMB) # better for random effects?
 library(lubridate)
 library(DHARMa)
 
 # set theme and load functions
 theme_set(theme_bw())
-source("Code/theme_black.R")
 source("Code/Functions.R")
 
 # Kelp data ----
@@ -89,6 +90,9 @@ kelp_rls <- kelp_rls1 %>%
   invert_length_to_weight() %>% # invert length to weight
   length_to_weight() %>% # fish length to weight function
   home_range() # calculate each fish's home range
+
+#write_csv(kelp_rls, "Output/Output_data/kelp_rls.csv")
+
 
 # extract just one row per survey to join with the pee data and tide data
 # Only keep the surveys I have pee samples for!
@@ -212,8 +216,12 @@ data <- pee %>%
          tide_cat = case_when(avg_exchange_rate < -0.1897325 ~ "Ebb",
                               avg_exchange_rate < 0.1897325 ~ "Slack",
                               avg_exchange_rate > 0.1897325 ~ "Flood") # only slack and flood
-  ) %>%
-  filter(site_name != "Second Beach South")
+  ) 
+
+# I don't think I want to remove Second beach south
+#  filter(site_name != "Second Beach South")
+
+
 # Each row is a mini transect into the kelp forest
   # That has an individual kelp density + biomass estimate + inside vs outside ammonium value
 
@@ -221,7 +229,10 @@ data <- pee %>%
 data_s <- data %>%
   select(site, site_code, survey_id, in_out_avg, nh4_in_avg, nh4_out_avg, nh4_avg, depth_avg, avg_exchange_rate, kelp_sp, BiomassM, bio_mean_scale, weight_sum, weight_sum_stand, all_weighted_stand, abundance_stand, rich_stand, shannon_stand, simpson_stand, tide_stand, depth_avg_stand, tide_cat) %>%
   unique() %>%
-  filter(site != "Wizard_I_North" | kelp_sp != "none")
+  filter(site != "Wizard_I_North" | kelp_sp != "none") # just getting rid of the duplicate row, bc there wasn't kelp on one transect unique misses this one
+
+#write_csv(data_s, "Output/Output_data/kelp_final.csv")
+
 
 # not sure what this is
 data_s_reduced <- data %>%
@@ -502,58 +513,6 @@ visreg(kelp_mod_best)
 
 
 # Plots ----
-# Make a map -----
-# Load not great shapefile
-potato_map <- sf::st_read("Data/Shapefiles/eez.shp") %>%
-  st_sf() %>%
-  st_set_crs(4326)
-
-# Define colours
-blue <- paste("#b9d1df", sep="")
-
-# Make map without pies, just scaling size of point to %
-sf_use_s2(FALSE)
-
-# coords
-kelp_coords <- data_s %>%
-  select(site_code, nh4_in_avg, nh4_out_avg, nh4_avg, kelp_sp, tide_cat) %>%
-  left_join(
-    kelp_rls %>%
-      transmute(site_code = site_code,
-                latitude = Latitude,
-                longitude = Longitude) %>%
-      unique()
-  ) %>%
-  st_as_sf(coords = c("longitude", "latitude")) %>%
-  st_set_crs(4326) %>%
-  group_by(site_code)
-
-# Make maps
-# shows avg for each site including all data
-map_daddy(kelp_coords, nh4_avg) 
-
-#ggsave("Output/Figures/nh4_kelp_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
-# Kelp + RLS map -----
-# will need to have coordinates from rls blitz to run this
-
-all_coords <- rls_coords %>%
-  transmute(site_code = site_code,
-            nh4_avg = nh4_overall_avg,
-            geometry = geometry,
-            Habitat = "Reef") %>%
-  unique() %>%
-  rbind(
-    (kelp_coords %>% transmute(nh4_avg = nh4_out_avg,
-                               geometry = geometry,
-                               Habitat = "Kelp")) 
-    ) %>%
-  mutate(nh4_avg = ifelse(site_code == "KCCA21", 1.5, nh4_avg))
-
-map_daddy(all_coords, nh4_avg, Habitat) 
-
-#ggsave("Output/Figures/nh4_all_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
 
 ggplot(data, aes(bio_mean_scale, log_pee_diff)) +
   geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
