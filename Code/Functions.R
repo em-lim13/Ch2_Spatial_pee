@@ -469,6 +469,7 @@ map_daddy <- function(coord_data, nh4_var, kelp_var) {
     theme(panel.background = element_rect(fill = "white"),
           panel.grid.major = element_line(color = "white")) +
     viridis::scale_fill_viridis(option="magma", direction = -1,
+                                limits = c(0, 1.5),
             guide = guide_colorbar(frame.colour = "white", ticks.colour = "white")) +
     labs(x = "Longitude", y = "Latitude",
          fill = expression(paste("NH"[4]^" +",(mu*M)))) +

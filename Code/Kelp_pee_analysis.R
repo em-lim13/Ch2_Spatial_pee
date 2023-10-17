@@ -534,8 +534,9 @@ map_daddy(kelp_coords, nh4_avg)
 
 #ggsave("Output/Figures/nh4_kelp_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
-# Can I put everything together?
+# Kelp + RLS map -----
 # will need to have coordinates from rls blitz to run this
+
 all_coords <- rls_coords %>%
   transmute(site_code = site_code,
             nh4_avg = nh4_overall_avg,
@@ -551,7 +552,7 @@ all_coords <- rls_coords %>%
 
 map_daddy(all_coords, nh4_avg, Habitat) 
 
-ggsave("Output/Figures/nh4_all_map.png", device = "png", height = 9, width = 16, dpi = 400)
+#ggsave("Output/Figures/nh4_all_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 ggplot(data, aes(bio_mean_scale, log_pee_diff)) +
