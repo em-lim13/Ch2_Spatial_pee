@@ -576,3 +576,32 @@ map_daddy <- function(coord_data, nh4_var, kelp_var) {
 #axis.text = element_text(size = 12, colour = "black"),
 #axis.title = element_text(size = 13, colour = "black"),
 #legend.text = element_text(size = 11, colour = "black"),
+
+
+# Plotting -----
+
+# Dot Whisker Plot -----
+
+dot_whisker <- function(sum_data, all_data, x_var, y_var){
+  ggplot() +
+    geom_point(data = {{sum_data}},
+               aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}),
+               size = 6) +
+    geom_errorbar(data = {{sum_data}},
+                  aes(x = {{x_var}},
+                      y = {{y_var}},
+                      ymin = conf.low,
+                      ymax = conf.high, 
+                      colour = {{x_var}}),
+                  width = 0.4,
+                  linewidth = 1.5) +
+    geom_jitter(data = {{all_data}}, 
+                aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}), 
+                size = 3, alpha = 0.5, height=0) +
+    theme_black() + 
+    theme(legend.position = "none",
+          plot.title = element_text(size = 30)) +
+    scale_colour_manual(values = rev(csee_pal)) +
+    labs(y = expression(paste("Ammonium"~(mu*M)))) +
+    ylim(c(0, 3.8))
+}
