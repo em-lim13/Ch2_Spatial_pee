@@ -13,11 +13,11 @@ library(lmerTest)
 library(PNWColors)
 library(patchwork)
 library(ggeffects)
-source("Code/theme_black.R")
+source("Code/Functions.R")
 
 theme_set(theme_bw())
 
-##Code to analyse The Experiment of Many Tubs June 21, 2021----
+##Code to analyze The Experiment of Many Tubs June 21, 2021----
   
 tubs <- read_csv("Data/Emily_flow/2021_06_21_emily_flow_exp.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(flu_1, flu_2, flu_3)),
@@ -270,6 +270,7 @@ tubs_nh4_added_final <- rbind(tubs_nh4_added1, tubs_nh4_added2) %>%
                                        ifelse(flow_s == 4, 25, "Control"))))) %>%
   mutate(flow_s = factor(flow_s, levels = c("Control", 10, 15, 20, 25)))
         
+
 # stats ----
 model <- lm(nh4_added ~ flow_s + Week, data = tubs_nh4_added_final)
 summary(model)
