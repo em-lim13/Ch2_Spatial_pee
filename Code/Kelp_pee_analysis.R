@@ -91,7 +91,14 @@ kelp_rls <- kelp_rls1 %>%
   length_to_weight() %>% # fish length to weight function
   home_range() # calculate each fish's home range
 
-#write_csv(kelp_rls, "Output/Output_data/kelp_rls.csv")
+# save csv for mapping 
+  #kelp_rls_csv <- kelp_rls %>%
+  #  transmute(site_code = site_code,
+  #            latitude = Latitude,
+  #            longitude = Longitude) %>%
+  #  unique()
+  #
+  #write_csv(kelp_rls_csv, "Output/Output_data/kelp_rls.csv")
 
 
 # extract just one row per survey to join with the pee data and tide data

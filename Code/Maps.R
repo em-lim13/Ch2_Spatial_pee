@@ -61,11 +61,7 @@ kelp_coords <- data_s %>%
   select(site_code, nh4_in_avg, nh4_out_avg, nh4_avg, kelp_sp, tide_cat) %>%
   left_join(
     kelp_rls %>%
-      transmute(site_code = site_code,
-                latitude = Latitude,
-                longitude = Longitude,
-                Habitat = "Kelp") %>%
-      unique()
+      mutate(Habitat = "Kelp")
   ) %>%
   st_as_sf(coords = c("longitude", "latitude")) %>%
   st_set_crs(4326) %>%
