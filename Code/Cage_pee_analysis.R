@@ -96,8 +96,8 @@ crab_plot <- dot_whisker(sum_data = sum_crabs, all_data = crab_pee,
 # plot together
 cuke_plot + crab_plot
 
-ggsave("Output/Figures/both_cages.png", device = "png", height = 9, width = 16, dpi = 400)
-
+ggsave("Output/Figures/both_cages.png", device = "png", height = 7, width = 16, dpi = 400)
+# og is 9 x 16
 
 # Old cuke x depth plot ----
 # Effect of depth
@@ -113,4 +113,72 @@ ggplot(cuke_pee, aes(depth, nh4_avg)) +
         axis.title = element_text(size = 16, colour = "black"),
         legend.text = element_text(size = 14),
         legend.title = element_text(size = 15)) 
+
+
+# Map ? -----
+
+# Try bcmaps for a better shapefile!!!!!!!!
+library(sf)
+library(ggimage) # for the pictures!
+
+# Load not great shapefile ----
+potato_map <- sf::st_read("Data/Shapefiles/eez.shp") %>%
+  st_sf() %>%
+  st_set_crs(4326)
+
+# Make map without pies, just scaling size of point to %
+sf_use_s2(FALSE)
+
+# Define colours
+blue <- paste("#b9d1df", sep="")
+
+# Choose coordinates 
+site <- c("Scott's Bay", "Nova Harvest")
+lat <- c(48.835583, 48.829500)
+long <- c(-125.146361, -125.136250)
+image <- c("Images/cuke_no_background.png", "Images/red_crab_no_background.png")
+
+coords <- data.frame(site, lat, long, image) %>%
+  st_as_sf(coords = c("long", "lat")) %>%
+  st_set_crs(4326) 
+
+# make the map!
+ggplot() +
+  geom_sf(data = potato_map, fill = blue, colour = "white") +
+  geom_sf(data = coords, 
+          colour = "black",
+          alpha = 0.9,
+          size = 9,
+          aes(fill = site)) +
+  coord_sf(xlim = c(-125.4, -125.0), ylim = c(48.80, 49), expand = FALSE)  +
+  theme_black() +
+  theme(panel.background = element_rect(fill = "white"),
+        panel.grid.major = element_line(color = "white"),
+        legend.position = "null") +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_x_continuous(breaks = seq(-125.4, -125.0, by = 0.1))
+
+
+# try to replace points with images!
+# Help here: https://www.simoncoulombe.com/2020/11/animated-ships/
+ggplot() +
+  geom_sf(data = potato_map, fill = blue, colour = "white") +
+  # new images
+  ggimage::geom_image(data = coords %>%
+                        mutate(
+                          proj_x= map_dbl( geometry, ~st_coordinates(.x)[1]), # trouver les coordonnées projetées
+                          proj_y= map_dbl( geometry, ~st_coordinates(.x)[2])
+                        ) %>% st_drop_geometry(), # dropper la géométrie
+                      aes(x = proj_x, y = proj_y),
+                      size = 0.25,
+                      image = image) +
+  coord_sf(xlim = c(-125.18, -125.1), ylim = c(48.82, 48.85), expand = FALSE)  +
+  theme_black() +
+  theme(panel.background = element_rect(fill = "white"),
+        panel.grid.major = element_line(color = "white"),
+        legend.position = "null") +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_x_continuous(breaks = seq(-125.18, -125.1, by = 0.05))
+
+
 
