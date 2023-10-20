@@ -115,10 +115,11 @@ ggplot(cuke_pee, aes(depth, nh4_avg)) +
         legend.title = element_text(size = 15)) 
 
 
-# Map ? -----
+# Map -----
 
-# Try bcmaps for a better shapefile!!!!!!!!
+# Try bcmaps for a better shapefile ????
 library(sf)
+library(osmdata)
 library(ggimage) # for the pictures!
 
 # Load not great shapefile ----
@@ -126,7 +127,7 @@ potato_map <- sf::st_read("Data/Shapefiles/eez.shp") %>%
   st_sf() %>%
   st_set_crs(4326)
 
-# Make map without pies, just scaling size of point to %
+# do this so i can trim the map margins
 sf_use_s2(FALSE)
 
 # Define colours
@@ -146,10 +147,9 @@ coords <- data.frame(site, lat, long, image) %>%
 ggplot() +
   geom_sf(data = potato_map, fill = blue, colour = "white") +
   geom_sf(data = coords, 
-          colour = "black",
           alpha = 0.9,
           size = 9,
-          aes(fill = site)) +
+          aes(colour = site)) +
   coord_sf(xlim = c(-125.4, -125.0), ylim = c(48.80, 49), expand = FALSE)  +
   theme_black() +
   theme(panel.background = element_rect(fill = "white"),
@@ -161,8 +161,13 @@ ggplot() +
 
 # try to replace points with images!
 # Help here: https://www.simoncoulombe.com/2020/11/animated-ships/
+
+# zoom in, use osm map
+load("/Users/emlim/Documents/PhD/Ch2_Spatial_pee/Data/coastline.Rdata") 
+
+
 ggplot() +
-  geom_sf(data = potato_map, fill = blue, colour = "white") +
+  geom_sf(data = coastline_data$osm_lines, fill = blue, colour = "black") +
   # new images
   ggimage::geom_image(data = coords %>%
                         mutate(
