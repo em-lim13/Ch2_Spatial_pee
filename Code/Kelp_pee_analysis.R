@@ -4,13 +4,11 @@
 
 # Load packages and functions -----
 library(tidyverse)
-library(MuMIn)
+library(MuMIn) # for dredging
 library(visreg)
 library(ggplot2)
-library(lmerTest)
-library(lme4)
 library(TMB)
-library(glmmTMB) # better for random effects?
+library(glmmTMB) # better for random effects
 library(lubridate)
 library(DHARMa)
 
@@ -262,6 +260,7 @@ ggplot(data, aes(x = in_minus_out)) +
 # Hey that's roughly Gaussian!
 # Positive and negative values roughly centered around 0
 
+
 # Step 2: Choose your predictors
 
 # Biological
@@ -301,30 +300,69 @@ ggplot(data, aes(x = in_minus_out)) +
 # choose one animal community biomass and one biodiversity variable
 
 # Need to think harder about modelling based on site vs mini transect level!!!
-mod_norm_kelp <- glmmTMB(in_minus_out ~ bio_mean_scale*tide_stand + bio_tran_scale + weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + kelp_sp + (1|site_code), 
+
+# This is the transect level model
+# One row per transect, 3 per site
+mod_tran <- glmmTMB(in_minus_out ~ bio_mean_scale*tide_stand*weight_sum_stand*bio_tran_scale + shannon_stand + depth_avg_stand + kelp_sp + (1|site_code), 
                          family = 'gaussian',
                          data = data)
-summary(mod_norm_kelp)
+summary(mod_tran)
+# tiny negative effect of tide, small negative effect of weight, mixed slightly less than macro, and negative biomass:tide interaction
 
-# Try building one site level model and one transect level model?
-mod_site <- glmmTMB(in_out_avg ~ bio_mean_scale*tide_stand + weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + kelp_sp, 
+# This is the site level model 
+# same variables, minus the kelp transect biomass (bio_tran_scale) and without a random effect of site, with only one row per site
+mod_site <- glmmTMB(in_out_avg ~ bio_mean_scale*tide_stand*weight_sum_stand + shannon_stand + depth_avg_stand + kelp_sp, 
                          family = 'gaussian',
                          data = data_s)
 summary(mod_site)
+# teeeeny negative tide effect, tiiiny positive depth effect, negative kelp biomass:tide interaction
 
+# For both models the only significant thing is the bio_mean_scale:tide_stand interaction
 
 # Step 3: Model residuals 
-# Compare the two distrubutions 
+# Check residuals
 
-# Gaussian
-mod_kelp_resids <- simulateResiduals(mod_site)
-plot(mod_kelp_resids) # not the best thing I've ever seen but it's not bad!
+# Transect level
+plot(simulateResiduals(mod_norm_kelp)) # pretty good
+
+# Site level
+plot(simulateResiduals(mod_site)) # not the best thing I've ever seen but it's not bad!
+
+# The transect level looks better than the site level!
+
+AIC(mod_tran, mod_site) # diff numbers of variables, can't use AIC
+
 
 # Step 4: Check for collinearity of predictors
 
 # car can't handle random effects so make a simplified mod
 car::vif(lm(in_minus_out ~ bio_mean_scale + tide_stand + bio_tran_scale + weight_sum_stand + shannon_stand + depth_avg_stand + kelp_sp, data = data))
 # Bio_mean_scale is 2.6 but I'm not sure what it's correlated to, probably bio_tran_scale
+
+# So I think the best model is the transect level one????
+
+
+# Alright so let's nail down the best suite of interactions to include in the transect level model
+# this is the full model
+mod_tran <- glmmTMB(in_minus_out ~ bio_mean_scale*tide_stand*weight_sum_stand*bio_tran_scale + shannon_stand + depth_avg_stand + kelp_sp + (1|site_code), 
+                    family = 'gaussian',
+                    data = data,
+                    na.action = na.fail)
+
+# dredge <- as.data.frame(dredge(mod_tran)) %>% filter(delta < 3)
+
+# best = bio_mean_scale*tide_stand*weight_sum_stand + kelp_sp + shannon_stand 
+# second best is the same + bio_tran_scale
+
+
+mod_best <- glmmTMB(in_minus_out ~ bio_mean_scale*tide_stand*weight_sum_stand + bio_tran_scale + shannon_stand + kelp_sp + (1|site_code), 
+                    family = 'gaussian',
+                    data = data,
+                    na.action = na.fail)
+
+summary(mod_best)
+plot(simulateResiduals(mod_best)) 
+
 
 
 # Stats: site to site variation ----
