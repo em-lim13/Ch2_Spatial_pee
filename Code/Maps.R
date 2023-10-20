@@ -20,10 +20,9 @@ rls_final <- read_csv("Output/Output_data/rls_final.csv")
 kelp_rls <- read_csv("Output/Output_data/kelp_rls.csv")
  
 
-# Load not great shapefile ----
-potato_map <- sf::st_read("Data/Shapefiles/eez.shp") %>%
-  st_sf() %>%
-  st_set_crs(4326)
+# Load GREAT shapefile ----
+load("~/Documents/PhD/Ch2_Spatial_pee/Data/bc_map.Rdata")
+bc_map <- slice # rename
 
 # Make map without pies, just scaling size of point to %
 sf_use_s2(FALSE)
@@ -84,9 +83,6 @@ all_coords <- rls_coords %>%
          nh4_avg = ifelse(nh4_avg > 2, 2, nh4_avg)) 
 
 
-    #
-
-
 
 # Make maps! ------
 
@@ -110,7 +106,6 @@ all_coords %>%
 map_daddy(all_coords, nh4_avg, Habitat) 
 
 #ggsave("Output/Figures/all_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
 
 
 # just avg of the slack and ebb measurements for RLS sites

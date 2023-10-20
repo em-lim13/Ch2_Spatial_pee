@@ -550,7 +550,7 @@ depth_function <- function(datafile){
 
 map_daddy <- function(coord_data, nh4_var, kelp_var) {
   ggplot() +
-    geom_sf(data = potato_map, fill = blue, colour = "white") +
+    geom_sf(data = bc_map, fill = "white", colour = blue) +
     geom_sf(data = {{coord_data}}, 
             colour = "black",
             alpha = 0.9,
@@ -559,8 +559,8 @@ map_daddy <- function(coord_data, nh4_var, kelp_var) {
                 pch = {{kelp_var}})) +
     coord_sf(xlim = c(-125.4, -125.0), ylim = c(48.80, 49), expand = FALSE)  +
     theme_black() +
-    theme(panel.background = element_rect(fill = "white"),
-          panel.grid.major = element_line(color = "white")) +
+    theme(panel.background = element_rect(fill = blue),
+          panel.grid.major = element_line(color = blue)) +
     viridis::scale_fill_viridis(option="magma", direction = -1,
                                 limits = c(0, 2),
             guide = guide_colorbar(frame.colour = "white", ticks.colour = "white")) +
