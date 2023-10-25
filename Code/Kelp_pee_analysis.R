@@ -316,15 +316,7 @@ mod_tran <- glmmTMB(in_minus_out ~ bio_mean_scale*tide_stand*weight_sum_stand + 
                          data = data,
                     na.action = na.fail)
 plot(simulateResiduals(mod_tran)) # pretty good
-
-# see if I should use percent diff instead of raw difference
-mod_tran_diff <- glmmTMB(percent_diff ~ bio_mean_scale*tide_stand*weight_sum_stand + bio_tran_scale + shannon_stand + depth_avg_stand + kelp_sp + (1|site_code), 
-                    family = 'gaussian',
-                    data = data)
-
-plot(simulateResiduals(mod_tran_diff)) # fine
-
-AIC(mod_tran, mod_tran_diff) # raw difference is so much better
+summary(mod_tran)
 
 # This is the site level model 
 # same variables, minus the kelp transect biomass (bio_tran_scale) and without a random effect of site, with only one row per site
@@ -332,75 +324,69 @@ mod_site <- glmmTMB(in_out_avg ~ bio_mean_scale*tide_stand*weight_sum_stand + sh
                          family = 'gaussian',
                          data = data_s)
 plot(simulateResiduals(mod_site)) # not the best thing I've ever seen but it's not bad!
+summary(mod_site)
 
 # I think I like the transect level model better
 # Alright so let's nail down the best suite of variables to include in the transect level model
 
-# dredge <- as.data.frame(dredge(mod_tran)) %>% filter(delta < 3)
+dredge <- as.data.frame(dredge(mod_tran)) %>% filter(delta < 3)
 
+# with Second beach:
 # best = bio_mean_scale*tide_stand*weight_sum_stand + kelp_sp + shannon_stand 
 # second best is the same + bio_tran_scale
 
-mod_best <- glmmTMB(in_minus_out ~ bio_mean_scale*weight_sum_stand*tide_stand + shannon_stand + kelp_sp + (1|site_code), 
+# Without second beach:
+# best = bio_mean_scale*tide_stand + kelp_sp + shannon_stand + weight_sum_stand
+# second best = same + weight_sum_stand:tide_stand
+
+mod_best <- glmmTMB(in_minus_out ~ bio_mean_scale*tide_stand + weight_sum_stand + shannon_stand + kelp_sp + (1|site_code), 
                     family = 'gaussian',
                     data = data)
 
 summary(mod_best)
-plot(simulateResiduals(mod_best)) 
-
-# can I drop the triple?
-mod_best_no_trip <- glmmTMB(in_minus_out ~ bio_mean_scale*weight_sum_stand*tide_stand + shannon_stand + kelp_sp + (1|site_code) - bio_mean_scale:tide_stand:weight_sum_stand, 
-                            family = 'gaussian',
-                            data = data)
-
-summary(mod_best_no_trip) # not too wild
-plot(simulateResiduals(mod_best_no_trip)) # WOOOONKY!
-
-# We're not sure there's an a priori for the animal:tide interaction so maybe we should get rid of that, and also the triple interaction?
-mod_best_reduced <- glmmTMB(in_minus_out ~ bio_mean_scale*weight_sum_stand*tide_stand + shannon_stand + kelp_sp + (1|site_code) - bio_mean_scale:tide_stand:weight_sum_stand - tide_stand:weight_sum_stand, 
-                           family = 'gaussian',
-                           data = data)
-
-summary(mod_best_reduced) # again not too crazy
-plot(simulateResiduals(mod_best_reduced)) # super wonky!
-
-AIC(mod_best, mod_best_no_trip, mod_best_reduced) 
-# keep all three two way interactions and the three way
-# Better AIC and better residuals
+plot(simulateResiduals(mod_best)) # looks fine
 
 
 # Double checking biomass is best kelp variable
 # total forest biomass
-mod_forest <- glmmTMB(in_minus_out ~ forest_bio_scale*weight_sum_stand*tide_stand + shannon_stand + kelp_sp + (1|site_code), 
+mod_forest <- glmmTMB(in_minus_out ~ forest_bio_scale*tide_stand + weight_sum_stand + shannon_stand + kelp_sp + (1|site_code), 
                       family = 'gaussian',
                       data = data)
 
 summary(mod_forest)
-plot(simulateResiduals(mod_forest)) 
+plot(simulateResiduals(mod_forest)) #BAD
 
 # mean forest density
-mod_den <- glmmTMB(in_minus_out ~ den_scale*weight_sum_stand*tide_stand + shannon_stand + kelp_sp + (1|site_code), 
+mod_den <- glmmTMB(in_minus_out ~ den_scale*tide_stand + weight_sum_stand + shannon_stand + kelp_sp + (1|site_code), 
                    family = 'gaussian',
                    data = data)
 
 summary(mod_den)
-plot(simulateResiduals(mod_den)) 
+plot(simulateResiduals(mod_den)) # BAD
+
+# tran level 
+mod_bio_tran <- glmmTMB(in_minus_out ~ bio_tran_scale*tide_stand + weight_sum_stand + shannon_stand + kelp_sp + (1|site_code), 
+                   family = 'gaussian',
+                   data = data)
+
+summary(mod_bio_tran)
+plot(simulateResiduals(mod_bio_tran)) # BAD
 
 # try logging the kelp biomass to account for the potential asymptotic!
-mod_log <- glmmTMB(in_minus_out ~ log_kelp_scale*weight_sum_stand*tide_stand + shannon_stand + kelp_sp + (1|site_code), 
+mod_log <- glmmTMB(in_minus_out ~ log_kelp_scale*tide_stand + weight_sum_stand + shannon_stand + kelp_sp + (1|site_code), 
                    family = 'gaussian',
                    data = data)
 
 summary(mod_log)
-plot(simulateResiduals(mod_log)) # these look fine
+plot(simulateResiduals(mod_log)) # ehhh less good
 
 # Check which kelp variable is best
-AIC(mod_best, mod_forest, mod_den, mod_log)
-# log(biomass) is best, but just by a little
+AIC(mod_best, mod_forest, mod_den, mod_bio_tran, mod_log)
+# mod_best is best!
 
 
 # Now check animal variables
-mod_abun <- glmmTMB(in_minus_out ~ bio_mean_scale*abundance_stand*tide_stand + shannon_stand + kelp_sp + (1|site_code), 
+mod_abun <- glmmTMB(in_minus_out ~ bio_mean_scale*tide_stand + abundance_stand + shannon_stand + kelp_sp + (1|site_code), 
                     family = 'gaussian',
                     data = data)
 
@@ -410,7 +396,7 @@ plot(simulateResiduals(mod_abun))
 AIC(mod_best, mod_abun) # biomass is better
 
 # check richness
-mod_rich <- glmmTMB(in_minus_out ~ bio_mean_scale*weight_sum_stand*tide_stand + rich_stand + kelp_sp + (1|site_code), 
+mod_rich <- glmmTMB(in_minus_out ~ bio_mean_scale*tide_stand + weight_sum_stand + rich_stand + kelp_sp + (1|site_code), 
                     family = 'gaussian',
                     data = data)
 
@@ -435,24 +421,8 @@ car::vif(lm(in_minus_out ~ bio_mean_scale + tide_stand + weight_sum_stand + shan
   
 
 # Try to plot in minus out ------
-visreg(mod_best, "bio_mean_scale", by = "tide_stand", overlay =TRUE) # not signif int
-visreg(mod_best, "bio_mean_scale", by = "weight_sum_stand", overlay=TRUE) 
-visreg(mod_best, "weight_sum_stand", by = "tide_stand", overlay=TRUE)
-
-# what's the distribution of tide data?
-ggplot(data, aes(avg_exchange_rate, 1)) + geom_point()
-
-# what does the interaction look like at low clump
-visreg(mod_best, "bio_mean_scale", "weight_sum_stand", 
-       cond=list(tide_stand= -0.7500489), overlay=TRUE)
-
-# what does the interaction look like at mid clump
-visreg(mod_best, "bio_mean_scale", "weight_sum_stand", 
-       cond=list(tide_stand= 0.5667869), overlay=TRUE)
-
-# what does the interaction look like at mean(high exchange clump)
-visreg(mod_best, "bio_mean_scale", "weight_sum_stand", 
-       cond=list(tide_stand= 1.744447), overlay=TRUE)
+visreg(mod_best, "bio_mean_scale", by = "tide_stand", overlay =TRUE)
+# so when the tide comes in the difference in ammonium in thicker kelp forests is even greater than you'd expect at slack tide
 
 
 # generate df for plotting
@@ -465,12 +435,12 @@ df <- confint(mod_best, level = 0.95, method = c("wald"), component = c("all", "
          estimate = Estimate) %>%
   head(- 1)  %>%
   mutate(variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "bio_mean_scale", "weight_sum_stand", "tide_stand",  "shannon_stand", "kelp_spmixed", "kelp_spnereo", "kelp_spnone", "bio_mean_scale:tide_stand", "bio_mean_scale:weight_sum_stand", "weight_sum_stand:tide_stand", "bio_mean_scale:weight_sum_stand:tide_stand"),
-                           labels = c("Intercept", "Kelp biomass", "Animal biomass", "Tide", "Shannon", "Mixed kelp", "Nereo", "None", "Kelp:tide", "Kelp:animals", "Animals:tide", "Kelp:animals:tide"))
+                           levels = c("(Intercept)", "bio_mean_scale", "tide_stand", "weight_sum_stand",  "shannon_stand", "kelp_spmixed", "kelp_spnereo", "kelp_spnone", "bio_mean_scale:tide_stand"),
+                           labels = c("Intercept", "Kelp biomass", "Tide", "Animal biomass",  "Shannon", "Mixed kelp", "Nereo", "None", "Kelp:tide"))
   )
 
 # Coefficient plot
-pal12 <- viridis::viridis(12)
+pal9 <- viridis::viridis(9)
 
 ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
   geom_point(size = 10) +
@@ -480,7 +450,7 @@ ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, c
   scale_y_discrete(limits = rev(levels(df$variable))) +
   theme_black() +
   theme(legend.position = "none") + 
-  scale_colour_manual(values = pal12)
+  scale_colour_manual(values = pal9)
 
 #ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 9, width = 16, dpi = 400)
 
@@ -488,54 +458,79 @@ ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, c
 # remake the shitty asymptote fig with the log(kelp) model and actual predictions, with geom_point(aes(colour = tide, size = animal weight))! See what that looks like???
 
 # make new mod with untransformed vars
-mod_plot <- glmmTMB(in_minus_out ~ log_kelp*weight_sum*avg_exchange_rate + shannon + kelp_sp + (1|site_code), 
+mod_plot <- glmmTMB(in_minus_out ~ BiomassM*avg_exchange_rate + weight_sum + shannon + kelp_sp + (1|site_code), 
                    family = 'gaussian',
                    data = data)
 summary(mod_plot)
 plot(simulateResiduals(mod_log))
 
+# what should the tide be set to?
+ggplot(data, aes(avg_exchange_rate, 1)) + geom_point()
+slack <- mean(data$avg_exchange_rate[data$avg_exchange_rate<0])
+flood <- mean(data$avg_exchange_rate[data$avg_exchange_rate>0])
+
+visreg(mod_plot, "BiomassM", by = "avg_exchange_rate")
+
 # make predictions
 # create range vector
-v <- seq(-6.97, 1.2, length.out = 100)
+v <- seq(-6.97, 0.65, length.out = 100)
+
+v <- c(slack, flood)
+
 # now make predictions
-predict <- ggpredict(mod_plot, terms = "log_kelp [v]") %>% 
-  mutate(BiomassM = exp(x) - 0.001) %>%
-  filter(predicted > -1)
+predict <- ggpredict(mod_plot, terms = c("BiomassM", "avg_exchange_rate [v]")) %>% 
+  mutate(BiomassM = x,
+         tide = ifelse(group == "-0.0733210864013331", "slack", "flood")) %>%
+  filter(tide != "flood" | BiomassM < 0.9) %>%
+  filter(tide != "flood" | BiomassM > 0.2)
   
 # now plot these predictions
+
 ggplot() + 
-  geom_point(data = data, aes(x = BiomassM, y = in_minus_out,
-                              colour = avg_exchange_rate,
-                              fill = avg_exchange_rate,
-                              size = weight_sum,
-                              pch = kelp_sp), alpha = 0.8) +
-  #now plot the  model output
-  geom_ribbon(data = predict,
-              aes(x = BiomassM, y = predicted, ymin = conf.low, ymax = conf.high), 
-              alpha = 0.3) +
+  geom_point(data = data %>%
+               mutate(tide = ifelse(avg_exchange_rate < 0, "slack", "flood")) , 
+             aes(x = BiomassM, y = in_minus_out,
+             colour = tide,
+             fill = tide,
+             size = weight_sum,
+             pch = kelp_sp), alpha = 0.8) +
   geom_line(data = predict,
-            aes(x = BiomassM, y = predicted),
+            aes(x = BiomassM, y = predicted, lty = tide, colour = tide),
             linewidth = 1) +
-  theme_classic() +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "red", linewidth = 0.5) +
+  geom_ribbon(data = predict,
+              aes(x = BiomassM, y = predicted, 
+                  fill = tide,
+                  ymin = conf.low, ymax = conf.high), 
+              alpha = 0.2) +
+  geom_hline(yintercept= 0, linetype = "dashed", color = "white", linewidth = 0.5) +
 labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Biomass (kg/m2)",
-     colour = "Tide exchange (m/s)", fill = "Tide exchange (m/s)",
+     colour = "Tide", fill = "Tide",
+     lty = "Tide",
      size = "Animal biomass (kg)",
      pch = "Kelp species") +
-  ylim(c(-1, 1)) +
-  scale_shape_manual(values = c(21, 24, 22, 25))
+  guides(pch = guide_legend(override.aes = 
+                              list(colour = "white", fill = "white", size = 5)),
+         size = guide_legend(override.aes = 
+                              list(colour = "white")),) +
+  scale_shape_manual(values = c(21, 24, 22, 25)) +
+  theme_black()
+
+ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 16, dpi = 400)
+
+  
+
 
 # try again on transect level ---
 # mod for plotting indiv transects?
-mod_tran <- glmmTMB(in_minus_out ~ log_kelp_tran*weight_sum*avg_exchange_rate + shannon_stand + kelp_sp + (1|site_code), 
+mod_tran <- glmmTMB(in_minus_out ~ log_kelp_tran*avg_exchange_rate + weight_sum + shannon_stand + kelp_sp + (1|site_code), 
                     family = 'gaussian',
                     data = data)
 
 # make predictions
 # create range vector
-v <- seq(-6.97, 1.3, length.out = 100)
+v2 <- seq(-6.97, 1.2, length.out = 100)
 # now make predictions
-predict <- ggpredict(mod_tran, terms = "log_kelp_tran [v]") %>% 
+predict2 <- ggpredict(mod_tran, terms = "log_kelp_tran [v2]") %>% 
   mutate(Biomassm2kg = exp(x) - 0.001) %>%
   filter(predicted > -1)
 
@@ -547,10 +542,10 @@ ggplot() +
                               size = weight_sum,
                               pch = kelp_sp), alpha = 0.8) +
   #now plot the  model output
-  geom_ribbon(data = predict,
+  geom_ribbon(data = predict2,
               aes(x = Biomassm2kg, y = predicted, ymin = conf.low, ymax = conf.high), 
               alpha = 0.3) +
-  geom_line(data = predict,
+  geom_line(data = predict2,
             aes(x = Biomassm2kg, y = predicted),
             linewidth = 1) +
   theme_classic() +
