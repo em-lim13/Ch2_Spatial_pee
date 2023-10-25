@@ -661,7 +661,7 @@ df <- confint(mod_best, level = 0.95, method = c("wald"), component = c("all", "
          lower_CI = `2.5 %`,
          upper_CI = `97.5 %`,
          estimate = Estimate) %>%
-  slice(1:7) %>%
+  head(- 1)  %>%
   mutate(variable = factor(as.factor(variable), 
          levels = c("(Intercept)", "abundance_stand", "rich_stand", "tide_stand", "depth_avg_stand","abundance_stand:tide_stand", "tide_stand:rich_stand"),
          labels = c("Intercept", "Abundance", "Richness", "Tide", "Depth", "Abundance:Tide", "Richness:Tide"))
