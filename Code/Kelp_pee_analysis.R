@@ -439,7 +439,7 @@ labs(y = "Delta ammonium (uM)", x = "Kelp Biomass (kg/m2)",
                               list(colour = "white"))) +
   theme_black()
 
-ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 16, dpi = 400)
+#ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 16, dpi = 400)
 
   
 
