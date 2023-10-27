@@ -297,6 +297,24 @@ ggplot(rls_final, aes(x = nh4_avg)) +
 # NH4 is positive only and continuous (not intergers) 
 # Gamma is likely the best bet for this!
 
+# Build full model with gaussian distribution
+# mod_norm_full <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+#                          family = 'gaussian',
+#                          data = rls_final)
+# plot(simulateResiduals(mod_norm_full)) 
+
+
+# Build full model with gamma distribution
+# mod_gam_full <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+#                         family = Gamma(link = 'log'),
+#                         data = rls_final)
+# plot(simulateResiduals(mod_gam_full)) 
+# 
+# compare via AIC
+# AIC(mod_norm_full, mod_gam_full) 
+
+# Gamma residuals look better and that mod has a lower AIC!
+
 # Step 2: Choose your predictors
 
 # Biological predictors:
@@ -307,19 +325,20 @@ ggplot(rls_final, aes(x = nh4_avg)) +
     # c) fish_weight_sum = total wet weight of just the fishes (kg)
     # d) fish_weight_weighted = total weight of fishes weighted by home range size
     # e) abundance
-# I'm going with weight_sum
+# Abundance is preferred by AIC!
 
 # 2) Biodiversity
     # a) species_richness = total # species on each transect
     # b) shannon = shannon diversity of each transect
     # c) simpson = simpson diversity of each transect
-# I'm going with shannon
+# Richness is slightly preferred by AIC but I'm going with shannon
     
 # These are the variables I really care about!!!! The abiotics are the things I might need to control for
 
 # Continuous abiotic predictors
   # 1) depth_avg = average nh4 sample depths
   # 2) avg_exchange_rate = average rate of change of the tide height over the 1 hour survey
+# Depth doesn't matter but avg_exchange_rate is important!
 
 # Categorical abiotic predictors
   # 3) year = 2021, 2022, or 2023
@@ -328,150 +347,197 @@ ggplot(rls_final, aes(x = nh4_avg)) +
       # interested trends across a broad spatial scale (and not site-specific trends) so site should be random
       # so year should also be random???
 
+      # What if year is absent or fixed
+      # Year = fixed no change, years are diff from 2021
+      # Drop year = interaction still signif but species richness is now signif negative slope
+      # What if site is absent or fixed
+      # Site = fixed no change, some sites are diff from each other
+      # Drop site no change
+      # What if both are fixed or dropped?
+      # Both fixed = no change.
+      # Both dropped = interaction still there but species richness is now signif negative slope
+
 # Interactions
-  # I think whatever biomass and biodiversity variable I choose should have an interaction with exchange rate
+  # I think abundance:tide will have an interaction
+  # I double checked, there's no triple interaction or abundance:richness interaction! Phewwww
 
-# Build full model with gaussian distribution
-mod_norm_full <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                         family = 'gaussian',
-                         data = rls_final)
-summary(mod_norm_full)
 
-# Build full model with gamma distribution
-mod_gam_full <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                         family = Gamma(link = 'log'),
-                         data = rls_final)
-summary(mod_gam_full)
+# I ran through dredging this model:
+#mod_all <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+#                   family = Gamma(link = 'log'),
+#                   data = rls_final,
+#                   na.action = na.fail)
+# summary(mod_all)
+# plot(simulateResiduals(mod_all))
 
-# Step 3: Model residuals 
-  # Compare the two distrubutions 
+# dredge <- as.data.frame(dredge(mod_all)) %>% filter(delta < 3)
 
-# Gaussian
-mod_norm_full_resids <- DHARMa::simulateResiduals(mod_norm_full)
-plot(mod_norm_full_resids) 
+# Best according to AIC: just intercept, lol
+# Second best = abundance_stand*tide_stand
+# Third best = just tide
 
-# Gamma
-mod_gam_resids <- DHARMa::simulateResiduals(mod_gam_full)
-plot(mod_gam_resids) 
+# so the best AIC model
+mod_aic <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + (1|year) + (1|site_code), 
+                   family = Gamma(link = 'log'),
+                   data = rls_final)
+summary(mod_aic)
+plot(simulateResiduals(mod_aic))
 
-AIC(mod_norm_full, mod_gam_full)
+# I prefer biomass over abundance bc that's theoretically more linked to NH4
+  # But abundance is a straight up recorded measure, no biomass proxy BS
+# And I prefer shannon diversity over richness bc it's a "better" biodiversity measure
+# And I want to drop depth bc it doesn't seem to matter...
 
-# Gamma residuals look better and that mod has a lower AIC!
+mod_brain <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand + (1|year) + (1|site_code), 
+                   family = Gamma(link = 'log'),
+                   data = rls_final)
+summary(mod_brain)
+plot(simulateResiduals(mod_brain))
+
+
+# what happens when I compare these
+AIC(mod_aic, mod_brain) # ok so obvi the AIC mod is the best, I should probably just stick with that
+# Use AIC to get predictors, then show the coefficients and a model output
+
 
 # Step 4: Check for collinearity of predictors
 
-### THIS IS WHERE THE WHEELS FALL OFF THE BUS
-
 # car can't handle random effects so make a simplified mod
-car::vif(lm(nh4_avg ~ weight_sum_stand + tide_stand + shannon_stand + depth_avg_stand, data = rls_final))
-# Allll goooood
-
-# Double checking my variables!!!
-
-# Would a diff biomass variable would be better than weight sum!
-
-# all weight summed
-mod_weight_sum <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                          family = Gamma(link = 'log'),
-                          data = rls_final)
-
-# all_weight_weighted
-mod_all_weighted_sum <- glmmTMB(nh4_avg ~ all_weighted_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                          family = Gamma(link = 'log'),
-                          data = rls_final)
-
-# fish weight
-mod_fish_weight <- glmmTMB(nh4_avg ~ fish_weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                           family = Gamma(link = 'log'),
-                           data = rls_final)
-
-# fish weight weighted
-mod_fish_weighted <- glmmTMB(nh4_avg ~ fish_weight_weighted_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                           family = Gamma(link = 'log'),
-                           data = rls_final)
+car::vif(lm(nh4_avg ~ abundance_stand + tide_stand, data = rls_final))
+# All good
 
 
-# abundance
-mod_abund <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = rls_final)
-summary(mod_abund)
+# Graphing ----
 
-# compare
-aic_biomass <- AIC(mod_weight_sum, mod_all_weighted_sum, mod_fish_weight, mod_fish_weighted, mod_abund) %>%
-  mutate(delta = AIC - min(AIC)) # abundance is best, but weight sum is NOT far behind
+# ALRIGHT I'M GOING WITH MOD_AIC
 
+pal <- pnw_palette("Sailboat", 3)
+pal3 <- viridis::viridis(3)
+pal4 <- viridis::viridis(4)
 
-# Which richness variable explains data best
-
-# richness
-mod_rich <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + rich_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                    family = Gamma(link = 'log'),
-                    data = rls_final)
-
-# shannon
-mod_shan <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                    family = Gamma(link = 'log'),
-                    data = rls_final)
-
-# simpsons
-mod_simp <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + simpson_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                    family = Gamma(link = 'log'),
-                    data = rls_final)
-
-AIC(mod_rich, mod_shan, mod_simp) # richness is best
+csee_pal <- pnw_palette("Starfish", n = 3)
 
 
-# So the best mod would be:
-mod_best <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + rich_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                    family = Gamma(link = 'log'),
-                    data = rls_final)
-summary(mod_best)
-# I double checked, there's no triple interaction or abundance:richness interaction! Phewwww
+# Coefficient plot of the model ----
 
-# What if year is absent or fixed
-  # Year = fixed no change, years are diff from 2021
-  # Drop year = interaction still signif but species richness is now signif negative slope
-# What if site is absent or fixed
-  # Site = fixed no change, some sites are diff from each other
-  # Drop site no change
-# What if both are fixed or dropped?
-  # Both fixed = no change.
-  # Both dropped = interaction still there but species richness is now signif negative slope
-
-# Double check the resids on this
-mod_best_resids <- DHARMa::simulateResiduals(mod_best)
-plot(mod_best_resids) # YEP that's fine!
+# generate coefficients
+rls_coeffs <- confint(mod_aic, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  rename(variable = rowname,
+         lower_CI = `2.5 %`,
+         upper_CI = `97.5 %`,
+         estimate = Estimate) %>%
+  head(- 2)  %>%
+  mutate(estimate = ifelse(variable == "(Intercept)", exp(estimate), estimate),
+         lower_CI = ifelse(variable == "(Intercept)", exp(lower_CI), lower_CI),
+         upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI),
+         variable = factor(as.factor(variable), 
+                           levels = c("(Intercept)", "abundance_stand", "tide_stand", "abundance_stand:tide_stand"),
+                           labels = c("Intercept", "Abundance", "Tide", "Abundance:Tide")))
 
 
-# The model I liked better was:
-# I prefer biomass over abundance bc that's theoretically more linked to NH4
-# But abundance is a straight up recorded measure, no biomass proxy BS
-mod_weight_sum <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand*tide_stand + depth_avg_stand + (1|year) + (1|site_code), 
-                          family = Gamma(link = 'log'),
-                          data = rls_final)
-summary(mod_weight_sum)
+# Coefficient plot 
+ggplot(rls_coeffs, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
+    geom_point(size = 10) +
+    geom_errorbar(width = 0, linewidth = 3) +
+    geom_vline(xintercept=0, color="white", linetype="dashed") +
+    labs(x = "Coefficient", y = " ") +
+  scale_y_discrete(limits = rev(levels(rls_coeffs$variable))) +
+  theme_black() +
+  theme(legend.position = "none") + 
+  scale_colour_manual(values = pal4)
+
+# ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 
-# quick plot to figure out this interaction
-ggplot(rls_final, aes(abundance, nh4_avg, colour = tide_cat)) +
-  geom_point() +
-  geom_smooth(method = lm) 
-# So nh4 increases a bit with abundance at slack and ebb tide, but at flood the trend flips. neat!
+# Plot abundance vs nh4 -----
+tide_means <- rls_final %>%
+  group_by(tide_cat) %>%
+  summarise(tide = mean(tide_stand))
+  
+v <- c(-1.067, -0.279, 1.066)
+
+predict <- ggpredict(mod_aic, terms = c("abundance_stand", "tide_stand [v]")) %>% 
+  mutate(abundance = x,
+         tide_cat = case_when(group == "-1.067" ~ "Ebb",
+                              group == "-0.279" ~ "Slack",
+                              group == "1.066" ~ "Flood"))
+
+# now plot these predictions
+ggplot() + 
+  geom_point(data = rls_final, 
+             aes(x = abundance_stand, y = nh4_avg,
+                 colour = tide_cat,
+                 fill = tide_cat), alpha = 0.8, size = 3) +
+  geom_line(data = predict,
+            aes(x = abundance, y = predicted, lty = tide_cat, colour = tide_cat),
+            linewidth = 2) +
+  geom_ribbon(data = predict,
+              aes(x = abundance, y = predicted, 
+                  fill = tide_cat,
+                  ymin = conf.low, ymax = conf.high), 
+              alpha = 0.2) +
+  labs(y = "Ammonium (uM)", x = "Abundance",
+       colour = "Tide", fill = "Tide",
+       lty = "Tide") +
+  guides(pch = guide_legend(override.aes = 
+                              list(colour = "white", fill = "white", size = 5)),
+         size = guide_legend(override.aes = 
+                               list(colour = "white")),) +
+  scale_shape_manual(values = c(21, 24, 22, 25)) +
+  theme_black() +
+  scale_colour_manual(values = (csee_pal)) +
+  scale_fill_manual(values = (csee_pal))
+
+# ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
-# weight and abundance give very similar results + figs, does that mean they're super linear?
-ggplot(rls_final, aes(abundance, weight_sum)) +
-  geom_point() +
-  geom_smooth(method = lm) # WOOOAH they basically are... 
-# that's a cool result in itself....
+# plot mean for each year
+rls_nh4 %>%
+  group_by(site, year) %>%
+  mutate(nh4_avg = mean(nh4_conc)) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_point(aes(x = reorder(site, -nh4_avg), 
+                 nh4_avg, colour = year, fill = year, pch = month),
+             size = 3, alpha = 0.75) +
+  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) +
+  labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
+  scale_colour_manual(values = pal) 
+
+
+# Plot the ranking of each site year to year
+# Plot rank
+ggplot(data = rank) +
+  geom_point(aes(reorder(site, -avg_grade), grade2021, colour = "2021"), size = 3) +
+  geom_point(aes(reorder(site, -avg_grade), grade2022, colour = "2022"), size = 3) +
+  geom_point(aes(reorder(site, -avg_grade), grade2023, colour = "2023"), size = 3) +
+  labs(x= "Site", y = "Rank", colour = "Year") +
+  scale_colour_manual(values = pal) + 
+  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) 
+
+# ggsave("Output/Figures/rank_all_years.png", device = "png",
+#        height = 5, width = 8, dpi = 400)
+
+
+# Site vs pee
+ggplot(rls_nh4, aes(nh4_conc, site, fill = site)) +
+  geom_boxplot(colour = "white") +
+  theme_black() +
+  labs(x= "Ammonium concentration (umol/L)", y = "Site") +
+  theme(legend.position = "none")
+
+#ggsave("Output/Figures/RLS_sites_pee.png", device = "png",
+#       height = 9, width = 16, dpi = 400)
+
 
 
 
 #Data exploration ------
-  # Data checks
-  goby <- fish %>%
+# Data checks
+goby <- fish %>%
   filter(species_name == "Rhinogobiops nicholsii") %>%
   filter(site_name == "Goby Town") %>%
   filter(depth == "5.7") %>%
@@ -534,7 +600,7 @@ hist(goby$size_class)
 # Jordania zonope avg 5
 # Oxylebius pictus avg 12.5
 
-  
+
 #write_csv(no_sizes, "Output/Output_data/missing_fish_sizes.csv")
 
 # What's the most abundant species?
@@ -642,99 +708,6 @@ cor.test(cor_data$nh4_2022, cor_data$nh4_2023,
 cor.test(cor_data$nh4_2023, cor_data$nh4_2021, 
          method = "spearman")
 # Yes correlated?
-
-# Graphing ----
-pal <- pnw_palette("Sailboat", 3)
-pal3 <- viridis::viridis(3)
-pal7 <- viridis::viridis(7)
-
-csee_pal <- pnw_palette("Starfish", n = 3)
-
-
-# Coefficient plot of the model ----
-
-# generate df for plotting
-df <- confint(mod_best, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
-  as.data.frame() %>%
-  rownames_to_column() %>%
-  rename(variable = rowname,
-         lower_CI = `2.5 %`,
-         upper_CI = `97.5 %`,
-         estimate = Estimate) %>%
-  head(- 1)  %>%
-  mutate(variable = factor(as.factor(variable), 
-         levels = c("(Intercept)", "abundance_stand", "rich_stand", "tide_stand", "depth_avg_stand","abundance_stand:tide_stand", "tide_stand:rich_stand"),
-         labels = c("Intercept", "Abundance", "Richness", "Tide", "Depth", "Abundance:Tide", "Richness:Tide"))
-         )
-
-# Coefficient plot
-ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
-    geom_point(size = 10) +
-    geom_errorbar(width = 0, linewidth = 3) +
-    geom_vline(xintercept=0, color="white", linetype="dashed") +
-    labs(x = "Coefficient (log-link)", y = " ") +
-  scale_y_discrete(limits = rev(levels(df$variable))) +
-  theme_black() +
-  theme(legend.position = "none") + 
-  scale_colour_manual(values = pal7)
-
-#ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-
-# Plot abundance vs nh4 -----
-ggplot(rls_final, aes(abundance, nh4_avg, colour = tide_cat, fill = tide_cat)) +
-  geom_point(size = 3) +
-  geom_smooth(method = lm, alpha = 0.15) +
-  labs(x = "Animal abundance", y = expression(paste("NH"[4]^" +",(mu*M))),
-       colour = "Tide", fill = "Tide") +
-  scale_colour_manual(values = (csee_pal)) +
-  scale_fill_manual(values = (csee_pal)) +
-  theme_black()
-
-# try to plot the actual model output another time!
-
-#ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-# plot mean for each year
-rls_nh4 %>%
-  group_by(site, year) %>%
-  mutate(nh4_avg = mean(nh4_conc)) %>%
-  ungroup() %>%
-  ggplot() +
-  geom_point(aes(x = reorder(site, -nh4_avg), 
-                 nh4_avg, colour = year, fill = year, pch = month),
-             size = 3, alpha = 0.75) +
-  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) +
-  labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
-  scale_colour_manual(values = pal) 
-
-
-# Plot the ranking of each site year to year
-# Plot rank
-ggplot(data = rank) +
-  geom_point(aes(reorder(site, -avg_grade), grade2021, colour = "2021"), size = 3) +
-  geom_point(aes(reorder(site, -avg_grade), grade2022, colour = "2022"), size = 3) +
-  geom_point(aes(reorder(site, -avg_grade), grade2023, colour = "2023"), size = 3) +
-  labs(x= "Site", y = "Rank", colour = "Year") +
-  scale_colour_manual(values = pal) + 
-  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) 
-
-# ggsave("Output/Figures/rank_all_years.png", device = "png",
-#        height = 5, width = 8, dpi = 400)
-
-
-# Site vs pee
-ggplot(rls_nh4, aes(nh4_conc, site, fill = site)) +
-  geom_boxplot(colour = "white") +
-  theme_black() +
-  labs(x= "Ammonium concentration (umol/L)", y = "Site") +
-  theme(legend.position = "none")
-
-#ggsave("Output/Figures/RLS_sites_pee.png", device = "png",
-#       height = 9, width = 16, dpi = 400)
-
 
 
 # Graveyard -----
