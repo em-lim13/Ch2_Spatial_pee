@@ -222,8 +222,9 @@ data <- pee %>%
          # abiotic variables I should control for
          depth_avg_stand = c(scale(depth_avg)),
          tide_stand = c(scale(avg_exchange_rate)),
-         tide_cat = ifelse(avg_exchange_rate < -0.1897325, "Ebb",
-                           ifelse(avg_exchange_rate < 0.1897325, "Slack", "Flood")),
+         tide_cat = factor(as.factor(ifelse(avg_exchange_rate < -0.1897325, "Ebb",
+                           ifelse(avg_exchange_rate < 0.1897325, "Slack", "Flood"))),
+                           levels = c("Ebb", "Slack", "Flood")),
                     # only slack and flood
          log_kelp = log(BiomassM + 0.001),
          log_kelp_scale = c(scale(log_kelp)),
@@ -244,13 +245,6 @@ data_s <- data %>%
   filter(site != "Wizard_I_North" | kelp_sp != "none") # just getting rid of the duplicate row, bc there wasn't kelp on one transect unique misses this one
 
 #write_csv(data_s, "Output/Output_data/kelp_final.csv")
-
-
-# not sure what this is
-data_s_reduced <- data %>%
-  select(site, site_code, survey_id, nh4_in_avg, depth_avg, avg_exchange_rate, BiomassM, weight_sum, species_richness, abundance, avg_exchange_rate,  depth_avg) %>%
-  unique() %>%
-  rename(nh4_avg = nh4_in_avg)
   
 
 # Stats for in minus out -----
@@ -372,6 +366,8 @@ df <- confint(mod_best, level = 0.95, method = c("wald"), component = c("all", "
 
 # Coefficient plot
 pal9 <- viridis::viridis(9)
+pal <- viridis::viridis(10)
+pal2 <- c(pal[8], pal[5])
 
 ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
   geom_point(size = 10) +
@@ -389,55 +385,54 @@ ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, c
 # remake the shitty asymptote fig with the log(kelp) model and actual predictions, with geom_point(aes(colour = tide, size = animal weight))! See what that looks like???
 
 # make new mod with untransformed vars
-mod_plot <- glmmTMB(in_minus_out ~ BiomassM*avg_exchange_rate + weight_sum + shannon + kelp_sp + (1|site_code), 
-                   family = 'gaussian',
-                   data = data)
-summary(mod_plot)
-plot(simulateResiduals(mod_log))
 
-# what should the tide be set to?
-ggplot(data, aes(avg_exchange_rate, 1)) + geom_point()
-slack <- mean(data$tide_stand[data$avg_exchange_rate<0])
-flood <- mean(data$tide_stand[data$avg_exchange_rate>0])
-
-# make predictions
 # create range vector
-v <- seq(-6.97, 0.65, length.out = 100)
+tide_means_kelp <- data %>%
+  group_by(tide_cat) %>%
+  summarise(tide = mean(tide_stand))
 
-v <- c(slack, flood)
+v2 <- c(1.4964027, -0.5470555)
 
 # now make predictions
-predict <- ggpredict(mod_best, terms = c("bio_mean_scale", "tide_stand [v]")) %>% 
+predict <- ggpredict(mod_best, terms = c("bio_mean_scale", "tide_stand [v2]")) %>% 
   mutate(bio_mean_scale = x,
-         tide = ifelse(group == "-0.750048942265706", "slack", "flood")) %>%
-  filter(tide != "flood" | bio_mean_scale < 0) %>%
-  filter(tide != "flood" | bio_mean_scale > -0.78)
+         tide_cat = factor(as.factor(ifelse(group == "-0.5470555", "Slack", "Flood")),
+         levels = c("Ebb", "Slack", "Flood"))
+         ) %>%
+  filter(tide_cat != "Flood" | bio_mean_scale < 0) %>%
+  filter(tide_cat != "Flood" | bio_mean_scale > -0.78)
   
 # now plot these predictions
-
+# SEE IF I CAN MAKE SIZE = ANIMAL BIOMASS SCALE MORE PRONOUNCED
 ggplot() + 
   geom_point(data = data %>%
-               mutate(tide = ifelse(avg_exchange_rate < 0, "slack", "flood")) , 
+               mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood")) , 
              aes(x = bio_mean_scale, y = in_minus_out,
-             colour = tide,
-             fill = tide,
-             size = weight_sum_stand), alpha = 0.8) +
+             colour = tide_cat,
+             fill = tide_cat,
+             size = weight_sum), alpha = 0.8) +
   geom_line(data = predict,
-            aes(x = bio_mean_scale, y = predicted, lty = tide, colour = tide),
+            aes(x = bio_mean_scale, y = predicted, lty = tide_cat, colour = tide_cat),
             linewidth = 1.5) +
   geom_ribbon(data = predict,
               aes(x = bio_mean_scale, y = predicted, 
-                  fill = tide,
+                  fill = tide_cat,
                   ymin = conf.low, ymax = conf.high), 
               alpha = 0.2) +
   geom_hline(yintercept= 0, linetype = "dashed", color = "white", linewidth = 0.5) +
-labs(y = "Delta ammonium (uM)", x = "Kelp Biomass (kg/m2)",
+labs(y = "Delta ammonium (uM)", x = "Kelp biomass (kg/m2)",
      colour = "Tide", fill = "Tide",
      lty = "Tide",
      size = "Animals (kg)") +
+  scale_size_continuous(range = c(0.5, 10),
+                        limits = c(0, 50)) +
   guides(size = guide_legend(override.aes = 
-                              list(colour = "white"))) +
-  theme_black()
+                              list(colour = "white")),
+         lty = guide_legend(override.aes = list(linewidth = 0.5))) +
+  theme_black() + 
+  scale_colour_manual(values = pal2) +
+  scale_fill_manual(values = pal2)
+
 
 #ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 16, dpi = 400)
 
