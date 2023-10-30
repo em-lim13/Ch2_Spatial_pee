@@ -464,7 +464,7 @@ tide_means <- rls_final %>%
 v <- c(-1.067, -0.279, 1.066)
 
 predict <- ggpredict(mod_aic, terms = c("abundance_stand", "tide_stand [v]")) %>% 
-  mutate(abundance = x,
+  mutate(abundance_stand = x,
          tide_cat = factor(as.factor(case_when(group == "-1.067" ~ "Ebb",
                               group == "-0.279" ~ "Slack",
                               group == "1.066" ~ "Flood")),
@@ -476,13 +476,14 @@ ggplot() +
              aes(x = abundance_stand, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
              alpha = 0.8, size = 3) +
   geom_line(data = predict,
-            aes(x = abundance, y = predicted, colour = tide_cat),
+            aes(x = abundance_stand, y = predicted, colour = tide_cat),
             linewidth = 2) +
   geom_ribbon(data = predict,
-              aes(x = abundance, y = predicted, fill = tide_cat,
+              aes(x = abundance_stand, y = predicted, fill = tide_cat,
                   ymin = conf.low, ymax = conf.high), 
               alpha = 0.15) +
-  labs(y = "Ammonium (uM)", x = "Abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = "Abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
   theme_black() +
   scale_colour_manual(values = (pal3)) +
   scale_fill_manual(values = (pal3))

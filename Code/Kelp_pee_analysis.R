@@ -420,7 +420,8 @@ ggplot() +
                   ymin = conf.low, ymax = conf.high), 
               alpha = 0.2) +
   geom_hline(yintercept= 0, linetype = "dashed", color = "white", linewidth = 0.5) +
-labs(y = "Delta ammonium (uM)", x = "Kelp biomass (kg/m2)",
+labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
+     x = expression(paste("Kelp biomass (kg/m"^2,")")),
      colour = "Tide", fill = "Tide",
      lty = "Tide",
      size = "Animals (kg)") +
@@ -469,7 +470,7 @@ ggplot() +
             linewidth = 1.5) +
   theme_classic() +
   geom_hline(yintercept= 0, linetype = "dashed", color = "red", linewidth = 0.5) +
-  labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Biomass (kg/m2)",
+  labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), x = "Kelp Biomass (kg/m2)",
        colour = "Tide exchange (m/s)", fill = "Tide exchange (m/s)",
        size = "Animal biomass (kg)",
        pch = "Kelp species") +
