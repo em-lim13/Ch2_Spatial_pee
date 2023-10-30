@@ -256,9 +256,10 @@ rls_final <-
     # abiotic variables I should control for
     depth_avg_stand = c(scale(depth_avg)),
     tide_stand = c(scale(avg_exchange_rate)),
-    tide_cat = case_when(avg_exchange_rate < -0.1897325 ~ "Ebb",
+    tide_cat = factor(as.factor(case_when(avg_exchange_rate < -0.1897325 ~ "Ebb",
                          avg_exchange_rate < 0.1897325 ~ "Slack",
-                         avg_exchange_rate > 0.1897325 ~ "Flood")
+                         avg_exchange_rate > 0.1897325 ~ "Flood")),
+                      levels = c("Ebb", "Slack", "Flood"))
   )
 
 
@@ -412,8 +413,11 @@ car::vif(lm(nh4_avg ~ abundance_stand + tide_stand, data = rls_final))
 # ALRIGHT I'M GOING WITH MOD_AIC
 
 pal <- pnw_palette("Sailboat", 3)
-pal3 <- viridis::viridis(3)
 pal4 <- viridis::viridis(4)
+pal <- viridis::viridis(10)
+pal3 <- c(pal[10], pal[8], pal[5])
+
+pie(rep(1, 10), col = pal)
 
 csee_pal <- pnw_palette("Starfish", n = 3)
 
@@ -461,35 +465,27 @@ v <- c(-1.067, -0.279, 1.066)
 
 predict <- ggpredict(mod_aic, terms = c("abundance_stand", "tide_stand [v]")) %>% 
   mutate(abundance = x,
-         tide_cat = case_when(group == "-1.067" ~ "Ebb",
+         tide_cat = factor(as.factor(case_when(group == "-1.067" ~ "Ebb",
                               group == "-0.279" ~ "Slack",
-                              group == "1.066" ~ "Flood"))
+                              group == "1.066" ~ "Flood")),
+                           levels = c("Ebb", "Slack", "Flood")))
 
 # now plot these predictions
 ggplot() + 
   geom_point(data = rls_final, 
-             aes(x = abundance_stand, y = nh4_avg,
-                 colour = tide_cat,
-                 fill = tide_cat), alpha = 0.8, size = 3) +
+             aes(x = abundance_stand, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
+             alpha = 0.8, size = 3) +
   geom_line(data = predict,
-            aes(x = abundance, y = predicted, lty = tide_cat, colour = tide_cat),
+            aes(x = abundance, y = predicted, colour = tide_cat),
             linewidth = 2) +
   geom_ribbon(data = predict,
-              aes(x = abundance, y = predicted, 
-                  fill = tide_cat,
+              aes(x = abundance, y = predicted, fill = tide_cat,
                   ymin = conf.low, ymax = conf.high), 
-              alpha = 0.2) +
-  labs(y = "Ammonium (uM)", x = "Abundance",
-       colour = "Tide", fill = "Tide",
-       lty = "Tide") +
-  guides(pch = guide_legend(override.aes = 
-                              list(colour = "white", fill = "white", size = 5)),
-         size = guide_legend(override.aes = 
-                               list(colour = "white")),) +
-  scale_shape_manual(values = c(21, 24, 22, 25)) +
+              alpha = 0.15) +
+  labs(y = "Ammonium (uM)", x = "Abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
   theme_black() +
-  scale_colour_manual(values = (csee_pal)) +
-  scale_fill_manual(values = (csee_pal))
+  scale_colour_manual(values = (pal3)) +
+  scale_fill_manual(values = (pal3))
 
 # ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 16, dpi = 400)
 
