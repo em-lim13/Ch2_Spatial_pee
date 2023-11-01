@@ -364,12 +364,12 @@ ggplot(rls_final, aes(x = nh4_avg)) +
 
 
 # I ran through dredging this model:
-#mod_all <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
-#                   family = Gamma(link = 'log'),
-#                   data = rls_final,
-#                   na.action = na.fail)
-# summary(mod_all)
-# plot(simulateResiduals(mod_all))
+mod_all <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                   family = Gamma(link = 'log'),
+                   data = rls_final,
+                   na.action = na.fail)
+ summary(mod_all)
+ plot(simulateResiduals(mod_all))
 
 # dredge <- as.data.frame(dredge(mod_all)) %>% filter(delta < 3)
 
@@ -389,7 +389,7 @@ plot(simulateResiduals(mod_aic))
 # And I prefer shannon diversity over richness bc it's a "better" biodiversity measure
 # And I want to drop depth bc it doesn't seem to matter...
 
-mod_brain <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand + (1|year) + (1|site_code), 
+mod_brain <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
                    family = Gamma(link = 'log'),
                    data = rls_final)
 summary(mod_brain)
@@ -404,28 +404,26 @@ AIC(mod_aic, mod_brain) # ok so obvi the AIC mod is the best, I should probably 
 # Step 4: Check for collinearity of predictors
 
 # car can't handle random effects so make a simplified mod
-car::vif(lm(nh4_avg ~ abundance_stand + tide_stand, data = rls_final))
-# All good
+car::vif(lm(nh4_avg ~ abundance_stand + tide_stand + shannon_stand + depth_avg_stand, data = rls_final))
+# All good, shannon is a little high
 
 
 # Graphing ----
 
-# ALRIGHT I'M GOING WITH MOD_AIC
+# ALRIGHT I'M GOING WITH MOD_BRAIN
+# Just using AIC blindly isn't good! I had reasons for all these predictors and I'm gonna keep them!!!
 
-pal <- pnw_palette("Sailboat", 3)
-pal4 <- viridis::viridis(4)
+pal6 <- viridis::viridis(6)
 pal <- viridis::viridis(10)
 pal3 <- c(pal[10], pal[8], pal[5])
 
 pie(rep(1, 10), col = pal)
 
-csee_pal <- pnw_palette("Starfish", n = 3)
-
 
 # Coefficient plot of the model ----
 
 # generate coefficients
-rls_coeffs <- confint(mod_aic, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
   rownames_to_column() %>%
   rename(variable = rowname,
@@ -437,8 +435,8 @@ rls_coeffs <- confint(mod_aic, level = 0.95, method = c("wald"), component = c("
          lower_CI = ifelse(variable == "(Intercept)", exp(lower_CI), lower_CI),
          upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI),
          variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "abundance_stand", "tide_stand", "abundance_stand:tide_stand"),
-                           labels = c("Intercept", "Abundance", "Tide", "Abundance:Tide")))
+                           levels = c("(Intercept)", "abundance_stand", "tide_stand", "abundance_stand:tide_stand", "shannon_stand", "depth_avg_stand"),
+                           labels = c("Intercept", "Animal abundance", "Tide", "Abundance:Tide", "Biodiversity", "Depth")))
 
 
 # Coefficient plot 
@@ -450,9 +448,9 @@ ggplot(rls_coeffs, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upp
   scale_y_discrete(limits = rev(levels(rls_coeffs$variable))) +
   theme_black() +
   theme(legend.position = "none") + 
-  scale_colour_manual(values = pal4)
+  scale_colour_manual(values = pal6)
 
-# ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 
@@ -463,7 +461,7 @@ tide_means <- rls_final %>%
   
 v <- c(-1.067, -0.279, 1.066)
 
-predict <- ggpredict(mod_aic, terms = c("abundance_stand", "tide_stand [v]")) %>% 
+predict <- ggpredict(mod_brain, terms = c("abundance_stand", "tide_stand [v]")) %>% 
   mutate(abundance_stand = x,
          tide_cat = factor(as.factor(case_when(group == "-1.067" ~ "Ebb",
                               group == "-0.279" ~ "Slack",
@@ -483,12 +481,12 @@ ggplot() +
                   ymin = conf.low, ymax = conf.high), 
               alpha = 0.15) +
   labs(y = expression(paste("Ammonium ", (mu*M))), 
-       x = "Abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
+       x = "Animal abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
   theme_black() +
   scale_colour_manual(values = (pal3)) +
   scale_fill_manual(values = (pal3))
 
-# ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # plot mean for each year
