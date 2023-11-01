@@ -5,6 +5,7 @@
 # Load packages -----
 library(tidyverse)
 library(ggplot2)
+library(ggspatial)
 library(sf)
 
 # Load functions ----
@@ -23,6 +24,11 @@ kelp_rls <- read_csv("Output/Output_data/kelp_rls.csv")
 # Load GREAT shapefile ----
 load("~/Documents/PhD/Ch2_Spatial_pee/Data/bc_map.Rdata")
 bc_map <- slice # rename
+
+# Load not great shapefile that renders quicker
+potato_map <- sf::st_read("Data/Potato_shapefiles/eez.shp") %>%
+  st_sf() %>%
+  st_set_crs(4326)
 
 # Make map without pies, just scaling size of point to %
 sf_use_s2(FALSE)
@@ -86,10 +92,57 @@ all_coords <- rls_coords %>%
 
 # Make maps! ------
 
+# try functions for inset map
+
+# just rls sites
+barkley_rls <- site_map(lat_min = -125.6, lat_max = -124.95, long_min = 48.75, long_max = 49.1,
+                    coord_data = all_coords %>%
+                      filter(Habitat == "Reef"), map_data = bc_map) +
+  guides(pch = "none")
+
+van_isle_rls <- inset_map(rect_xmin = -125.6, rect_xmax = -124.95, rect_ymin = 48.75, rect_ymax = 49.1,
+                      map_data = bc_map)
+
+  
+barkley_rls + 
+  inset_element(
+    van_isle_rls, 
+    left = 0, 
+    bottom = 0.5, 
+    right = 0.5, 
+    top = 1.03,
+    align_to = 'panel'
+  )
+
+# ggsave("Output/Figures/rls_site_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+# just kelp sites
+barkley_kelp <- site_map(lat_min = -125.6, lat_max = -124.95, long_min = 48.75, long_max = 49.1,
+                        coord_data = all_coords %>%
+                          filter(Habitat == "Kelp"), map_data = bc_map) +
+  guides(pch = "none")
+
+van_isle_kelp <- inset_map(rect_xmin = -125.6, rect_xmax = -124.95, rect_ymin = 48.75, rect_ymax = 49.1,
+                          map_data = bc_map)
+
+
+barkley_kelp + 
+  inset_element(
+    van_isle_kelp, 
+    left = 0, 
+    bottom = 0.5, 
+    right = 0.5, 
+    top = 1.03,
+    align_to = 'panel'
+  )
+
+ ggsave("Output/Figures/kelp_site_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
 # RLS site averages including all data
 all_coords %>%
   filter(Habitat == "Reef") %>%
-  map_daddy(nh4_avg, Habitat)
+  map_daddy(nh4_avg, Habitat, potato_map)
 
 #ggsave("Output/Figures/rls_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
@@ -97,19 +150,19 @@ all_coords %>%
 # Kelp only map
 all_coords %>%
   filter(Habitat == "Kelp") %>%
-  map_daddy(nh4_avg, Habitat)
+  map_daddy(nh4_avg, Habitat, potato_map)
 
 #ggsave("Output/Figures/kelp_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Kelp + RLS map -----
-map_daddy(all_coords, nh4_avg, Habitat) 
+map_daddy(all_coords, nh4_avg, Habitat, potato_map) 
 
 #ggsave("Output/Figures/all_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # just avg of the slack and ebb measurements for RLS sites
-map_daddy(coords_slack, nh4_avg, Habitat) 
+map_daddy(coords_slack, nh4_avg, Habitat, potato_map) 
 
 #ggsave("Output/Figures/nh4_slack_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
