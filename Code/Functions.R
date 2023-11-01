@@ -34,7 +34,7 @@ theme_black = function(base_size = 12, base_family = "") {
       legend.box = NULL, 
       # Specify panel options
       panel.background = element_rect(fill = "black", color  =  NA),  
-      panel.border = element_rect(fill = NA, color = "black"),  
+      panel.border = element_rect(fill = NA, color = "white"),  
       panel.grid.major = element_line(color = "black"),  
       panel.grid.minor = element_line(color = "black"),  
       panel.spacing = unit(0.5, "lines"),   
@@ -606,11 +606,13 @@ site_map <- function(lat_min, lat_max, long_min, long_max, coord_data, map_data)
 }
 
 # big inset map
-inset_map <- function(rect_xmin, rect_xmax, rect_ymin, rect_ymax, map_data){
+inset_map <- function(rect_xmin, rect_xmax, rect_ymin, rect_ymax, 
+                      map_data){
   
   ggplot() +
     geom_sf(data = {{map_data}}, fill = "white", colour = blue) +
     coord_sf(xlim = c(-128.5, -123), ylim = c(48.25, 51), expand = FALSE) +
+    # add rectangle for zoomed in part
     geom_rect(aes(xmin = {{rect_xmin}}, xmax = {{rect_xmax}}, ymin = {{rect_ymin}}, ymax = {{rect_ymax}}), color = "red", fill = NA, inherit.aes = FALSE) +
     # add aesthetic elements
     theme_bw() +
@@ -624,6 +626,11 @@ inset_map <- function(rect_xmin, rect_xmax, rect_ymin, rect_ymax, map_data){
           plot.title = NULL,
           plot.margin=grid::unit(c(0,0,0,0), "mm"))
 }
+
+# add label for Vancouver
+# geom_text(aes(x = -123.120694, y = 49.282694, 
+#               label = "Vancouver",
+#               fontface = "bold")) +
 
 # Plotting -----
 
