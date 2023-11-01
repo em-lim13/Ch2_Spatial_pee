@@ -34,7 +34,7 @@ theme_black = function(base_size = 12, base_family = "") {
       legend.box = NULL, 
       # Specify panel options
       panel.background = element_rect(fill = "black", color  =  NA),  
-      panel.border = element_rect(fill = NA, color = "white"),  
+      panel.border = element_rect(fill = NA, color = "black"),  
       panel.grid.major = element_line(color = "black"),  
       panel.grid.minor = element_line(color = "black"),  
       panel.spacing = unit(0.5, "lines"),   
@@ -548,9 +548,9 @@ depth_function <- function(datafile){
 
 # Mapping -----
 
-map_daddy <- function(coord_data, nh4_var, kelp_var) {
+map_daddy <- function(coord_data, nh4_var, kelp_var, map_file) {
   ggplot() +
-    geom_sf(data = bc_map, fill = "white", colour = blue) +
+    geom_sf(data = {{map_file}}, fill = "white", colour = blue) +
     geom_sf(data = {{coord_data}}, 
             colour = "black",
             alpha = 0.9,
@@ -577,6 +577,53 @@ map_daddy <- function(coord_data, nh4_var, kelp_var) {
 #axis.title = element_text(size = 13, colour = "black"),
 #legend.text = element_text(size = 11, colour = "black"),
 
+# Site map
+site_map <- function(lat_min, lat_max, long_min, long_max, coord_data, map_data){
+ 
+  ggplot() +
+    geom_sf(data = {{map_data}}, fill = "white", colour = blue) +
+    geom_sf(data = {{coord_data}}, 
+            colour = "black",
+            fill = "black",
+            alpha = 0.5,
+            size = 8,
+            aes(pch = Habitat)) +
+    coord_sf(xlim = c({{lat_min}}, {{lat_max}}), ylim = c({{long_min}}, {{long_max}}), expand = FALSE)  +
+    # add aesthetic elements
+    theme_black() +
+    theme(panel.background = element_rect(fill = blue),
+          panel.grid.major = element_line(color = blue)) +
+    labs(x = "Longitude", y = "Latitude",
+         fill = "Habitat") +
+    scale_x_continuous(breaks = seq({{lat_min}}, {{lat_max}}, by = 0.1)) +
+    scale_shape_manual(values = c(21, 25), drop = F) +
+    guides(pch = guide_legend(override.aes = 
+                                list(colour = "black"))) +
+    annotation_scale(location = "br", width_hint = 0.4) +
+    annotation_north_arrow(location = "br", which_north = "true", 
+                           pad_x = unit(0.0, "in"), pad_y = unit(0.2, "in"),
+                           style = north_arrow_fancy_orienteering)
+}
+
+# big inset map
+inset_map <- function(rect_xmin, rect_xmax, rect_ymin, rect_ymax, map_data){
+  
+  ggplot() +
+    geom_sf(data = {{map_data}}, fill = "white", colour = blue) +
+    coord_sf(xlim = c(-128.5, -123), ylim = c(48.25, 51), expand = FALSE) +
+    geom_rect(aes(xmin = {{rect_xmin}}, xmax = {{rect_xmax}}, ymin = {{rect_ymin}}, ymax = {{rect_ymax}}), color = "red", fill = NA, inherit.aes = FALSE) +
+    # add aesthetic elements
+    theme_bw() +
+    theme(panel.background = element_rect(fill = blue),
+          panel.grid.major = element_line(color = blue),
+          panel.border = element_rect(fill = NA, colour = "black"),
+          axis.title = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.ticks.length = unit(0, "pt"),
+          plot.title = NULL,
+          plot.margin=grid::unit(c(0,0,0,0), "mm"))
+}
 
 # Plotting -----
 
@@ -604,4 +651,42 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var){
     scale_colour_manual(values = rev(csee_pal)) +
     labs(y = expression(paste("Ammonium"~(mu*M)))) +
     ylim(c(0, 3.8))
+}
+
+
+# Standardize variables -----
+
+scale_vars <- function(datafile){
+  {{datafile}} %>%
+    mutate(
+      # kelp forest level variables
+      forest_biomass = BiomassM*Area_m2,
+      den_scale = c(scale(DensityM)), # make sure density is right
+      kelp_bio_scale = c(scale(BiomassM)),
+      log_kelp = log(BiomassM + 0.001),
+      log_kelp_scale = c(scale(log_kelp)),
+      forest_bio_scale = c(scale(forest_biomass)),
+      area_scale = c(scale(Area_m2)),
+      # transect level variables
+      bio_tran_scale = c(scale(Biomassm2kg)),
+      log_kelp_tran = log(Biomassm2kg + 0.001),
+      den_tran_scale = c(scale(kelp_den)), # make sure density is right
+      # log the pee diff?
+      log_pee_diff = log(in_minus_out + 1),
+      # the biomass + abundance variables
+      weight_sum_scale = c(scale(weight_sum)),
+      all_weighted_scale = c(scale(all_weight_weighted)),
+      abundance_scale = c(scale(abundance)),
+      # biodiversity variables
+      rich_scale = c(scale(species_richness)),
+      shannon_scale = c(scale(shannon)),
+      simpson_scale = c(scale(simpson)),
+      # abiotic variables I should control for
+      depth_scale = c(scale(depth_avg)),
+      tide_scale = c(scale(avg_exchange_rate)),
+      tide_cat = factor(as.factor(ifelse(avg_exchange_rate < -0.1897325, "Ebb",
+                                         ifelse(avg_exchange_rate < 0.1897325, "Slack", "Flood"))),
+                        levels = c("Ebb", "Slack", "Flood")),
+      # only slack and flood
+    ) 
 }
