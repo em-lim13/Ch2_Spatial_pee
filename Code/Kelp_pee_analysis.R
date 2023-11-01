@@ -235,6 +235,7 @@ ggplot(data, aes(x = in_minus_out)) +
 
 
 # Step 2: Choose your predictors
+# And Step 3: Model residuals!
 
 # Biological
   # Kelp forest
@@ -279,7 +280,7 @@ ggplot(data, aes(x = in_minus_out)) +
 # Build full model with gaussian distribution
 # This is the transect level model
 # One row per transect, 3 per site
-mod_tran <- glmmTMB(in_minus_out ~ kelp_bio_scale*tide_scale*weight_sum_scale + bio_tran_scale + shannon_scale + depth_scale + kelp_sp + (1|site_code), 
+mod_tran <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale*weight_sum_scale + bio_tran_scale + shannon_scale + depth_scale + (1|site_code), 
                          family = 'gaussian',
                          data = data,
                     na.action = na.fail)
@@ -299,15 +300,23 @@ mod_best <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale + weight_
                     family = 'gaussian',
                     data = data)
 
+plot(simulateResiduals(mod_best)) # looks fine
 summary(mod_best)
 
-# Step 3: Model residuals!
-plot(simulateResiduals(mod_best)) # looks fine
+# use my stupid brain to think of a good model
+mod_in_out <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale*weight_sum_scale + shannon_scale + depth_scale - kelp_bio_scale:tide_scale:weight_sum_scale +
+(1|site_code), 
+                    family = 'gaussian',
+                    data = data)
+
+plot(simulateResiduals(mod_in_out)) # looks fine
+summary(mod_in_out)
+
 
 # Step 4: Check for collinearity of predictors
 
 # car can't handle random effects so make a simplified mod
-car::vif(lm(in_minus_out ~ kelp_bio_scale + tide_scale + weight_sum_scale + shannon_scale + kelp_sp, data = data))
+car::vif(lm(in_minus_out ~ kelp_bio_scale + tide_scale + weight_sum_scale + shannon_scale + kelp_sp + depth_scale, data = data))
 # Yep this looks fine!
 
 
@@ -322,7 +331,7 @@ visreg(mod_best, "kelp_bio_scale", by = "tide_scale", overlay =TRUE)
 
 
 # generate df for plotting
-df <- confint(mod_best, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
   rownames_to_column() %>%
   rename(variable = rowname,
@@ -331,12 +340,12 @@ df <- confint(mod_best, level = 0.95, method = c("wald"), component = c("all", "
          estimate = Estimate) %>%
   head(- 1)  %>%
   mutate(variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "kelp_spmixed", "kelp_spnereo", "kelp_spnone", "weight_sum_scale",  "shannon_scale", "kelp_bio_scale", "tide_scale", "kelp_bio_scale:tide_scale"),
-                           labels = c("Intercept", "Mixed kelp", "Nereo", "None", "Animal biomass", "Shannon", "Kelp biomass", "Tide", "Kelp:tide"))
+                           levels = c("(Intercept)", "kelp_spmixed", "kelp_spnereo", "kelp_spnone", "shannon_scale", "depth_scale", "kelp_bio_scale", "weight_sum_scale", "tide_scale", "kelp_bio_scale:tide_scale", "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
+                           labels = c("Intercept", "Mixed kelp", "Nereo", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals"))
   )
 
 # Coefficient plot
-pal9 <- viridis::viridis(9)
+pal12 <- viridis::viridis(12)
 pal <- viridis::viridis(10)
 pal2 <- c(pal[8], pal[5])
 
@@ -348,9 +357,9 @@ ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, c
   scale_y_discrete(limits = rev(levels(df$variable))) +
   theme_black() +
   theme(legend.position = "none") + 
-  scale_colour_manual(values = pal9)
+  scale_colour_manual(values = pal12)
 
-# ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # remake the shitty asymptote fig with the log(kelp) model and actual predictions, with geom_point(aes(colour = tide, size = animal weight))! See what that looks like???
@@ -365,7 +374,7 @@ tide_means_kelp <- data %>%
 v2 <- c(1.5020449, -0.5006816)
 
 # now make predictions
-predict <- ggpredict(mod_best, terms = c("kelp_bio_scale", "tide_scale [v2]")) %>% 
+predict <- ggpredict(mod_in_out, terms = c("kelp_bio_scale", "tide_scale [v2]")) %>% 
   mutate(kelp_bio_scale = x,
          tide_cat = factor(as.factor(ifelse(group == "-0.5006816", "Slack", "Flood")),
          levels = c("Ebb", "Slack", "Flood"))
@@ -406,47 +415,9 @@ labs(y = expression(paste(Delta, " Ammonium ", (mu*M))),
   scale_fill_manual(values = pal2)
 
 
-# ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 12, dpi = 400)
 
   
-
-
-# try again on transect level ---
-# mod for plotting indiv transects?
-mod_tran <- glmmTMB(in_minus_out ~ log_kelp_tran*avg_exchange_rate + weight_sum + shannon_scale + kelp_sp + (1|site_code), 
-                    family = 'gaussian',
-                    data = data)
-
-# make predictions
-# create range vector
-v2 <- seq(-6.97, 1.2, length.out = 100)
-# now make predictions
-predict2 <- ggpredict(mod_tran, terms = "log_kelp_tran [v2]") %>% 
-  mutate(Biomassm2kg = exp(x) - 0.001) %>%
-  filter(predicted > -1)
-
-# now plot these predictions
-ggplot() + 
-  geom_point(data = data, aes(x = Biomassm2kg, y = in_minus_out,
-                              colour = avg_exchange_rate,
-                              fill = avg_exchange_rate,
-                              size = weight_sum,
-                              pch = kelp_sp), alpha = 0.8) +
-  #now plot the  model output
-  geom_ribbon(data = predict2,
-              aes(x = Biomassm2kg, y = predicted, ymin = conf.low, ymax = conf.high), 
-              alpha = 0.3) +
-  geom_line(data = predict2,
-            aes(x = Biomassm2kg, y = predicted),
-            linewidth = 1.5) +
-  theme_classic() +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "red", linewidth = 0.5) +
-  labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), x = "Kelp Biomass (kg/m2)",
-       colour = "Tide exchange (m/s)", fill = "Tide exchange (m/s)",
-       size = "Animal biomass (kg)",
-       pch = "Kelp species") +
-  ylim(c(-1, 1)) +
-  scale_shape_manual(values = c(21, 24, 22, 25))
 
 # # Ammonium at the site level?
 data_s %>%
@@ -463,7 +434,6 @@ data_s %>%
                        labels = c("Outside kelp", "Inside kelp"),
                        guide = "legend")
 # Ok this is sort of neat, you can see the base ammonium levels and then how different they are, by site. might be neat to arrange these with kelp density instead of site on the x
-
 ggplot(data) +
   geom_point(aes(x = kelp_bio_scale, nh4_out_avg, 
                  colour = "blue")) +
@@ -475,6 +445,7 @@ ggplot(data) +
                        breaks = c("blue", "green"),
                        labels = c("Outside kelp", "Inside kelp"),
                        guide = "legend")
+
 
 # Stats: site to site variation ----
 
@@ -525,15 +496,15 @@ ggplot(data_s, aes(x = nh4_out_avg)) +
 # And Step 3: Model residuals 
 
 # Build full model with gamma distribution
-mod_gam_kelp <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale + shannon_scale + kelp_sp + depth_scale, 
+mod_kelp_site <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale + shannon_scale + kelp_sp + depth_scale - weight_sum_scale:tide_scale:kelp_bio_scale, 
                         family = Gamma(link = 'log'),
                         data = data_s,
                         na.action = na.fail)
-summary(mod_gam_kelp)
-plot(simulateResiduals(mod_gam_kelp))
+summary(mod_kelp_site)
+plot(simulateResiduals(mod_kelp_site))
 
 # try making a model with MORE interactions!
-mod_gam_kelp2 <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale*shannon_scale + kelp_sp + depth_scale - 
+mod_kelp_site_ints <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale*shannon_scale + kelp_sp + depth_scale - 
                            weight_sum_scale:tide_scale:kelp_bio_scale:shannon_scale -
                            weight_sum_scale:tide_scale:kelp_bio_scale - 
                            weight_sum_scale:tide_scale:shannon_scale -
@@ -541,10 +512,10 @@ mod_gam_kelp2 <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scal
                            tide_scale:kelp_bio_scale:shannon_scale, 
                          family = Gamma(link = 'log'),
                          data = data_s)
-summary(mod_gam_kelp2) 
-plot(simulateResiduals(mod_gam_kelp2)) # when I put Second beach south back in, the residuals look fine. Why is that. why. 
+summary(mod_kelp_site_ints) 
+plot(simulateResiduals(mod_kelp_site_ints)) # when I put Second beach south back in, the residuals look fine. Why is that. why. 
 
-AIC(mod_gam_kelp2, mod_gam_kelp) # mod_gam_kelp is better
+AIC(mod_kelp_site, mod_kelp_site_ints) # mod_kelp_site is better
 
 # Finalize which predictors are best
 # dredge <- as.data.frame(dredge(mod_gam_kelp)) %>% filter(delta < 3)
@@ -556,37 +527,47 @@ mod_top <- glmmTMB(nh4_out_avg ~ kelp_sp + tide_scale,
 summary(mod_top)
 plot(simulateResiduals(mod_top)) # looks good.....
 
+# But I'm sticking with my first model!
+
 
 # Step 4: Check for collinearity of predictors
 
 # car can't handle random effects so make a simplified mod
-car::vif(lm(nh4_out_avg ~ kelp_sp + tide_scale,  data = data_s))
+car::vif(lm(nh4_out_avg ~ weight_sum_scale + tide_scale + kelp_bio_scale + shannon_scale + kelp_sp + depth_scale, data = data_s))
 # all good
 
 
 # Plot kelp site mod ------
 # generate df for plotting
  
-int <- exp(confint(mod_top, estimate = TRUE)[1,3])
-
-df2 <- confint(mod_top, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+df2 <- confint(mod_kelp_site, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
   rownames_to_column() %>%
   rename(variable = rowname,
          lower_CI = `2.5 %`,
          upper_CI = `97.5 %`,
          estimate = Estimate) %>%
-  mutate(estimate = ifelse(variable != "tide_scale", exp(estimate), estimate),
-         lower_CI = ifelse(variable != "tide_scale", exp(lower_CI), lower_CI),
-         upper_CI = ifelse(variable != "tide_scale", exp(upper_CI), upper_CI),
+  mutate(estimate = ifelse(variable == "(Intercept)" |
+                             variable == "kelp_spmixed" |
+                             variable == "kelp_spnereo" |
+                             variable == "kelp_spnone",
+                           exp(estimate), estimate),
+         lower_CI = ifelse(variable == "(Intercept)" |
+                             variable == "kelp_spmixed" |
+                             variable == "kelp_spnereo" |
+                             variable == "kelp_spnone",
+                           exp(lower_CI), lower_CI),
+         upper_CI = ifelse(variable == "(Intercept)" |
+                             variable == "kelp_spmixed" |
+                             variable == "kelp_spnereo" |
+                             variable == "kelp_spnone",
+                           exp(upper_CI), upper_CI),
          variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "kelp_spmixed", "kelp_spnereo", "kelp_spnone", "tide_scale"),
-                           labels = c("Intercept", "Mixed kelp", "Nereo", "No kelp", "Tide"))
-  )
-
+                           levels = c("(Intercept)", "kelp_spmixed", "kelp_spnereo", "kelp_spnone", "shannon_scale", "depth_scale", "kelp_bio_scale", "weight_sum_scale", "tide_scale", "tide_scale:kelp_bio_scale", "weight_sum_scale:kelp_bio_scale", "weight_sum_scale:tide_scale"),
+                           labels = c("Intercept", "Mixed kelp", "Nereo", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals")))
 
 # Coefficient plot
-pal5 <- viridis::viridis(5)
+pal12 <- viridis::viridis(12)
 
 # plot un-logged cat variables
 ggplot(df2, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
@@ -597,9 +578,9 @@ ggplot(df2, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, 
   scale_y_discrete(limits = rev(levels(df2$variable))) +
   theme_black() +
   theme(legend.position = "none") + 
-  scale_colour_manual(values = pal5)
+  scale_colour_manual(values = pal12)
 
-# ggsave("Output/Figures/kelp_site_mod_coeff.png", device = "png", height = 9, width = 16, dpi = 400)
+ ggsave("Output/Figures/kelp_site_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # plot model predictions
 ggplot(data = data_s, 
