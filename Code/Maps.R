@@ -166,6 +166,12 @@ map_daddy(coords_slack, nh4_avg, Habitat, potato_map)
 
 #ggsave("Output/Figures/nh4_slack_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
+# use site map! -----
+
+site_map(lat_min = -125.3, lat_max = -125, long_min = 48.8, long_max = 48.9,
+         coord_data = all_coords, map_data = potato_map, 
+         add_points = TRUE, add_annotate = FALSE)
+
 
 # Cursed pimple map -----
 

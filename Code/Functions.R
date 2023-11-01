@@ -578,31 +578,43 @@ map_daddy <- function(coord_data, nh4_var, kelp_var, map_file) {
 #legend.text = element_text(size = 11, colour = "black"),
 
 # Site map
-site_map <- function(lat_min, lat_max, long_min, long_max, coord_data, map_data){
- 
-  ggplot() +
+site_map <- function(lat_min, lat_max, long_min, long_max, 
+                     coord_data, map_data, 
+                     add_points, add_annotate){
+
+# make basic map plot
+  gg <- ggplot() +
     geom_sf(data = {{map_data}}, fill = "white", colour = blue) +
-    geom_sf(data = {{coord_data}}, 
-            colour = "black",
-            fill = "black",
-            alpha = 0.5,
-            size = 8,
-            aes(pch = Habitat)) +
-    coord_sf(xlim = c({{lat_min}}, {{lat_max}}), ylim = c({{long_min}}, {{long_max}}), expand = FALSE)  +
+    coord_sf(xlim = c({{lat_min}}, {{lat_max}}), ylim = c({{long_min}}, {{long_max}}), expand = FALSE) +
     # add aesthetic elements
     theme_black() +
     theme(panel.background = element_rect(fill = blue),
           panel.grid.major = element_line(color = blue)) +
+    # axis things
     labs(x = "Longitude", y = "Latitude",
          fill = "Habitat") +
-    scale_x_continuous(breaks = seq({{lat_min}}, {{lat_max}}, by = 0.1)) +
-    scale_shape_manual(values = c(21, 25), drop = F) +
-    guides(pch = guide_legend(override.aes = 
-                                list(colour = "black"))) +
+    scale_x_continuous(breaks = seq({{lat_min}}, {{lat_max}}, by = 0.1))
+  
+  # add bells and whistles
+  if(add_points == TRUE){
+    gg + geom_sf(data = {{coord_data}}, 
+                 colour = "black",
+                 fill = "black",
+                 alpha = 0.5,
+                 size = 8,
+                 aes(pch = Habitat)) +
+      scale_shape_manual(values = c(21, 25), drop = F) +
+      guides(pch = guide_legend(override.aes = 
+                                  list(colour = "black")))} 
+
+  # add arrow + scale bar
+  if(add_annotate == TRUE){
+    gg +
     annotation_scale(location = "br", width_hint = 0.4) +
     annotation_north_arrow(location = "br", which_north = "true", 
                            pad_x = unit(0.0, "in"), pad_y = unit(0.2, "in"),
                            style = north_arrow_fancy_orienteering)
+}
 }
 
 # big inset map
