@@ -86,24 +86,140 @@ all_coords <- rls_coords %>%
                                Habitat = Habitat)) ) %>%
   # shrink the two sites over 1 uM to 2 uM so the scale is nicer
   mutate(Habitat = factor(as.factor(Habitat), levels = c("Reef", "Kelp")),
-         nh4_avg = ifelse(nh4_avg > 2, 2, nh4_avg)) 
+         nh4_avg = ifelse(nh4_avg > 2, 2, nh4_avg),
+         dummy = 2) 
 
 
 
 # Make maps! ------
 
-# try functions for inset map
+# Barkley Sound map
+map_daddy_np(lat_min = -127,
+          lat_max = -123, 
+          long_min = 48.5, 
+          long_max = 51, 
+          map_file = bc_map,
+          invert = FALSE) +
+  # add rectangle for zoomed in part
+  geom_rect(aes(xmin = -125.4, xmax = -125.0, ymin = 48.80, ymax = 49), color = "red", fill = NA, inherit.aes = FALSE) 
+
+# ggsave("Output/Figures/barkley_sound_map.png", device = "png", height = 9, width = 16, units = "cm", dpi = 400)
+
+
+# Making RLS maps -----
+
+# RLS site map
+map_daddy(lat_min = -125.4,
+           lat_max = -125.0, 
+           long_min = 48.75, 
+           long_max = 49, 
+           coord_data = all_coords %>% filter(Habitat == "Reef"), 
+           nh4_var = dummy, 
+           point_size = 4, 
+           kelp_var = Habitat,
+           map_file = bc_map,
+           invert = FALSE) +
+  guides(pch = "none",
+         fill = "none")
+
+# ggsave("Output/Figures/rls_site_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+# RLS nh4 data!
+map_daddy(lat_min = -125.4,
+           lat_max = -125.0, 
+           long_min = 48.80, 
+           long_max = 49, 
+           coord_data = all_coords %>% filter(Habitat == "Reef"), 
+           nh4_var = nh4_avg, 
+           point_size = 9, 
+           kelp_var = Habitat,
+           map_file = bc_map,
+           invert = FALSE) +
+  guides(pch = "none")
+
+# ggsave("Output/Figures/rls_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+# Kelp maps! ----
+# Kelp site map
+map_daddy(lat_min = -125.4,
+           lat_max = -125.0, 
+           long_min = 48.80, 
+           long_max = 49, 
+           coord_data = all_coords %>% filter(Habitat == "Kelp"), 
+           nh4_var = dummy, 
+           point_size = 4, 
+           kelp_var = Habitat,
+           map_file = bc_map,
+           invert = FALSE) +
+  guides(pch = "none",
+         fill = "none")
+
+# ggsave("Output/Figures/kelp_site_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+# Kelp nh4 data!
+map_daddy(lat_min = -125.4,
+           lat_max = -125.0, 
+           long_min = 48.80, 
+           long_max = 49, 
+           coord_data = all_coords %>% filter(Habitat == "Kelp"), 
+           nh4_var = nh4_avg, 
+           point_size = 9, 
+           kelp_var = Habitat,
+           map_file = potato_map,
+           invert = TRUE) +
+  guides(pch = "none")
+
+#ggsave("Output/Figures/kelp_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+
+# All sites
+map_daddy(lat_min = -125.4,
+           lat_max = -125.0, 
+           long_min = 48.80, 
+           long_max = 49, 
+           coord_data = all_coords, 
+           nh4_var = nh4_avg, 
+           kelp_var = Habitat,
+           point_size = 9, 
+           map_file = bc_map,
+           invert = FALSE)
+
+ggsave("Output/Figures/all_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+
+
+
+# Graveyard ------
+
+# use site map! -----
+site_map(
+  lat_min = -125.3,
+  lat_max = -125,
+  long_min = 48.8,
+  long_max = 48.9,
+  coord_data = all_coords,
+  map_data = potato_map,
+  add_points = TRUE,
+  add_annotate = TRUE
+)
+
 
 # just rls sites
 barkley_rls <- site_map(lat_min = -125.6, lat_max = -124.95, long_min = 48.75, long_max = 49.1,
-                    coord_data = all_coords %>%
-                      filter(Habitat == "Reef"), map_data = bc_map) +
+                        coord_data = all_coords %>%
+                          filter(Habitat == "Reef"), map_data = potato_map,
+                        add_points = TRUE, add_annotate = TRUE) +
   guides(pch = "none")
 
 van_isle_rls <- inset_map(rect_xmin = -125.6, rect_xmax = -124.95, rect_ymin = 48.75, rect_ymax = 49.1,
-                      map_data = bc_map)
+                          map_data = bc_map)
 
-  
+
 barkley_rls + 
   inset_element(
     van_isle_rls, 
@@ -114,63 +230,6 @@ barkley_rls +
     align_to = 'panel'
   )
 
-# ggsave("Output/Figures/rls_site_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
-# just kelp sites
-barkley_kelp <- site_map(lat_min = -125.6, lat_max = -124.95, long_min = 48.75, long_max = 49.1,
-                        coord_data = all_coords %>%
-                          filter(Habitat == "Kelp"), map_data = bc_map) +
-  guides(pch = "none")
-
-van_isle_kelp <- inset_map(rect_xmin = -125.6, rect_xmax = -124.95, rect_ymin = 48.75, rect_ymax = 49.1,
-                          map_data = bc_map)
-
-
-barkley_kelp + 
-  inset_element(
-    van_isle_kelp, 
-    left = 0, 
-    bottom = 0.5, 
-    right = 0.5, 
-    top = 1.03,
-    align_to = 'panel'
-  )
-
- ggsave("Output/Figures/kelp_site_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-# RLS site averages including all data
-all_coords %>%
-  filter(Habitat == "Reef") %>%
-  map_daddy(nh4_avg, Habitat, potato_map)
-
-#ggsave("Output/Figures/rls_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-# Kelp only map
-all_coords %>%
-  filter(Habitat == "Kelp") %>%
-  map_daddy(nh4_avg, Habitat, potato_map)
-
-#ggsave("Output/Figures/kelp_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-# Kelp + RLS map -----
-map_daddy(all_coords, nh4_avg, Habitat, potato_map) 
-
-#ggsave("Output/Figures/all_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-# just avg of the slack and ebb measurements for RLS sites
-map_daddy(coords_slack, nh4_avg, Habitat, potato_map) 
-
-#ggsave("Output/Figures/nh4_slack_map.png", device = "png", height = 9, width = 16, dpi = 400)
-
-# use site map! -----
-
-site_map(lat_min = -125.3, lat_max = -125, long_min = 48.8, long_max = 48.9,
-         coord_data = all_coords, map_data = potato_map, 
-         add_points = TRUE, add_annotate = FALSE)
 
 
 # Cursed pimple map -----
