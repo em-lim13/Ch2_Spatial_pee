@@ -9,6 +9,7 @@ library(TMB)
 library(glmmTMB)
 library(patchwork)
 library(PNWColors)
+library(ggeffects)
 
 # Load functions
 source("Code/Functions.R")
@@ -96,7 +97,7 @@ crab_plot <- dot_whisker(sum_data = sum_crabs, all_data = crab_pee,
 # plot together
 cuke_plot + crab_plot
 
-ggsave("Output/Figures/both_cages.png", device = "png", height = 7, width = 16, dpi = 400)
+#ggsave("Output/Figures/both_cages.png", device = "png", height = 7, width = 16, dpi = 400)
 # og is 9 x 16
 
 # Old cuke x depth plot ----
@@ -116,16 +117,18 @@ ggplot(cuke_pee, aes(depth, nh4_avg)) +
 
 
 # Map -----
-
-# Try bcmaps for a better shapefile ????
 library(sf)
 library(osmdata)
 library(ggimage) # for the pictures!
 
 # Load not great shapefile ----
-potato_map <- sf::st_read("Data/Shapefiles/eez.shp") %>%
+potato_map <- sf::st_read("Data/Potato_shapefiles/eez.shp") %>%
   st_sf() %>%
   st_set_crs(4326)
+
+# Load GREAT shapefile
+load("~/Documents/PhD/Ch2_Spatial_pee/Data/bc_map.Rdata")
+bc_map <- slice # rename
 
 # do this so i can trim the map margins
 sf_use_s2(FALSE)
@@ -143,27 +146,60 @@ coords <- data.frame(site, lat, long, image) %>%
   st_as_sf(coords = c("long", "lat")) %>%
   st_set_crs(4326) 
 
-# make the map!
+
+# Make new map
 ggplot() +
-  geom_sf(data = potato_map, fill = blue, colour = "white") +
+  geom_sf(data = potato_map, fill = "white", colour = blue) +
   geom_sf(data = coords, 
           alpha = 0.9,
           size = 9,
           aes(colour = site)) +
   coord_sf(xlim = c(-125.4, -125.0), ylim = c(48.80, 49), expand = FALSE)  +
   theme_black() +
-  theme(panel.background = element_rect(fill = "white"),
-        panel.grid.major = element_line(color = "white"),
+  theme(panel.background = element_rect(fill = blue),
+        panel.grid.major = element_line(color = blue),
+        legend.position = "null") +
+  labs(x = "Longitude", y = "Latitude",
+       fill = expression(paste("NH"[4]^" +",(mu*M)))) +
+  scale_x_continuous(breaks = seq(-125.4, -125.0, by = 0.1)) 
+
+
+
+# make the map!
+ggplot() +
+  geom_sf(data = bc_map, fill = "white", colour = blue) +
+  geom_sf(data = coords, 
+          alpha = 0.9,
+          size = 9,
+          aes(colour = site)) +
+  coord_sf(xlim = c(-125.25, -125.1), ylim = c(48.80, 48.9), expand = FALSE)  +
+  theme_black() +
+  theme(panel.background = element_rect(fill = blue),
+        panel.grid.major = element_line(color = blue),
         legend.position = "null") +
   labs(x = "Longitude", y = "Latitude") +
-  scale_x_continuous(breaks = seq(-125.4, -125.0, by = 0.1))
+  scale_x_continuous(breaks = seq(-125.3, -125.1, by = 0.1))
+
+# ggsave("Output/Figures/cage_site_map.png", device = "png", height = 9, width = 16, dpi = 400)
+
+# Barkley sound for schematic
+google_blue <- "#9bbff4"
+google_green <- "#bbdaa4"
+
+ggplot() +
+  geom_sf(data = bc_map, fill = "white", colour = google_blue) +
+  coord_sf(xlim = c(-125.3, -125), ylim = c(48.75, 48.95), expand = FALSE)  +
+  theme_black() +
+  theme(panel.background = element_rect(fill = google_blue),
+        panel.grid.major = element_line(color = google_blue),
+        legend.position = "null") +
+  scale_x_continuous(breaks = seq(-125.3, -125, by = 0.1))
+
+ggsave("Output/Figures/schematic_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # try to replace points with images!
 # Help here: https://www.simoncoulombe.com/2020/11/animated-ships/
-
-# zoom in, use osm map
-load("/Users/emlim/Documents/PhD/Ch2_Spatial_pee/Data/coastline.Rdata") 
 
 
 ggplot() +
