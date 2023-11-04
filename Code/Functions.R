@@ -548,37 +548,8 @@ depth_function <- function(datafile){
 
 # Mapping -----
 
-map_daddy <- function(coord_data, nh4_var, kelp_var, map_file) {
-  ggplot() +
-    geom_sf(data = {{map_file}}, fill = "white", colour = blue) +
-    geom_sf(data = {{coord_data}}, 
-            colour = "black",
-            alpha = 0.9,
-            size = 9,
-            aes(fill = {{nh4_var}},
-                pch = {{kelp_var}})) +
-    coord_sf(xlim = c(-125.4, -125.0), ylim = c(48.80, 49), expand = FALSE)  +
-    theme_black() +
-    theme(panel.background = element_rect(fill = blue),
-          panel.grid.major = element_line(color = blue)) +
-    viridis::scale_fill_viridis(option="magma", direction = -1,
-                                limits = c(0, 2),
-            guide = guide_colorbar(frame.colour = "white", ticks.colour = "white")) +
-    labs(x = "Longitude", y = "Latitude",
-         fill = expression(paste("NH"[4]^" +",(mu*M)))) +
-    scale_x_continuous(breaks = seq(-125.4, -125.0, by = 0.1)) +
-    scale_shape_manual(values = c(21, 25), drop = F) +
-    guides(pch = guide_legend(override.aes = 
-                                 list(colour = "white")))
-}
-
-
-#axis.text = element_text(size = 12, colour = "black"),
-#axis.title = element_text(size = 13, colour = "black"),
-#legend.text = element_text(size = 11, colour = "black"),
-
 # Site map
-site_map <- function(lat_min, lat_max, long_min, long_max, 
+old_site_map <- function(lat_min, lat_max, long_min, long_max, 
                      coord_data, map_data, 
                      add_points, add_annotate){
 
@@ -617,6 +588,63 @@ site_map <- function(lat_min, lat_max, long_min, long_max,
 }
 }
 
+# Site map from Nikola
+site_map <- function(lat_min,
+                     lat_max,
+                     long_min,
+                     long_max,
+                     coord_data,
+                     map_data,
+                     add_points,
+                     add_annotate) {
+  # make basic map plot
+  plot <- ggplot() +
+    geom_sf(data = map_data,
+            fill = "white",
+            colour = blue) +
+    coord_sf(
+      xlim = c(lat_min, lat_max),
+      ylim = c(long_min, long_max),
+      expand = FALSE
+    ) +
+    # add aesthetic elements
+    theme_black() +
+    theme(
+      panel.background = element_rect(fill = blue),
+      panel.grid.major = element_line(color = blue)
+    ) +
+    # axis things
+    labs(x = "Longitude", y = "Latitude",
+         fill = "Habitat") +
+    scale_x_continuous(breaks = seq(lat_min, lat_max, by = 0.1))
+  
+  if (add_points) {
+    plot <- plot + geom_sf(
+      data = coord_data,
+      colour = "black",
+      fill = "black",
+      alpha = 0.5,
+      size = 8,
+      aes(pch = Habitat)
+    ) +
+      scale_shape_manual(values = c(21, 25), drop = F) +
+      guides(pch = guide_legend(override.aes =
+                                  list(colour = "black")))
+  }
+  if (add_annotate) {
+    plot <- plot + annotation_scale(location = "br", width_hint = 0.4) +
+      annotation_north_arrow(
+        location = "br",
+        which_north = "true",
+        pad_x = unit(0.0, "in"),
+        pad_y = unit(0.2, "in"),
+        style = north_arrow_fancy_orienteering
+      )
+  }
+  print(plot)
+}
+
+
 # big inset map
 inset_map <- function(rect_xmin, rect_xmax, rect_ymin, rect_ymax, 
                       map_data){
@@ -642,7 +670,136 @@ inset_map <- function(rect_xmin, rect_xmax, rect_ymin, rect_ymax,
 # add label for Vancouver
 # geom_text(aes(x = -123.120694, y = 49.282694, 
 #               label = "Vancouver",
-#               fontface = "bold")) +
+#               fontface = "bold")) 
+
+
+
+map_daddy <- function(lat_min, lat_max, long_min, long_max, 
+                      coord_data, nh4_var, kelp_var, point_size, map_file, invert) {
+  
+  if(invert == FALSE){
+    sea <- blue
+    land <- "white"
+  }
+  if(invert == TRUE){
+    sea <- "white"
+    land <- blue
+  }
+    
+  ggplot() +
+    geom_sf(data = map_file, fill = land, colour = sea) +
+    # add points
+    geom_sf(data = coord_data, 
+            colour = "black",
+            alpha = 0.9,
+            size = point_size,
+            aes(fill = {{nh4_var}},
+                pch = {{kelp_var}})) +
+    viridis::scale_fill_viridis(option="magma", direction = -1,
+                                limits = c(0, 2),
+                                guide = guide_colorbar(frame.colour = "white", ticks.colour = "white")) +
+    coord_sf(xlim = c(lat_min, lat_max), ylim = c(long_min, long_max), expand = FALSE)  +
+    labs(fill = expression(paste("NH"[4]^" +",(mu*M)))) +
+    scale_shape_manual(values = c(21, 25), drop = F) +
+    guides(pch = guide_legend(override.aes = 
+                                list(colour = "white"))) +
+    # Themes
+    theme_bw() +
+    theme(
+          # panel stuff
+          panel.background = element_rect(fill = sea),
+          panel.grid.major = element_line(color = sea),
+          panel.border = element_rect(fill = NA, colour = "black"),
+          # remove axis
+          axis.title = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.ticks.length = unit(0, "pt"),
+          plot.title = NULL,
+          plot.margin=grid::unit(c(0,0,0,0), "mm"),
+          # Specify legend options
+          legend.background = element_rect(color = NA, fill = "black"),  
+          legend.key = element_rect(color = "black",  fill = "black"),  
+          legend.key.size = unit(1.2, "lines"),  
+          legend.key.height = NULL,  
+          legend.key.width = NULL,      
+          legend.text = element_text(size = 24, color = "white"),  
+          legend.title = element_text(size = 24, face = "bold", hjust = 0, color = "white"),  
+          legend.position = "right",  
+          legend.text.align = NULL,  
+          legend.title.align = NULL,  
+          legend.direction = "vertical",  
+          legend.box = NULL,
+          # Specify facetting options
+          strip.background = element_rect(fill = "grey30", color = "grey10"),  
+          strip.text.x = element_text(size = 30, color = "white"),  
+          strip.text.y = element_text(size = 30, color = "white",angle = -90),  
+          # Specify plot options
+          plot.background = element_rect(color = "black", fill = "black"),  
+          ) +
+    annotation_scale(location = "br", width_hint = 0.4) +
+    annotation_north_arrow(location = "br", which_north = "true", 
+                           pad_x = unit(0.0, "in"), pad_y = unit(0.2, "in"),
+                           style = north_arrow_fancy_orienteering)
+}
+
+
+map_daddy_np <- function(lat_min, lat_max, long_min, long_max, 
+                      map_file, invert) {
+  
+  if(invert == FALSE){
+    sea <- blue
+    land <- "white"
+  }
+  if(invert == TRUE){
+    sea <- "white"
+    land <- blue
+  }
+  
+  ggplot() +
+    geom_sf(data = map_file, fill = land, colour = sea) +
+    coord_sf(xlim = c(lat_min, lat_max), ylim = c(long_min, long_max), expand = FALSE)  +
+    # Themes
+    theme_bw() +
+    theme(
+      # panel stuff
+      panel.background = element_rect(fill = sea),
+      panel.grid.major = element_line(color = sea),
+      panel.border = element_rect(fill = NA, colour = "black"),
+      # remove axis
+      axis.title = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.ticks.length = unit(0, "pt"),
+      plot.title = NULL,
+      plot.margin=grid::unit(c(0,0,0,0), "mm"),
+      # Specify legend options
+      legend.background = element_rect(color = NA, fill = "black"),  
+      legend.key = element_rect(color = "black",  fill = "black"),  
+      legend.key.size = unit(1.2, "lines"),  
+      legend.key.height = NULL,  
+      legend.key.width = NULL,      
+      legend.text = element_text(size = 20, color = "white"),  
+      legend.title = element_text(size = 20, face = "bold", hjust = 0, color = "white"),  
+      legend.position = "right",  
+      legend.text.align = NULL,  
+      legend.title.align = NULL,  
+      legend.direction = "vertical",  
+      legend.box = NULL,
+      # Specify facetting options
+      strip.background = element_rect(fill = "grey30", color = "grey10"),  
+      strip.text.x = element_text(size = 30, color = "white"),  
+      strip.text.y = element_text(size = 30, color = "white",angle = -90),  
+      # Specify plot options
+      plot.background = element_rect(color = "black", fill = "black"),  
+    ) +
+    annotation_scale(location = "br", width_hint = 0.4) +
+    annotation_north_arrow(location = "br", which_north = "true", 
+                           pad_x = unit(0.0, "in"), pad_y = unit(0.2, "in"),
+                           style = north_arrow_fancy_orienteering)
+}
+
+
 
 # Plotting -----
 
