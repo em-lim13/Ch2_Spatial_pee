@@ -412,17 +412,17 @@ labs(y = expression(paste(Delta, " Ammonium ", (mu*M))),
   theme_black() + 
   scale_colour_manual(values = pal2) +
   scale_fill_manual(values = pal2) +
-  scale_x_continuous(breaks = c(-1, -0.1, 1, 2.05),
+  scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
                      labels = c("0", "0.6", "1.2", "1.8"))
 
 # get original axis
-ggplot(data, aes(BiomassM, kelp_bio_scale)) +
-  geom_smooth() +
-  geom_vline(xintercept= 1.8,  color = "red", linewidth = 0.5) +
-  scale_y_continuous(n.breaks = 50)
+#ggplot(data, aes(BiomassM, kelp_bio_scale)) +
+#  geom_smooth() +
+#  geom_vline(xintercept= 1.8,  color = "red", linewidth = 0.5) +
+#  scale_y_continuous(n.breaks = 50)
 
 
- ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 12, dpi = 400)
+# ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 12, dpi = 400)
 
   
 
