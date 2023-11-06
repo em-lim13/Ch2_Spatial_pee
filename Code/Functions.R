@@ -829,6 +829,38 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var){
     ylim(c(0, 3.8))
 }
 
+# Plot model predictions ----
+
+# get original axis
+#ggplot(d, aes(abundance, abundance_stand)) +
+#  geom_smooth() +
+#  geom_vline(xintercept= 300,  color = "red", linewidth = 0.5) +
+#  scale_y_continuous(n.breaks = 50)
+
+
+
+plot_rls_pred <- function(raw_data, predict_data){
+  
+ggplot() + 
+  geom_point(data = raw_data, 
+             aes(x = abundance_stand, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
+             alpha = 0.8, size = 3) +
+  geom_line(data = predict_data,
+            aes(x = abundance_stand, y = predicted, colour = tide_cat),
+            linewidth = 2) +
+  geom_ribbon(data = predict_data,
+              aes(x = abundance_stand, y = predicted, fill = tide_cat,
+                  ymin = conf.low, ymax = conf.high), 
+              alpha = 0.15) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = "Animal abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
+  theme_black() +
+  scale_colour_manual(values = (pal3), drop = FALSE) +
+  scale_fill_manual(values = (pal3), drop = FALSE) +
+  scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
+                     labels = c("300", "600", "900", "1200", "1500")) +
+  ylim(0, 3)
+}
 
 # Standardize variables -----
 

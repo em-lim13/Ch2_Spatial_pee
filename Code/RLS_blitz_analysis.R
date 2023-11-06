@@ -369,7 +369,7 @@ mod_all <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + depth_
                    data = rls_final,
                    na.action = na.fail)
  summary(mod_all)
- plot(simulateResiduals(mod_all))
+ plot(DHARMa::simulateResiduals(mod_all))
 
 # dredge <- as.data.frame(dredge(mod_all)) %>% filter(delta < 3)
 
@@ -382,7 +382,7 @@ mod_aic <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + (1|year) + (1|site_cod
                    family = Gamma(link = 'log'),
                    data = rls_final)
 summary(mod_aic)
-plot(simulateResiduals(mod_aic))
+plot(DHARMa::simulateResiduals(mod_aic))
 
 # I prefer biomass over abundance bc that's theoretically more linked to NH4
   # But abundance is a straight up recorded measure, no biomass proxy BS
@@ -393,7 +393,7 @@ mod_brain <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + dept
                    family = Gamma(link = 'log'),
                    data = rls_final)
 summary(mod_brain)
-plot(simulateResiduals(mod_brain))
+plot(DHARMa::simulateResiduals(mod_brain))
 
 
 # what happens when I compare these
@@ -469,24 +469,24 @@ predict <- ggpredict(mod_brain, terms = c("abundance_stand", "tide_stand [v]")) 
                            levels = c("Ebb", "Slack", "Flood")))
 
 # now plot these predictions
-ggplot() + 
-  geom_point(data = rls_final, 
-             aes(x = abundance_stand, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
-             alpha = 0.8, size = 3) +
-  geom_line(data = predict,
-            aes(x = abundance_stand, y = predicted, colour = tide_cat),
-            linewidth = 2) +
-  geom_ribbon(data = predict,
-              aes(x = abundance_stand, y = predicted, fill = tide_cat,
-                  ymin = conf.low, ymax = conf.high), 
-              alpha = 0.15) +
-  labs(y = expression(paste("Ammonium ", (mu*M))), 
-       x = "Animal abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
-  theme_black() +
-  scale_colour_manual(values = (pal3)) +
-  scale_fill_manual(values = (pal3))
+plot_rls_pred(raw_data = rls_final, predict_data = predict)
 
-# ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 12, dpi = 400)
+#ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 12, dpi = 400)
+
+# just plot each line one by one
+# just ebb
+plot_rls_pred(raw_data = rls_final %>% filter(tide_cat == "Ebb"), 
+              predict_data = predict %>% filter(tide_cat == "Ebb"))
+
+#ggsave("Output/Figures/nh4_abund_tide_ebb.png", device = "png", height = 9, width = 12, dpi = 400)
+
+# add slack
+plot_rls_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"), 
+              predict_data = predict %>% filter(tide_cat != "Flood"))
+
+#ggsave("Output/Figures/nh4_abund_tide_ebb_slack.png", device = "png", height = 9, width = 12, dpi = 400)
+
+
 
 
 # plot mean for each year
