@@ -374,7 +374,7 @@ tide_means_kelp <- data %>%
 v2 <- c(1.5020449, -0.5006816)
 
 # now make predictions
-predict <- ggpredict(mod_in_out, terms = c("kelp_bio_scale", "tide_scale [v2]")) %>% 
+predict_kelp <- ggpredict(mod_in_out, terms = c("kelp_bio_scale", "tide_scale [v2]")) %>% 
   mutate(kelp_bio_scale = x,
          tide_cat = factor(as.factor(ifelse(group == "-0.5006816", "Slack", "Flood")),
          levels = c("Ebb", "Slack", "Flood"))
@@ -383,7 +383,6 @@ predict <- ggpredict(mod_in_out, terms = c("kelp_bio_scale", "tide_scale [v2]"))
   filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
   
 # now plot these predictions
-# SEE IF I CAN MAKE SIZE = ANIMAL BIOMASS SCALE MORE PRONOUNCED
 ggplot() + 
   geom_point(data = data %>%
                mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood")) , 
@@ -391,10 +390,10 @@ ggplot() +
              colour = tide_cat,
              fill = tide_cat,
              size = weight_sum), alpha = 0.8) +
-  geom_line(data = predict,
+  geom_line(data = predict_kelp,
             aes(x = kelp_bio_scale, y = predicted, lty = tide_cat, colour = tide_cat),
             linewidth = 1.5) +
-  geom_ribbon(data = predict,
+  geom_ribbon(data = predict_kelp,
               aes(x = kelp_bio_scale, y = predicted, 
                   fill = tide_cat,
                   ymin = conf.low, ymax = conf.high), 
@@ -412,10 +411,18 @@ labs(y = expression(paste(Delta, " Ammonium ", (mu*M))),
          lty = guide_legend(override.aes = list(linewidth = 0.5))) +
   theme_black() + 
   scale_colour_manual(values = pal2) +
-  scale_fill_manual(values = pal2)
+  scale_fill_manual(values = pal2) +
+  scale_x_continuous(breaks = c(-1, -0.1, 1, 2.05),
+                     labels = c("0", "0.6", "1.2", "1.8"))
+
+# get original axis
+ggplot(data, aes(BiomassM, kelp_bio_scale)) +
+  geom_smooth() +
+  geom_vline(xintercept= 1.8,  color = "red", linewidth = 0.5) +
+  scale_y_continuous(n.breaks = 50)
 
 
-# ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 12, dpi = 400)
+ ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 12, dpi = 400)
 
   
 
