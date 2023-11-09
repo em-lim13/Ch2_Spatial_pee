@@ -282,6 +282,18 @@ rls_final <-
 # slack = -0.1958187 - 0.1958187
 # ebb = > 0.1958187
 
+# just urchins
+urchins <- rls %>%
+  filter(species_name == "Mesocentrotus franciscanus") %>%
+  group_by(survey_id) %>%
+  summarize(urchins = sum(total)) %>%
+  mutate(Composition = "None") %>%
+  rename(site_code = survey_id) %>%
+  rbind(urchins_kelp)
+
+ggplot(urchins, aes(Composition, urchins, colour = Composition)) +
+  geom_boxplot() +
+  geom_jitter()
 
 # Stats -------
 
