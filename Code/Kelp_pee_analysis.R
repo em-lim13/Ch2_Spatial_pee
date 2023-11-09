@@ -218,6 +218,15 @@ data_s <- data_all %>%
 #write_csv(data_s, "Output/Output_data/kelp_final.csv")
   
 
+# urchins
+
+# just urchins
+urchins_kelp <- kelp_rls %>%
+  filter(species_name == "Mesocentrotus franciscanus") %>%
+  group_by(site_code) %>%
+  summarize(urchins = sum(total)) %>%
+  left_join(kelp %>% select(site_code, Composition) %>% unique())
+
 # Stats for in minus out -----
 
 # Step 0: Ask my question
@@ -331,6 +340,9 @@ visreg(mod_best, "kelp_bio_scale", by = "tide_scale", overlay =TRUE)
 
 
 # generate df for plotting
+
+int <- confint(mod_in_out, estimate = TRUE)[1,3]
+
 df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
   rownames_to_column() %>%
@@ -341,7 +353,14 @@ df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all",
   head(- 1)  %>%
   mutate(variable = factor(as.factor(variable), 
                            levels = c("(Intercept)", "kelp_spmixed", "kelp_spnereo", "kelp_spnone", "shannon_scale", "depth_scale", "kelp_bio_scale", "weight_sum_scale", "tide_scale", "kelp_bio_scale:tide_scale", "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
-                           labels = c("Intercept", "Mixed kelp", "Nereo", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals"))
+                           labels = c("Macro", "Mixed kelp", "Nereo", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals")),
+         adj_estimate = case_when(variable == "Mixed kelp" ~ estimate + int,
+                                  variable == "Nereo" ~ estimate + int,
+                                  variable == "No kelp" ~ estimate + int,
+                                  TRUE ~ estimate),
+         se = (upper_CI - estimate)/1.96,
+         ci.lb_adjust = adj_estimate - (1.96*se),
+         ci.up_adjust = adj_estimate + (1.96*se)
   )
 
 # Coefficient plot
@@ -349,7 +368,10 @@ pal12 <- viridis::viridis(12)
 pal <- viridis::viridis(10)
 pal2 <- c(pal[8], pal[5])
 
-ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
+# marginal means for cats
+ggplot(df, aes(x = adj_estimate, y = variable, 
+               xmin = ci.lb_adjust, xmax = ci.up_adjust, 
+               colour = variable)) +
   geom_point(size = 10) +
   geom_errorbar(width = 0, linewidth = 3) +
   geom_vline(xintercept=0, color="white", linetype="dashed") +
@@ -359,7 +381,7 @@ ggplot(df, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, c
   theme(legend.position = "none") + 
   scale_colour_manual(values = pal12)
 
-# ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
+ ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # remake the shitty asymptote fig with the log(kelp) model and actual predictions, with geom_point(aes(colour = tide, size = animal weight))! See what that looks like???
