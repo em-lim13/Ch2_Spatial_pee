@@ -105,7 +105,8 @@ rls_survey_info <- rls %>%
   select(site_code, year, depth, survey_id, survey_date, hour) %>%
   rename(survey_depth = depth) %>%
   unique() %>%
-  mutate(date_time = ymd_hms(paste(survey_date, hour)))
+  mutate(date_time = ymd_hms(paste(survey_date, hour)),
+         date = survey_date)
 
 
 # Pivot the data wider for diversity metrics
@@ -147,8 +148,8 @@ rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
                         read_csv("Output/Output_data/RLS_nh4_2022.csv"),
                         read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
   mutate(year = as.factor(year)) %>%
-  filter(month == "May") %>% 
   rename(site_code = site_ID) %>%
+  filter(month == "May") %>%
   left_join(rls_survey_info, by = c("site_code", "year")) %>%
   depth_function() # only keep the RLS survey from the transect where the pee is from
 
