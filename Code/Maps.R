@@ -19,7 +19,17 @@ data_s <- read_csv("Output/Output_data/kelp_final.csv")
 rls_final <- read_csv("Output/Output_data/rls_final.csv")
 
 kelp_rls <- read_csv("Output/Output_data/kelp_rls.csv")
- 
+
+# load all RLS data
+rls_nh4_all <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
+                 read_csv("Output/Output_data/RLS_nh4_2022.csv"),
+                 read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
+  rename(site_code = site_ID) %>%
+  group_by(site_code) %>%
+  mutate(nh4_overall_avg_all = mean(nh4_conc)) %>%
+  ungroup() %>%
+  select(site_code, nh4_overall_avg_all) %>%
+  unique()
 
 # Load GREAT shapefile ----
 load("~/Documents/PhD/Ch2_Spatial_pee/Data/bc_map.Rdata")
@@ -51,7 +61,8 @@ rls_coords <- rls_final %>%
          nh4_min = min(nh4_avg),
          nh4_max = max(nh4_avg)) %>%
   ungroup() %>%
-  mutate(Habitat = "Reef")
+  mutate(Habitat = "Reef") %>%
+  left_join(rls_nh4_all)
 
 # just slack and ebb
 coords_slack <- rls_coords %>%
@@ -76,7 +87,7 @@ kelp_coords <- data_s %>%
 # Both sets of coords ----
 all_coords <- rls_coords %>%
   transmute(site_code = site_code,
-            nh4_avg = nh4_overall_avg,
+            nh4_avg = nh4_overall_avg_all,
             geometry = geometry,
             Habitat = Habitat) %>%
   unique() %>%
@@ -98,10 +109,11 @@ map_daddy_np(lat_min = -127,
           lat_max = -123, 
           long_min = 48.5, 
           long_max = 51, 
-          map_file = bc_map,
+          map_file = potato_map,
           invert = FALSE) +
   # add rectangle for zoomed in part
-  geom_rect(aes(xmin = -125.4, xmax = -125.0, ymin = 48.80, ymax = 49), color = "red", fill = NA, inherit.aes = FALSE) 
+  geom_rect(aes(xmin = -125.4, xmax = -125.0, ymin = 48.80, ymax = 49),
+            color = "red", fill = NA, inherit.aes = FALSE) 
 
 # ggsave("Output/Figures/barkley_sound_map.png", device = "png", height = 9, width = 16, units = "cm", dpi = 400)
 
@@ -138,7 +150,7 @@ map_daddy(lat_min = -125.4,
            invert = FALSE) +
   guides(pch = "none")
 
-# ggsave("Output/Figures/rls_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+ ggsave("Output/Figures/rls_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Kelp maps! ----
@@ -217,7 +229,7 @@ barkley_rls <- site_map(lat_min = -125.6, lat_max = -124.95, long_min = 48.75, l
   guides(pch = "none")
 
 van_isle_rls <- inset_map(rect_xmin = -125.6, rect_xmax = -124.95, rect_ymin = 48.75, rect_ymax = 49.1,
-                          map_data = bc_map)
+                          map_data = potato_map)
 
 
 barkley_rls + 
