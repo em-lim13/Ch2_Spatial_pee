@@ -1,3 +1,14 @@
+# Code for functions
+# Em Lim 
+
+
+# First let's get our packages sorted out using renv
+# install.packages("renv")
+library(renv)
+
+renv::init()
+
+
 # Code to create functions to calculate concentration of ammonium via fluorometric methods
 # Using the Taylor protocol 1 + 2 methods
 
