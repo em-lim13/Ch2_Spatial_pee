@@ -31,7 +31,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
                                  ifelse(Nereo_5m2 == "0", "macro", "mixed"))))) %>%
   left_join(names, by = "SiteName") %>% 
   replace(is.na(.), 0) %>%
-  # Add the averaged site level variables from Claire!
+  # Add the averaged site   level variables from Claire!
   left_join(read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv"), by = "SiteName") %>%
   group_by(SiteName) %>%
   mutate(BiomassM = mean(Biomassm2kg),
@@ -352,8 +352,8 @@ df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all",
          estimate = Estimate) %>%
   head(- 1)  %>%
   mutate(variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "kelp_spmixed", "kelp_spnereo", "kelp_spnone", "shannon_scale", "depth_scale", "kelp_bio_scale", "weight_sum_scale", "tide_scale", "kelp_bio_scale:tide_scale", "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
-                           labels = c("Macro", "Mixed kelp", "Nereo", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals")),
+                           levels = c("(Intercept)", "kelp_spnereo", "kelp_spmixed", "kelp_spnone", "shannon_scale", "depth_scale", "kelp_bio_scale", "weight_sum_scale", "tide_scale", "kelp_bio_scale:tide_scale", "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
+                           labels = c("Macro", "Nereo", "Mixed kelp", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals")),
          adj_estimate = case_when(variable == "Mixed kelp" ~ estimate + int,
                                   variable == "Nereo" ~ estimate + int,
                                   variable == "No kelp" ~ estimate + int,
@@ -381,7 +381,7 @@ ggplot(df, aes(x = adj_estimate, y = variable,
   theme(legend.position = "none") + 
   scale_colour_manual(values = pal12)
 
- ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
+ ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 8, width = 12, dpi = 400)
 
 
 # remake the shitty asymptote fig with the log(kelp) model and actual predictions, with geom_point(aes(colour = tide, size = animal weight))! See what that looks like???
