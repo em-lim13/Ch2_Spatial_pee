@@ -91,6 +91,8 @@ fishes <- fish %>%
 # Some people counted M2 fishes on M1, but not always so I don't actually want goby and sculpin counts from M1
 # Figure out what to do here
 
+# Megathura crenulata probably isn't found here????
+
 # now calc invert weights
 inverts <- invert %>%
   invert_length_to_weight() %>%
@@ -99,6 +101,8 @@ inverts <- invert %>%
 
 # Join all rls data together
 rls <- rbind(fishes, inverts)
+
+#write_csv(rls, "Output/Output_data/rls_species.csv")
 
 # extract just one row per survey to join with the pee data and tide data
 rls_survey_info <- rls %>%
@@ -119,6 +123,8 @@ rls_wider <- rls %>%
   ungroup() %>%
   spread(key = species_name, value = total) %>%
   replace(is.na(.), 0)
+
+# write_csv(rls_wider, "Output/Output_data/rls_wider.csv")
 
 # then calculate biodiversity metrics
 rls_wide <- rls_wider %>%
