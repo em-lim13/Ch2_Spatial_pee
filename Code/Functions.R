@@ -2,19 +2,21 @@
 # Em Lim 
 
 
-# First let's get our packages sorted out using renv
-# install.packages("renv")
-library(renv)
-
-renv::init()
-
-
 # Code to create functions to calculate concentration of ammonium via fluorometric methods
 # Using the Taylor protocol 1 + 2 methods
 
 # First load packages
 library(tidyverse)
 library(patchwork)
+library(renv)
+
+# First let's get our packages sorted out using renv
+
+# renv::init()
+# this adds three new files and directories:
+# renv/library = the project library
+# renv.lock = lockfile
+# .Rprofile 
 
 # Theme black ----
 theme_black = function(base_size = 12, base_family = "") {
