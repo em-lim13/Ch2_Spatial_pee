@@ -11,6 +11,8 @@ library(TMB)
 library(glmmTMB) # better for random effects
 library(lubridate)
 library(DHARMa)
+library(broom.mixed)
+library(dotwhisker)
 
 # set theme and load functions
 theme_set(theme_bw())
@@ -305,7 +307,7 @@ mod_tran <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale*weight_su
 # best = kelp_bio_scale*tide_scale*weight_sum_scale + kelp_sp + shannon_scale 
 # second best is the same + bio_tran_scale
 
-mod_best <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + (1|site_code), 
+mod_best <- glmmTMB(in_minus_out ~ +kelp_sp + kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + (1|site_code), 
                     family = 'gaussian',
                     data = data)
 
@@ -313,13 +315,44 @@ plot(simulateResiduals(mod_best)) # looks fine
 summary(mod_best)
 
 # use my stupid brain to think of a good model
-mod_in_out <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale*weight_sum_scale + shannon_scale + depth_scale - kelp_bio_scale:tide_scale:weight_sum_scale +
-(1|site_code), 
-                    family = 'gaussian',
-                    data = data)
+mod_in_out <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
+                        kelp_bio_scale*tide_scale*weight_sum_scale + 
+                        shannon_scale + depth_scale - 
+                        kelp_bio_scale:tide_scale:weight_sum_scale +
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data)
 
 plot(simulateResiduals(mod_in_out)) # looks fine
 summary(mod_in_out)
+
+
+# are the continuous predictors the same for all kelp species :|
+# what if I make nereo first instead of macro?
+n_data <- data %>%
+  mutate(kelp_sp = factor(kelp_sp, levels = c("nereo", "macro", "mixed", "none")))
+
+mod_in_out_nereo <- glmmTMB(in_minus_out ~ -1 + kelp_sp + kelp_bio_scale*tide_scale*weight_sum_scale + shannon_scale + depth_scale - kelp_bio_scale:tide_scale:weight_sum_scale +
+                        (1|site_code), 
+                      family = 'gaussian',
+                      data = n_data)
+
+summary(mod_in_out_nereo)
+
+# plot model
+tt <- (list(macro = mod_in_out, nereo = mod_in_out_nereo)
+       %>% purrr::map_dfr(tidy, effects = "fixed", conf.int = TRUE,
+                          .id = "model")
+       %>% select(model, component, term, estimate, conf.low, conf.high)
+       ## create new 'term' that combines component and term
+       %>% mutate(term_orig = term,
+                  term = forcats::fct_inorder(paste(term, component, sep = "_")))
+)
+
+dwplot(tt)
+
+# it doesn't seem to matter how I order the kelp_sp factor, all of the estimates are EXACTLY the same
+
 
 
 # Step 4: Check for collinearity of predictors
@@ -335,7 +368,7 @@ car::vif(lm(in_minus_out ~ kelp_bio_scale + tide_scale + weight_sum_scale + shan
   
 
 # Try to plot in minus out ------
-visreg(mod_best, "kelp_bio_scale", by = "tide_scale", overlay =TRUE)
+visreg(mod_in_out, "kelp_bio_scale", by = "tide_scale", overlay =TRUE)
 # so when the tide comes in the difference in ammonium in thicker kelp forests is even greater than you'd expect at slack tide
 
 
@@ -381,7 +414,7 @@ ggplot(df, aes(x = adj_estimate, y = variable,
   theme(legend.position = "none") + 
   scale_colour_manual(values = pal12)
 
- ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 8, width = 12, dpi = 400)
+ # ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 8, width = 12, dpi = 400)
 
 
 # remake the shitty asymptote fig with the log(kelp) model and actual predictions, with geom_point(aes(colour = tide, size = animal weight))! See what that looks like???
