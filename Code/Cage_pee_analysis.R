@@ -10,6 +10,7 @@ library(glmmTMB)
 library(patchwork)
 library(PNWColors)
 library(ggeffects)
+library(DHARMa)
 
 # Load functions
 source("Code/Functions.R")
@@ -25,40 +26,70 @@ crab_pee <- read_csv("Data/crab_cage_pee.csv") %>%
   mutate(week = c(rep("one", 12), rep("two", 11)),
          treatment = factor(as.factor(treatment), 
                             levels = c("control", "mid", "large"),
-                            labels = c("Control", "Medium", "Large")))
+                            labels = c("Control", "Medium", "Large"))) %>%
+  pivot_longer( cols = c(nh4_conc3, nh4_conc2, nh4_conc1), names_to = "measurement", values_to = "nh4_conc") %>%
+  mutate(day = c(rep(3:1, times = 12), rep(6:4, times = 11)))
 # this csv is created in the Ch4_Crabs/Code/Crab_cages.R file
 
 # Cuke stats -----
 # start with regular gaussian 
-mod_cu <- glmmTMB(nh4_avg ~ cukes + depth_stand * line, 
+mod_cu <- glmmTMB(nh4_avg ~ cukes + depth_stand * line,
                cuke_pee)
 
-# plot(simulateResiduals(mod_cu))
+plot(simulateResiduals(mod_cu))
 
 # try gamma (positive and continuous)
-mod_cu_gamma <- glmmTMB(nh4_avg ~ cukes + depth_stand * line, 
+mod_cu_gamma <- glmmTMB(nh4_avg ~ cukes * depth_stand * line
+                         - cukes:depth_stand:line, 
                      family = Gamma(link = "log"),
                      cuke_pee)
 
-# plot(simulateResiduals(mod_cu_gamma))
-# OK so let's use the gaussian! 
+plot(simulateResiduals(mod_cu_gamma))
 
-summary(mod_cu)
+AIC(mod_cu, mod_cu_gamma)
+# OK so let's use the gaussian!
 
+# add interactions?
+mod_cu2 <- glmmTMB(nh4_avg ~ cukes * depth_stand * line
+                   - cukes:depth_stand:line,
+                   cuke_pee)
+
+# random effect of line?
+mod_cu3 <- glmmTMB(nh4_avg ~ cukes + depth_stand + (1|line),
+                   cuke_pee)
+
+# pretend line doesn't exist
+mod_cu4 <- glmmTMB(nh4_avg ~ cukes + depth_stand,
+                   cuke_pee)
+
+plot(simulateResiduals(mod_cu4))
+
+AIC(mod_cu, mod_cu2, mod_cu3) # fewer interactions is better
+
+
+# look at model output
+summary(mod_cu4)
+visreg(mod_cu, "depth_stand", by = c("line"), overlay=TRUE)
 
 # Crab stats ----
 # start with regular gaussian 
-mod_cr <- glmmTMB(nh4_avg ~ treatment + (1|week), 
+mod_cr <- glmmTMB(nh4_conc ~ treatment + (1|week), 
                      crab_pee)
 
-# plot(simulateResiduals(mod_cr))
+plot(simulateResiduals(mod_cr))
 
 # try gamma (positive and continuous)
-mod_cr_gamma <- glmmTMB(nh4_avg ~ treatment + (1|week), 
+mod_cr_gamma <- glmmTMB(nh4_conc ~ treatment + (1|day), 
                  family = Gamma(link = "log"),
                  crab_pee)
 
-# plot(simulateResiduals(mod_cr_gamma))
+mod_cr_gamma2 <- glmmTMB(nh4_conc ~ treatment + (1|week), 
+                        family = Gamma(link = "log"),
+                        crab_pee)
+
+plot(simulateResiduals(mod_cr_gamma2))
+
+AIC(mod_cr, mod_cr_gamma, mod_cr_gamma2)
 # OK so let's use the gamma!
 
 summary(mod_cr_gamma)
