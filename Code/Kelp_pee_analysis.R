@@ -30,7 +30,10 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
                   ifelse(Transect == 5, 2, 3)),
          kelp_sp = as.factor(ifelse(Kelp == 0, "none",
                           ifelse(Macro_5m2 == 0, "nereo", 
-                                 ifelse(Nereo_5m2 == "0", "macro", "mixed"))))) %>%
+                                 ifelse(Nereo_5m2 == "0", "macro", "mixed")))),
+         # but the "mixed" kelps are actually mostly macro
+         kelp_sp = case_when(kelp_sp == "mixed" ~ "macro", 
+                             TRUE ~ as.character(kelp_sp))) %>%
   left_join(names, by = "SiteName") %>% 
   replace(is.na(.), 0) %>%
   # Add the averaged site   level variables from Claire!
@@ -220,14 +223,6 @@ data_s <- data_all %>%
 #write_csv(data_s, "Output/Output_data/kelp_final.csv")
   
 
-# urchins
-
-# just urchins
-urchins_kelp <- kelp_rls %>%
-  filter(species_name == "Mesocentrotus franciscanus") %>%
-  group_by(site_code) %>%
-  summarize(urchins = sum(total)) %>%
-  left_join(kelp %>% select(site_code, Composition) %>% unique())
 
 # Stats for in minus out -----
 
@@ -244,7 +239,6 @@ ggplot(data, aes(x = in_minus_out)) +
 # Hey that's roughly Gaussian!
 # Positive and negative values roughly centered around 0
 
-
 # Step 2: Choose your predictors
 # And Step 3: Model residuals!
 
@@ -259,7 +253,6 @@ ggplot(data, aes(x = in_minus_out)) +
     # den_tran_scale (mini transect level)
 # I'm using kelp_bio_scale, best for AIC and better than log(kelp) too
 # Tried including one transect level variable and it wasn't as good
-
 
   # RLS community (site level)
     # Biomass:
@@ -286,7 +279,6 @@ ggplot(data, aes(x = in_minus_out)) +
   # also interaction between animal biomass:kelp
   # maybe a triple interaction between kelp:animal_biomass:tide??
 # Only kelp:animal interaction! 
-
 
 # Build full model with gaussian distribution
 # This is the transect level model
@@ -327,7 +319,7 @@ plot(simulateResiduals(mod_in_out)) # looks fine
 summary(mod_in_out)
 
 # run the model without an intercept
-mod_in_out2 <- glmmTMB(in_minus_out ~ -1 +kelp_sp +
+mod_in_out2 <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
                         kelp_bio_scale*tide_scale*weight_sum_scale + 
                         shannon_scale + depth_scale - 
                         kelp_bio_scale:tide_scale:weight_sum_scale +
@@ -335,33 +327,6 @@ mod_in_out2 <- glmmTMB(in_minus_out ~ -1 +kelp_sp +
                       family = 'gaussian',
                       data = data)
 summary(mod_in_out2)
-
-
-# are the continuous predictors the same for all kelp species :|
-# what if I make nereo first instead of macro?
-n_data <- data %>%
-  mutate(kelp_sp = factor(kelp_sp, levels = c("nereo", "macro", "mixed", "none")))
-
-mod_in_out_nereo <- glmmTMB(in_minus_out ~ -1 + kelp_sp + kelp_bio_scale*tide_scale*weight_sum_scale + shannon_scale + depth_scale - kelp_bio_scale:tide_scale:weight_sum_scale +
-                        (1|site_code), 
-                      family = 'gaussian',
-                      data = n_data)
-
-summary(mod_in_out_nereo)
-
-# plot model
-tt <- (list(macro = mod_in_out, nereo = mod_in_out_nereo)
-       %>% purrr::map_dfr(tidy, effects = "fixed", conf.int = TRUE,
-                          .id = "model")
-       %>% select(model, component, term, estimate, conf.low, conf.high)
-       ## create new 'term' that combines component and term
-       %>% mutate(term_orig = term,
-                  term = forcats::fct_inorder(paste(term, component, sep = "_")))
-)
-
-dwplot(tt)
-
-# it doesn't seem to matter how I order the kelp_sp factor, all of the estimates are EXACTLY the same
 
 
 
@@ -378,14 +343,9 @@ car::vif(lm(in_minus_out ~ kelp_bio_scale + tide_scale + weight_sum_scale + shan
   
 
 # Try to plot in minus out ------
-visreg(mod_in_out, "kelp_bio_scale", by = "tide_scale", overlay =TRUE)
-# so when the tide comes in the difference in ammonium in thicker kelp forests is even greater than you'd expect at slack tide
 
-
-# generate df for plotting
-int <- confint(mod_in_out, estimate = TRUE)[1,3]
-
-df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+# use the no intercept model for plotting
+df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
   rownames_to_column() %>%
   rename(variable = rowname,
@@ -394,15 +354,9 @@ df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all",
          estimate = Estimate) %>%
   head(- 1)  %>%
   mutate(variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "kelp_spnereo", "kelp_spmixed", "kelp_spnone", "shannon_scale", "depth_scale", "kelp_bio_scale", "weight_sum_scale", "tide_scale", "kelp_bio_scale:tide_scale", "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
-                           labels = c("Macro", "Nereo", "Mixed kelp", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals")),
-         adj_estimate = case_when(variable == "Mixed kelp" ~ estimate + int,
-                                  variable == "Nereo" ~ estimate + int,
-                                  variable == "No kelp" ~ estimate + int,
-                                  TRUE ~ estimate),
-         se = (upper_CI - estimate)/1.96,
-         ci.lb_adjust = adj_estimate - (1.96*se),
-         ci.up_adjust = adj_estimate + (1.96*se)
+                           levels = c("kelp_spmacro", "kelp_spnereo", "kelp_spnone", "shannon_scale", "depth_scale", "kelp_bio_scale", "weight_sum_scale", "tide_scale", "kelp_bio_scale:tide_scale", "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
+                           labels = c("Macro", "Nereo", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals")),
+         se = (upper_CI - estimate)/1.96
   )
 
 # Coefficient plot
@@ -411,8 +365,8 @@ pal <- viridis::viridis(10)
 pal2 <- c(pal[8], pal[5])
 
 # marginal means for cats
-ggplot(df, aes(x = adj_estimate, y = variable, 
-               xmin = ci.lb_adjust, xmax = ci.up_adjust, 
+ggplot(df, aes(x = estimate, y = variable, 
+               xmin = lower_CI, xmax = upper_CI, 
                colour = variable)) +
   geom_point(size = 10) +
   geom_errorbar(width = 0, linewidth = 3) +
@@ -467,8 +421,8 @@ plot_kelp_pred(data, predict_kelp) +
 
 # Figure 3 for pub with white -----
 # plot coeffs on white
-kelp_coeff_plot <- ggplot(df, aes(x = adj_estimate, y = variable, 
-               xmin = ci.lb_adjust, xmax = ci.up_adjust, 
+kelp_coeff_plot <- ggplot(df, aes(x = estimate, y = variable, 
+               xmin = lower_CI, xmax = upper_CI, 
                colour = variable)) +
   geom_point(size = 10) +
   geom_errorbar(width = 0, linewidth = 3) +
@@ -490,7 +444,7 @@ kelp_pred_plot <- plot_kelp_pred(data, predict_kelp) +
 # Put them together for pub
 kelp_coeff_plot + kelp_pred_plot
 
-ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # # Ammonium at the site level?
@@ -674,6 +628,65 @@ ggplot(data = data_s,
 
 
 # Graveyard ------
+
+# are the continuous predictors the same for all kelp species :|
+# what if I make nereo first instead of macro?
+n_data <- data %>%
+  mutate(kelp_sp = factor(kelp_sp, levels = c("nereo", "macro", "mixed", "none")))
+
+mod_in_out_nereo <- glmmTMB(in_minus_out ~ -1 + kelp_sp + kelp_bio_scale*tide_scale*weight_sum_scale + shannon_scale + depth_scale - kelp_bio_scale:tide_scale:weight_sum_scale +
+                              (1|site_code), 
+                            family = 'gaussian',
+                            data = n_data)
+
+summary(mod_in_out_nereo)
+
+# plot model
+tt <- (list(no_mix = mod_in_out2, mix = mod_in_out_nereo)
+       %>% purrr::map_dfr(tidy, effects = "fixed", conf.int = TRUE,
+                          .id = "model")
+       %>% select(model, component, term, estimate, conf.low, conf.high)
+       ## create new 'term' that combines component and term
+       %>% mutate(term_orig = term,
+                  term = forcats::fct_inorder(paste(term, component, sep = "_")))
+)
+
+dwplot(tt)
+
+# it doesn't seem to matter how I order the kelp_sp factor, all of the estimates are EXACTLY the same
+
+
+
+# old kelp pee coeff plot using mod with intercept
+int <- confint(mod_in_out, estimate = TRUE)[1,3]
+
+df2 <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  rename(variable = rowname,
+         lower_CI = `2.5 %`,
+         upper_CI = `97.5 %`,
+         estimate = Estimate) %>%
+  head(- 1)  %>%
+  mutate(variable = factor(as.factor(variable), 
+                           levels = c("(Intercept)", "kelp_spnereo", "kelp_spnone", "shannon_scale", "depth_scale", "kelp_bio_scale", "weight_sum_scale", "tide_scale", "kelp_bio_scale:tide_scale", "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
+                           labels = c("Macro", "Nereo", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals")),
+         adj_estimate = case_when(variable == "Nereo" ~ estimate + int,
+                                  variable == "No kelp" ~ estimate + int,
+                                  TRUE ~ estimate),
+         se = (upper_CI - estimate)/1.96,
+         ci.lb_adjust = adj_estimate - (1.96*se),
+         ci.up_adjust = adj_estimate + (1.96*se)
+  )
+
+
+# just urchins
+urchins_kelp <- kelp_rls %>%
+  filter(species_name == "Mesocentrotus franciscanus") %>%
+  group_by(site_code) %>%
+  summarize(urchins = sum(total)) %>%
+  left_join(kelp %>% select(site_code, Composition) %>% unique())
+
 
 # try making a more simple model???
 mod_gam_kelp3 <- glmmTMB(nh4_out_avg ~ weight_sum_scale, 
