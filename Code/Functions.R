@@ -84,8 +84,8 @@ theme_white = function(base_size = 12, base_family = "") {
       legend.key.size = unit(1.2, "lines"),  
       legend.key.height = NULL,  
       legend.key.width = NULL,      
-      legend.text = element_text(size = base_size*1.5, color = "black"),  
-      legend.title = element_text(size = base_size*2.5, face = "bold", hjust = 0, color = "black"),  
+      legend.text = element_text(size = base_size*2, color = "black"),  
+      legend.title = element_text(size = base_size*2.2, face = "bold", hjust = 0, color = "black"),  
       legend.position = "right",  
       legend.text.align = NULL,  
       legend.title.align = NULL,  
@@ -842,6 +842,24 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var){
     ylim(c(0, 3.8))
 }
 
+# Alt dot whisker -----
+alt_dot_whisker <- function(data_frame, x_var, y_var, group, labels){
+  ggplot(data = data_frame,
+         aes(x = {{x_var}}, y = {{y_var}}, colour = {{group}})) +
+    geom_jitter(size = 5, alpha = 0.5, height = 0) +
+    stat_summary(fun = "mean", geom = "point", size = 8) +
+    stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.4, linewidth = 1.5) +
+    theme_white() + 
+    theme(legend.position = "none",
+          plot.title = element_text(size = 30)) +
+    scale_colour_manual(values = rev(csee_pal)) +
+    labs(y = expression(paste("Ammonium"~(mu*M)))) +
+    ylim(c(0, 3.8)) +
+    labs(x = "") +
+    scale_x_discrete(labels = {{labels}}) +
+    theme(axis.text.x = ggtext::element_markdown())
+}
+
 # Plot model predictions ----
 
 # get original axis
@@ -853,7 +871,6 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var){
 
 
 plot_rls_pred <- function(raw_data, predict_data){
-  
 ggplot() + 
   geom_point(data = raw_data, 
              aes(x = abundance_stand, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
@@ -873,6 +890,37 @@ ggplot() +
   scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
                      labels = c("300", "600", "900", "1200", "1500")) +
   ylim(0, 3)
+}
+
+# Plot kelp pee model predictions
+plot_kelp_pred <- function(raw_data, predict_data){
+ggplot() + 
+  geom_point(data = raw_data %>%
+               mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood")) , 
+             aes(x = kelp_bio_scale, y = in_minus_out,
+                 colour = tide_cat,
+                 fill = tide_cat,
+                 size = weight_sum), alpha = 0.8) +
+  geom_line(data = predict_data,
+            aes(x = kelp_bio_scale, y = predicted, lty = tide_cat, colour = tide_cat),
+            linewidth = 1.5) +
+  geom_ribbon(data = predict_data,
+              aes(x = kelp_bio_scale, y = predicted, 
+                  fill = tide_cat,
+                  ymin = conf.low, ymax = conf.high), 
+              alpha = 0.2) +
+  labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
+       x = expression(paste("Kelp biomass (kg/m"^2,")")),
+       colour = "Tide", fill = "Tide",
+       lty = "Tide",
+       size = "Animals (kg)") +
+  scale_size_continuous(range = c(0.5, 10),
+                        limits = c(0, 50)) +
+  theme_black() + 
+  scale_colour_manual(values = pal2) +
+  scale_fill_manual(values = pal2) +
+  scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
+                     labels = c("0", "0.6", "1.2", "1.8"))
 }
 
 # Standardize variables -----
