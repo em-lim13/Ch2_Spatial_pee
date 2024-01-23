@@ -455,7 +455,7 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
          upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI),
          variable = factor(as.factor(variable), 
                            levels = c("(Intercept)", "abundance_stand", "tide_stand", "abundance_stand:tide_stand", "shannon_stand", "depth_avg_stand"),
-                           labels = c("Intercept", "Animal abundance", "Tide", "Abundance:Tide", "Biodiversity", "Depth")))
+                           labels = c("Intercept", "Abundance", "Tide", "Abundance:tide", "Biodiversity", "Depth")))
 
 
 # Coefficient plot 
@@ -470,7 +470,6 @@ ggplot(rls_coeffs, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upp
   scale_colour_manual(values = pal6)
 
 # ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
-
 
 
 # Plot abundance vs nh4 -----
@@ -506,6 +505,27 @@ plot_rls_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"),
 #ggsave("Output/Figures/nh4_abund_tide_ebb_slack.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
+# White background for Fig 2 -----
+# white background
+rls_coeff_plot <- ggplot(rls_coeffs, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
+  geom_point(size = 10) +
+  geom_errorbar(width = 0, linewidth = 3) +
+  geom_vline(xintercept=0, color="black", linetype="dashed") +
+  labs(x = "Coefficient", y = " ") +
+  scale_y_discrete(limits = rev(levels(rls_coeffs$variable))) +
+  theme_white() +
+  theme(legend.position = "none") + 
+  scale_colour_manual(values = pal6)
+
+
+# white background
+rls_pred_plot <- plot_rls_pred(raw_data = rls_final, predict_data = predict) + 
+  theme_white() +
+  theme(legend.position = c(0.85, 0.9))
+
+rls_coeff_plot + rls_pred_plot
+
+# ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # plot mean for each year
