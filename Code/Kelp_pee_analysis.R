@@ -315,7 +315,7 @@ plot(simulateResiduals(mod_best)) # looks fine
 summary(mod_best)
 
 # use my stupid brain to think of a good model
-mod_in_out <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
+mod_in_out <- glmmTMB(in_minus_out ~ kelp_sp +
                         kelp_bio_scale*tide_scale*weight_sum_scale + 
                         shannon_scale + depth_scale - 
                         kelp_bio_scale:tide_scale:weight_sum_scale +
@@ -325,6 +325,16 @@ mod_in_out <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
 
 plot(simulateResiduals(mod_in_out)) # looks fine
 summary(mod_in_out)
+
+# run the model without an intercept
+mod_in_out2 <- glmmTMB(in_minus_out ~ -1 +kelp_sp +
+                        kelp_bio_scale*tide_scale*weight_sum_scale + 
+                        shannon_scale + depth_scale - 
+                        kelp_bio_scale:tide_scale:weight_sum_scale +
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data)
+summary(mod_in_out2)
 
 
 # are the continuous predictors the same for all kelp species :|
@@ -373,7 +383,6 @@ visreg(mod_in_out, "kelp_bio_scale", by = "tide_scale", overlay =TRUE)
 
 
 # generate df for plotting
-
 int <- confint(mod_in_out, estimate = TRUE)[1,3]
 
 df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
@@ -414,7 +423,7 @@ ggplot(df, aes(x = adj_estimate, y = variable,
   theme(legend.position = "none") + 
   scale_colour_manual(values = pal12)
 
- # ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 8, width = 12, dpi = 400)
+# ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 8, width = 12, dpi = 400)
 
 
 # remake the shitty asymptote fig with the log(kelp) model and actual predictions, with geom_point(aes(colour = tide, size = animal weight))! See what that looks like???
@@ -438,37 +447,13 @@ predict_kelp <- ggpredict(mod_in_out, terms = c("kelp_bio_scale", "tide_scale [v
   filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
   
 # now plot these predictions
-ggplot() + 
-  geom_point(data = data %>%
-               mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood")) , 
-             aes(x = kelp_bio_scale, y = in_minus_out,
-             colour = tide_cat,
-             fill = tide_cat,
-             size = weight_sum), alpha = 0.8) +
-  geom_line(data = predict_kelp,
-            aes(x = kelp_bio_scale, y = predicted, lty = tide_cat, colour = tide_cat),
-            linewidth = 1.5) +
-  geom_ribbon(data = predict_kelp,
-              aes(x = kelp_bio_scale, y = predicted, 
-                  fill = tide_cat,
-                  ymin = conf.low, ymax = conf.high), 
-              alpha = 0.2) +
+plot_kelp_pred(data, predict_kelp) +
   geom_hline(yintercept= 0, linetype = "dashed", color = "white", linewidth = 0.5) +
-labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-     x = expression(paste("Kelp biomass (kg/m"^2,")")),
-     colour = "Tide", fill = "Tide",
-     lty = "Tide",
-     size = "Animals (kg)") +
-  scale_size_continuous(range = c(0.5, 10),
-                        limits = c(0, 50)) +
   guides(size = guide_legend(override.aes = 
-                              list(colour = "white")),
-         lty = guide_legend(override.aes = list(linewidth = 0.5))) +
-  theme_black() + 
-  scale_colour_manual(values = pal2) +
-  scale_fill_manual(values = pal2) +
-  scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
-                     labels = c("0", "0.6", "1.2", "1.8"))
+                               list(colour = "white")),
+         lty = guide_legend(override.aes = list(linewidth = 0.5))) 
+
+
 
 # get original axis
 #ggplot(data, aes(BiomassM, kelp_bio_scale)) +
@@ -479,7 +464,34 @@ labs(y = expression(paste(Delta, " Ammonium ", (mu*M))),
 
 # ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 12, dpi = 400)
 
-  
+
+# Figure 3 for pub with white -----
+# plot coeffs on white
+kelp_coeff_plot <- ggplot(df, aes(x = adj_estimate, y = variable, 
+               xmin = ci.lb_adjust, xmax = ci.up_adjust, 
+               colour = variable)) +
+  geom_point(size = 10) +
+  geom_errorbar(width = 0, linewidth = 3) +
+  geom_vline(xintercept=0, color="black", linetype="dashed") +
+  labs(x = "Coefficient", y = " ") +
+  scale_y_discrete(limits = rev(levels(df$variable))) +
+  theme_white() +
+  theme(legend.position = "none") + 
+  scale_colour_manual(values = pal12)
+
+# plot predictions on white
+kelp_pred_plot <- plot_kelp_pred(data, predict_kelp) +
+  geom_hline(yintercept= 0, linetype = "dashed", color = "white", linewidth = 0.5) +
+  guides(size = guide_legend(override.aes = 
+                               list(colour = "black")),
+         lty = guide_legend(override.aes = list(linewidth = 0.5))) +
+  theme_white()
+
+# Put them together for pub
+kelp_coeff_plot + kelp_pred_plot
+
+ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+
 
 # # Ammonium at the site level?
 data_s %>%
