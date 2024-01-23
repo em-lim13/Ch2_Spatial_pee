@@ -11,6 +11,8 @@ library(patchwork)
 library(PNWColors)
 library(ggeffects)
 library(DHARMa)
+library(png)
+library(ggtext)
 
 # Load functions
 source("Code/Functions.R")
@@ -30,6 +32,7 @@ crab_pee <- read_csv("Data/crab_cage_pee.csv") %>%
   pivot_longer( cols = c(nh4_conc3, nh4_conc2, nh4_conc1), names_to = "measurement", values_to = "nh4_conc") %>%
   mutate(day = c(rep(3:1, times = 12), rep(6:4, times = 11)))
 # this csv is created in the Ch4_Crabs/Code/Crab_cages.R file
+
 
 # Cuke stats -----
 # start with regular gaussian 
@@ -64,7 +67,7 @@ mod_cu4 <- glmmTMB(nh4_avg ~ cukes + depth_stand,
 
 plot(simulateResiduals(mod_cu4))
 
-AIC(mod_cu, mod_cu2, mod_cu3) # fewer interactions is better
+AIC(mod_cu, mod_cu2, mod_cu3, mod_cu4) # fewer interactions is better
 
 
 # look at model output
@@ -102,7 +105,7 @@ csee_pal <- pnw_palette("Starfish")
 
 
 # use ggpredict to get estimates for the cuke model
-sum_cukes <- ggpredict(mod_cu, terms = c("cukes")) %>% 
+sum_cukes <- ggpredict(mod_cu4, terms = c("cukes")) %>% 
   dplyr::rename(cukes = x,
                 nh4_avg = predicted) %>% 
   as_tibble()
@@ -120,6 +123,7 @@ cuke_plot <- dot_whisker(sum_data = sum_cukes, all_data = cuke_pee,
                          x_var = cukes, y_var = nh4_avg) +
   labs(x = "", title = "Sea cucumbers")
 
+
 # plot crabs
 crab_plot <- dot_whisker(sum_data = sum_crabs, all_data = crab_pee, 
             x_var = treatment, y_var = nh4_avg) +
@@ -130,6 +134,44 @@ cuke_plot + crab_plot
 
 #ggsave("Output/Figures/both_cages.png", device = "png", height = 7, width = 16, dpi = 400)
 # og is 9 x 16
+
+# Fig 4 white background for pub ----
+# try again without ggpredit bc that struggles with glmmtmb
+
+# Load images
+cuke <- readPNG("Images/cuke_no_background.png")
+cuke_two <- readPNG("Images/two_cukes_no_background.png")
+
+cuke_labels <- c(Control = "Control",
+            Medium = "<img src='Images/cuke_no_background.png' width='100' />",
+            Large = "<img src='Images/two_cukes_no_background.png' width='100' />")
+
+# crab images
+crab <- readPNG("Images/red_crab_no_background.png")
+crab_sm <- readPNG("Images/red_crab_no_background_small.png")
+
+crab_labels <- c(Control = "Control",
+                 Medium = "<img src='Images/red_crab_no_background.png' width='65' />",
+                 Large = "<img src='Images/red_crab_no_background.png' width='100' />")
+
+# plot
+cuke_white <- alt_dot_whisker(data = cuke_pee, 
+                              x_var = cukes, 
+                              y_var = nh4_avg, 
+                              group = cukes, 
+                              labels = cuke_labels)
+
+# again for crabs
+crab_white <- alt_dot_whisker(data = crab_pee, 
+                              x_var = treatment, 
+                              y_var = nh4_avg, 
+                              group = treatment, 
+                              labels = crab_labels)
+
+cuke_white + crab_white
+
+ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 9, width = 16, dpi = 400)
+
 
 # Old cuke x depth plot ----
 # Effect of depth
