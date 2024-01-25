@@ -688,7 +688,7 @@ inset_map <- function(rect_xmin, rect_xmax, rect_ymin, rect_ymax,
 
 
 map_daddy <- function(lat_min, lat_max, long_min, long_max, 
-                      coord_data, nh4_var, kelp_var, point_size, map_file, invert) {
+                      coord_data, nh4_var, kelp_var, point_size, map_file, invert, white) {
   
   if(invert == FALSE){
     sea <- blue
@@ -697,6 +697,15 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
   if(invert == TRUE){
     sea <- "white"
     land <- blue
+  }
+  
+  if(white == TRUE){
+    background <- "white"
+    features <- "black"
+  }
+  if(white == FALSE){
+    background <- "black"
+    features <- "white"
   }
     
   ggplot() +
@@ -710,19 +719,19 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
                 pch = {{kelp_var}})) +
     viridis::scale_fill_viridis(option="magma", direction = -1,
                                 limits = c(0, 2),
-                                guide = guide_colorbar(frame.colour = "white", ticks.colour = "white")) +
+                                guide = guide_colorbar(frame.colour = features, ticks.colour = features)) +
     coord_sf(xlim = c(lat_min, lat_max), ylim = c(long_min, long_max), expand = FALSE)  +
     labs(fill = expression(paste("NH"[4]^" +",(mu*M)))) +
     scale_shape_manual(values = c(21, 25), drop = F) +
     guides(pch = guide_legend(override.aes = 
-                                list(colour = "white"))) +
+                                list(colour = features))) +
     # Themes
     theme_bw() +
     theme(
           # panel stuff
           panel.background = element_rect(fill = sea),
           panel.grid.major = element_line(color = sea),
-          panel.border = element_rect(fill = NA, colour = "black"),
+          panel.border = element_rect(fill = NA, colour = features),
           # remove axis
           axis.title = element_blank(),
           axis.text = element_blank(),
@@ -731,13 +740,13 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
           plot.title = NULL,
           plot.margin=grid::unit(c(0,0,0,0), "mm"),
           # Specify legend options
-          legend.background = element_rect(color = NA, fill = "black"),  
-          legend.key = element_rect(color = "black",  fill = "black"),  
+          legend.background = element_rect(color = NA, fill = background),  
+          legend.key = element_rect(color = background,  fill = background),  
           legend.key.size = unit(1.2, "lines"),  
           legend.key.height = NULL,  
           legend.key.width = NULL,      
-          legend.text = element_text(size = 24, color = "white"),  
-          legend.title = element_text(size = 24, face = "bold", hjust = 0, color = "white"),  
+          legend.text = element_text(size = 24, color = features),  
+          legend.title = element_text(size = 24, face = "bold", hjust = 0, color = features),  
           legend.position = "right",  
           legend.text.align = NULL,  
           legend.title.align = NULL,  
@@ -745,10 +754,10 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
           legend.box = NULL,
           # Specify facetting options
           strip.background = element_rect(fill = "grey30", color = "grey10"),  
-          strip.text.x = element_text(size = 30, color = "white"),  
-          strip.text.y = element_text(size = 30, color = "white",angle = -90),  
+          strip.text.x = element_text(size = 30, color = features),  
+          strip.text.y = element_text(size = 30, color = features,angle = -90),  
           # Specify plot options
-          plot.background = element_rect(color = "black", fill = "black"),  
+          plot.background = element_rect(color = background, fill = background),  
           ) +
     annotation_scale(location = "br", width_hint = 0.4) +
     annotation_north_arrow(location = "br", which_north = "true", 
