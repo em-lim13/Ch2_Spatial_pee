@@ -32,8 +32,12 @@ rls_nh4_all <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   unique()
 
 # Load GREAT shapefile ----
-load("~/Documents/PhD/Ch2_Spatial_pee/Data/bc_map.Rdata")
-bc_map <- slice # rename
+hakai_map <- sf::st_read("Data/Hakaii_coast/COAST_TEST2.shp") %>%
+  st_sf() %>%
+  st_set_crs(4326)
+
+#load("Data/bc_map.Rdata")
+#bc_map <- slice # rename
 
 # Load not great shapefile that renders quicker
 potato_map <- sf::st_read("Data/Potato_shapefiles/eez.shp") %>%
@@ -190,17 +194,18 @@ map_daddy(lat_min = -125.4,
 
 # All sites
 map_daddy(lat_min = -125.4,
-           lat_max = -125.0, 
-           long_min = 48.80, 
-           long_max = 49, 
-           coord_data = all_coords, 
-           nh4_var = nh4_avg, 
-           kelp_var = Habitat,
-           point_size = 9, 
-           map_file = bc_map,
-           invert = FALSE)
+          lat_max = -125.0, 
+          long_min = 48.80, 
+          long_max = 49, 
+          coord_data = all_coords, 
+          nh4_var = nh4_avg, 
+          kelp_var = Habitat,
+          point_size = 7, 
+          map_file = hakai_map,
+          invert = FALSE,
+          white = TRUE)
 
-ggsave("Output/Figures/all_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
+ggsave("Output/Pub_figs/Fig.all_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 
