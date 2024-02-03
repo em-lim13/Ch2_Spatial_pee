@@ -21,36 +21,45 @@ source("Code/Functions.R")
 cuke_pee <- read_csv("Output/Output_data/cuke_cages.csv") %>%
   rename(nh4_avg = nh4_conc) %>%
   mutate(cukes = factor(cukes, levels = c("Control", "Mid", "High"),
-                        labels = c("Control", "Medium", "Large")))
+                        labels = c("Control", "Medium", "Large"))) %>%
+  as.data.frame()
 
 # load crab data ------
-crab_pee <- read_csv("Data/crab_cage_pee.csv") %>%
+crab_pee <- read_csv("Data/Cage_experiment/crab_cage_pee.csv") %>%
   mutate(week = c(rep("one", 12), rep("two", 11)),
          treatment = factor(as.factor(treatment), 
                             levels = c("control", "mid", "large"),
                             labels = c("Control", "Medium", "Large"))) %>%
   pivot_longer( cols = c(nh4_conc3, nh4_conc2, nh4_conc1), names_to = "measurement", values_to = "nh4_conc") %>%
-  mutate(day = c(rep(3:1, times = 12), rep(6:4, times = 11)))
+  mutate(day = c(rep(3:1, times = 12), rep(6:4, times = 11)))%>%
+  as.data.frame()
 # this csv is created in the Ch4_Crabs/Code/Crab_cages.R file
+
+# Load and label images for plots
+# Load cuke images
+cuke <- readPNG("Images/cuke_no_background.png")
+cuke_two <- readPNG("Images/two_cukes_no_background.png")
+
+# label them
+cuke_labels <- c(Control = "Control",
+                 Medium = "<img src='Images/cuke_no_background.png' width='100' />",
+                 Large = "<img src='Images/two_cukes_no_background.png' width='100' />")
+
+# crab image
+crab <- readPNG("Images/red_crab_no_background.png")
+
+# label it
+crab_labels <- c(Control = "Control",
+                 Medium = "<img src='Images/red_crab_no_background.png' width='65' />",
+                 Large = "<img src='Images/red_crab_no_background.png' width='100' />")
 
 
 # Cuke stats -----
-# start with regular gaussian 
-mod_cu <- glmmTMB(nh4_avg ~ cukes + depth_stand * line,
+# start with regular gaussian, gamma is worse!
+mod_cu <- glmmTMB(nh4_avg ~ cukes + depth_stand,
                cuke_pee)
 
 plot(simulateResiduals(mod_cu))
-
-# try gamma (positive and continuous)
-mod_cu_gamma <- glmmTMB(nh4_avg ~ cukes * depth_stand * line
-                         - cukes:depth_stand:line, 
-                     family = Gamma(link = "log"),
-                     cuke_pee)
-
-plot(simulateResiduals(mod_cu_gamma))
-
-AIC(mod_cu, mod_cu_gamma)
-# OK so let's use the gaussian!
 
 # add interactions?
 mod_cu2 <- glmmTMB(nh4_avg ~ cukes * depth_stand * line
@@ -61,27 +70,16 @@ mod_cu2 <- glmmTMB(nh4_avg ~ cukes * depth_stand * line
 mod_cu3 <- glmmTMB(nh4_avg ~ cukes + depth_stand + (1|line),
                    cuke_pee)
 
-# pretend line doesn't exist
-mod_cu4 <- glmmTMB(nh4_avg ~ cukes + depth_stand,
-                   cuke_pee)
+AIC(mod_cu, mod_cu2, mod_cu3) # fewer interactions is better
 
-plot(simulateResiduals(mod_cu4))
-
-AIC(mod_cu, mod_cu2, mod_cu3, mod_cu4) # fewer interactions is better
-
+# when we take out the random effect of line, the residuals look better.
+# it doesn't change the model output
 
 # look at model output
-summary(mod_cu4)
-visreg(mod_cu, "depth_stand", by = c("line"), overlay=TRUE)
+summary(mod_cu)
 
 # Crab stats ----
-# start with regular gaussian 
-mod_cr <- glmmTMB(nh4_conc ~ treatment + (1|week), 
-                     crab_pee)
-
-plot(simulateResiduals(mod_cr))
-
-# try gamma (positive and continuous)
+# gamma (positive and continuous) is better than gaussian!
 mod_cr_gamma <- glmmTMB(nh4_conc ~ treatment + (1|day), 
                  family = Gamma(link = "log"),
                  crab_pee)
@@ -90,9 +88,9 @@ mod_cr_gamma2 <- glmmTMB(nh4_conc ~ treatment + (1|week),
                         family = Gamma(link = "log"),
                         crab_pee)
 
-plot(simulateResiduals(mod_cr_gamma2))
+plot(simulateResiduals(mod_cr_gamma))
 
-AIC(mod_cr, mod_cr_gamma, mod_cr_gamma2)
+AIC(mod_cr_gamma, mod_cr_gamma2)
 # OK so let's use the gamma!
 
 summary(mod_cr_gamma)
@@ -100,93 +98,47 @@ summary(mod_cr_gamma)
 #Graphing time folks-------
 
 # palettes
-sailboat <- pnw_palette("Sailboat")
-csee_pal <- pnw_palette("Starfish")
-
+pal <- viridis::viridis(6)
+pal3 <- c(pal[1], pal[3], pal[5])
 
 # use ggpredict to get estimates for the cuke model
-sum_cukes <- ggpredict(mod_cu4, terms = c("cukes")) %>% 
+sum_cukes <- ggpredict(mod_cu, terms = "cukes") %>% 
   dplyr::rename(cukes = x,
                 nh4_avg = predicted) %>% 
   as_tibble()
 
 # use ggpredict to get estimates for crab model
-sum_crabs <- ggpredict(mod_cr_gamma, terms = c("treatment")) %>% 
+sum_crabs <- ggpredict(mod_cr_gamma, terms = "treatment") %>% 
   dplyr::rename(treatment = x,
                 nh4_avg = predicted) %>% 
   as_tibble()
 
-
 # Make the plots
 # plot cukes
-cuke_plot <- dot_whisker(sum_data = sum_cukes, all_data = cuke_pee, 
-                         x_var = cukes, y_var = nh4_avg) +
-  labs(x = "", title = "Sea cucumbers")
-
+cuke_plot <- dot_whisker(sum_data = sum_cukes, 
+                         all_data = cuke_pee, 
+                         x_var = cukes, 
+                         y_var = nh4_avg, 
+                         labels = cuke_labels,
+                         theme_white = TRUE)
 
 # plot crabs
-crab_plot <- dot_whisker(sum_data = sum_crabs, all_data = crab_pee, 
-            x_var = treatment, y_var = nh4_avg) +
-  labs(x = "", title = "Crabs")
+crab_plot <- dot_whisker(sum_data = sum_crabs, 
+                         all_data = crab_pee,
+                         x_var = treatment,
+                         y_var = nh4_avg,
+                         labels = crab_labels,
+                         theme_white = TRUE)
 
 # plot together
 cuke_plot + crab_plot
 
+# Fig 4 white background for pub ----
+ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 9, width = 16, dpi = 400)
+
 #ggsave("Output/Figures/both_cages.png", device = "png", height = 7, width = 16, dpi = 400)
 # og is 9 x 16
 
-# Fig 4 white background for pub ----
-# try again without ggpredit bc that struggles with glmmtmb
-
-# Load images
-cuke <- readPNG("Images/cuke_no_background.png")
-cuke_two <- readPNG("Images/two_cukes_no_background.png")
-
-cuke_labels <- c(Control = "Control",
-            Medium = "<img src='Images/cuke_no_background.png' width='100' />",
-            Large = "<img src='Images/two_cukes_no_background.png' width='100' />")
-
-# crab images
-crab <- readPNG("Images/red_crab_no_background.png")
-crab_sm <- readPNG("Images/red_crab_no_background_small.png")
-
-crab_labels <- c(Control = "Control",
-                 Medium = "<img src='Images/red_crab_no_background.png' width='65' />",
-                 Large = "<img src='Images/red_crab_no_background.png' width='100' />")
-
-# plot
-cuke_white <- alt_dot_whisker(data = cuke_pee, 
-                              x_var = cukes, 
-                              y_var = nh4_avg, 
-                              group = cukes, 
-                              labels = cuke_labels)
-
-# again for crabs
-crab_white <- alt_dot_whisker(data = crab_pee, 
-                              x_var = treatment, 
-                              y_var = nh4_avg, 
-                              group = treatment, 
-                              labels = crab_labels)
-
-cuke_white + crab_white
-
-ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-# Old cuke x depth plot ----
-# Effect of depth
-ggplot(cuke_pee, aes(depth, nh4_avg)) +
-  geom_point(aes(colour = cukes), size = 4) +
-  geom_smooth(method = lm, aes(linetype = line), 
-              colour = "black", alpha = 0.2) +
-  scale_color_brewer(palette = "YlOrRd") +
-  scale_y_reverse() +
-  labs(y = "Ammonium concentration (umol)", x = "Depth (m)", 
-       colour = "Sea cucumbers", linetype = "Line") +
-  theme(axis.text = element_text(size = 15),
-        axis.title = element_text(size = 16, colour = "black"),
-        legend.text = element_text(size = 14),
-        legend.title = element_text(size = 15)) 
 
 
 # Map -----
@@ -295,4 +247,21 @@ ggplot() +
   scale_x_continuous(breaks = seq(-125.18, -125.1, by = 0.05))
 
 
+# Graveyard -----
+sailboat <- pnw_palette("Sailboat")
+csee_pal <- pnw_palette("Starfish")
 
+# Old cuke x depth plot ----
+# Effect of depth
+ggplot(cuke_pee, aes(depth, nh4_avg)) +
+  geom_point(aes(colour = cukes), size = 4) +
+  geom_smooth(method = lm, aes(linetype = line), 
+              colour = "black", alpha = 0.2) +
+  scale_color_brewer(palette = "YlOrRd") +
+  scale_y_reverse() +
+  labs(y = "Ammonium concentration (umol)", x = "Depth (m)", 
+       colour = "Sea cucumbers", linetype = "Line") +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 16, colour = "black"),
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 15)) 
