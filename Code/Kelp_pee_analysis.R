@@ -20,6 +20,10 @@ source("Code/Functions.R")
 
 # Kelp data ----
 
+#Should I drop the no kelp control from the model and just say we found no diff in ammonium on the sand? Basically using the no kelp control as a methods control but not using it in the model
+#Also double check that less dangerous bay was the no kelp control sand site???
+#Bc now I can’t remember which site we didn’t write down the inside vs outside and probably got it messed up.. 
+
 # load site names
 names <- read_csv("Data/Team_kelp/Output_data/site_names.csv")
 
