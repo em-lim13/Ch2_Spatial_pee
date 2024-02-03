@@ -8,7 +8,6 @@ library(ggplot2)
 library(TMB)
 library(glmmTMB)
 library(patchwork)
-library(PNWColors)
 library(ggeffects)
 library(DHARMa)
 library(png)
@@ -131,7 +130,8 @@ crab_plot <- dot_whisker(sum_data = sum_crabs,
                          theme_white = TRUE)
 
 # plot together
-cuke_plot + crab_plot
+cuke_plot + crab_plot + 
+  plot_annotation(tag_levels = "a")
 
 # Fig 4 white background for pub ----
 ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 9, width = 16, dpi = 400)

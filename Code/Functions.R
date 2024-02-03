@@ -58,7 +58,8 @@ theme_black = function(base_size = 12, base_family = "") {
       # Specify plot options
       plot.background = element_rect(color = "black", fill = "black"),  
       plot.title = element_text(size = base_size*1.2, color = "white"),  
-      plot.margin = unit(rep(1, 4), "lines")
+      plot.margin = unit(rep(1, 4), "lines"),
+      plot.tag = element_text(size = 30)
       
     )
   
@@ -104,7 +105,9 @@ theme_white = function(base_size = 12, base_family = "") {
       # Specify plot options
       plot.background = element_rect(color = "white", fill = "white"),  
       plot.title = element_text(size = base_size*1.2, color = "black"),  
-      plot.margin = unit(rep(1, 4), "lines")
+      plot.margin = unit(rep(1, 4), "lines"),
+      # changes the size of the patchwork annotations
+      plot.tag = element_text(size = 30)
       
     )
   
@@ -729,7 +732,7 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, theme_white){
     theme(legend.position = "none",
           plot.title = element_text(size = 30)) +
     scale_colour_manual(values = rev(pal3)) +
-    labs(y = expression(paste("Ammonium"~(mu*M)))) +
+    labs(y = expression(paste("Ammonium"~(mu*M))), x = " ") +
     ylim(c(0, 3.8)) +
     scale_x_discrete(labels = {{labels}}) +
     theme(axis.text.x = ggtext::element_markdown())
