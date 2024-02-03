@@ -568,6 +568,7 @@ depth_function <- function(datafile){
 map_daddy <- function(lat_min, lat_max, long_min, long_max, 
                       coord_data, nh4_var, kelp_var, point_size, map_file, invert, white_background) {
   
+  # invert land and sea colours if I use the potato map
   if(invert == FALSE){
     sea <- blue
     land <- "white"
@@ -577,6 +578,7 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
     land <- blue
   }
   
+  # specify black or white background
   if(white_background == TRUE){
     background <- "white"
     features <- "black"
