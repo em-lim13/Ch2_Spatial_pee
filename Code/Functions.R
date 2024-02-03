@@ -110,7 +110,7 @@ theme_white = function(base_size = 12, base_family = "") {
   
 }
 
-
+# Calculate nh4+ -----
 # function Nikola built for me!!!
 pee_calc <- function(data_path) {
   data_bf <- read_csv(data_path, show_col_types = FALSE) %>%
@@ -495,6 +495,8 @@ home_range <- function(datafile){
 
 # Joining surveys up by depth -----
 
+# this is a function to only keep RLS data that corresponds to the survey that I took a nh4 measurement on!
+
 # tricky ones:
 ### BMSC1 2021: two survey depths, one nh4 sample 
 ### BMSC6 2022: two nh4 samples at 2 depths
@@ -560,135 +562,8 @@ depth_function <- function(datafile){
 
 
 # Mapping -----
-
-# Site map
-old_site_map <- function(lat_min, lat_max, long_min, long_max, 
-                     coord_data, map_data, 
-                     add_points, add_annotate){
-
-# make basic map plot
-  gg <- ggplot() +
-    geom_sf(data = {{map_data}}, fill = "white", colour = blue) +
-    coord_sf(xlim = c({{lat_min}}, {{lat_max}}), ylim = c({{long_min}}, {{long_max}}), expand = FALSE) +
-    # add aesthetic elements
-    theme_black() +
-    theme(panel.background = element_rect(fill = blue),
-          panel.grid.major = element_line(color = blue)) +
-    # axis things
-    labs(x = "Longitude", y = "Latitude",
-         fill = "Habitat") +
-    scale_x_continuous(breaks = seq({{lat_min}}, {{lat_max}}, by = 0.1))
-  
-  # add bells and whistles
-  if(add_points == TRUE){
-    gg + geom_sf(data = {{coord_data}}, 
-                 colour = "black",
-                 fill = "black",
-                 alpha = 0.5,
-                 size = 8,
-                 aes(pch = Habitat)) +
-      scale_shape_manual(values = c(21, 25), drop = F) +
-      guides(pch = guide_legend(override.aes = 
-                                  list(colour = "black")))} 
-
-  # add arrow + scale bar
-  if(add_annotate == TRUE){
-    gg +
-    annotation_scale(location = "br", width_hint = 0.4) +
-    annotation_north_arrow(location = "br", which_north = "true", 
-                           pad_x = unit(0.0, "in"), pad_y = unit(0.2, "in"),
-                           style = north_arrow_fancy_orienteering)
-}
-}
-
-# Site map from Nikola
-site_map <- function(lat_min,
-                     lat_max,
-                     long_min,
-                     long_max,
-                     coord_data,
-                     map_data,
-                     add_points,
-                     add_annotate) {
-  # make basic map plot
-  plot <- ggplot() +
-    geom_sf(data = map_data,
-            fill = "white",
-            colour = blue) +
-    coord_sf(
-      xlim = c(lat_min, lat_max),
-      ylim = c(long_min, long_max),
-      expand = FALSE
-    ) +
-    # add aesthetic elements
-    theme_black() +
-    theme(
-      panel.background = element_rect(fill = blue),
-      panel.grid.major = element_line(color = blue)
-    ) +
-    # axis things
-    labs(x = "Longitude", y = "Latitude",
-         fill = "Habitat") +
-    scale_x_continuous(breaks = seq(lat_min, lat_max, by = 0.1))
-  
-  if (add_points) {
-    plot <- plot + geom_sf(
-      data = coord_data,
-      colour = "black",
-      fill = "black",
-      alpha = 0.5,
-      size = 8,
-      aes(pch = Habitat)
-    ) +
-      scale_shape_manual(values = c(21, 25), drop = F) +
-      guides(pch = guide_legend(override.aes =
-                                  list(colour = "black")))
-  }
-  if (add_annotate) {
-    plot <- plot + annotation_scale(location = "br", width_hint = 0.4) +
-      annotation_north_arrow(
-        location = "br",
-        which_north = "true",
-        pad_x = unit(0.0, "in"),
-        pad_y = unit(0.2, "in"),
-        style = north_arrow_fancy_orienteering
-      )
-  }
-  print(plot)
-}
-
-
-# big inset map
-inset_map <- function(rect_xmin, rect_xmax, rect_ymin, rect_ymax, 
-                      map_data){
-  
-  ggplot() +
-    geom_sf(data = {{map_data}}, fill = "white", colour = blue) +
-    coord_sf(xlim = c(-128.5, -123), ylim = c(48.25, 51), expand = FALSE) +
-    # add rectangle for zoomed in part
-    geom_rect(aes(xmin = {{rect_xmin}}, xmax = {{rect_xmax}}, ymin = {{rect_ymin}}, ymax = {{rect_ymax}}), color = "red", fill = NA, inherit.aes = FALSE) +
-    # add aesthetic elements
-    theme_bw() +
-    theme(panel.background = element_rect(fill = blue),
-          panel.grid.major = element_line(color = blue),
-          panel.border = element_rect(fill = NA, colour = "black"),
-          axis.title = element_blank(),
-          axis.text = element_blank(),
-          axis.ticks = element_blank(),
-          axis.ticks.length = unit(0, "pt"),
-          plot.title = NULL,
-          plot.margin=grid::unit(c(0,0,0,0), "mm"))
-}
-
-# add label for Vancouver
-# geom_text(aes(x = -123.120694, y = 49.282694, 
-#               label = "Vancouver",
-#               fontface = "bold")) 
-
-
-
 map_daddy <- function(lat_min, lat_max, long_min, long_max, 
-                      coord_data, nh4_var, kelp_var, point_size, map_file, invert, white) {
+                      coord_data, nh4_var, kelp_var, point_size, map_file, invert, white_background) {
   
   if(invert == FALSE){
     sea <- blue
@@ -699,11 +574,11 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
     land <- blue
   }
   
-  if(white == TRUE){
+  if(white_background == TRUE){
     background <- "white"
     features <- "black"
   }
-  if(white == FALSE){
+  if(white_background == FALSE){
     background <- "black"
     features <- "white"
   }
@@ -826,8 +701,15 @@ map_daddy_np <- function(lat_min, lat_max, long_min, long_max,
 # Plotting -----
 
 # Dot Whisker Plot -----
-
-dot_whisker <- function(sum_data, all_data, x_var, y_var){
+dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, theme_white){
+  
+  if(theme_white == TRUE){
+    theme <- theme_white()
+  }
+  if(theme_white == FALSE){
+    theme <- theme_black()
+  }
+  
   ggplot() +
     geom_point(data = {{sum_data}},
                aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}),
@@ -842,13 +724,15 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var){
                   linewidth = 1.5) +
     geom_jitter(data = {{all_data}}, 
                 aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}), 
-                size = 3, alpha = 0.5, height=0) +
-    theme_black() + 
+                size = 5, alpha = 0.5, height=0) +
+    theme + 
     theme(legend.position = "none",
           plot.title = element_text(size = 30)) +
-    scale_colour_manual(values = rev(csee_pal)) +
+    scale_colour_manual(values = rev(pal3)) +
     labs(y = expression(paste("Ammonium"~(mu*M)))) +
-    ylim(c(0, 3.8))
+    ylim(c(0, 3.8)) +
+    scale_x_discrete(labels = {{labels}}) +
+    theme(axis.text.x = ggtext::element_markdown())
 }
 
 # Alt dot whisker -----
@@ -861,7 +745,7 @@ alt_dot_whisker <- function(data_frame, x_var, y_var, group, labels){
     theme_white() + 
     theme(legend.position = "none",
           plot.title = element_text(size = 30)) +
-    scale_colour_manual(values = rev(csee_pal)) +
+    scale_colour_manual(values = rev(pal3)) +
     labs(y = expression(paste("Ammonium"~(mu*M)))) +
     ylim(c(0, 3.8)) +
     labs(x = "") +
@@ -869,17 +753,44 @@ alt_dot_whisker <- function(data_frame, x_var, y_var, group, labels){
     theme(axis.text.x = ggtext::element_markdown())
 }
 
+# Coeff plots -----
+coeff_plot <- function(coeff_df, pal, theme_white){
+  
+  if(theme_white == TRUE){
+    theme <- theme_white()
+    features <- "black"
+  }
+  if(theme_white == FALSE){
+    theme <- theme_black()
+    features <- "white"
+  }
+  
+  ggplot(coeff_df, aes(x = estimate, y = variable, 
+                 xmin = lower_CI, xmax = upper_CI, 
+                 colour = variable)) +
+    geom_point(size = 10) +
+    geom_errorbar(width = 0, linewidth = 3) +
+    geom_vline(xintercept = 0, color = features, linetype = "dashed") +
+    labs(x = "Coefficient", y = " ") +
+    scale_y_discrete(limits = rev(levels(coeff_df$variable))) +
+    theme +
+    theme(legend.position = "none") + 
+    scale_colour_manual(values = pal)
+}
+
 # Plot model predictions ----
 
-# get original axis
-#ggplot(d, aes(abundance, abundance_stand)) +
-#  geom_smooth() +
-#  geom_vline(xintercept= 300,  color = "red", linewidth = 0.5) +
-#  scale_y_continuous(n.breaks = 50)
-
-
-
-plot_rls_pred <- function(raw_data, predict_data){
+plot_rls_pred <- function(raw_data, predict_data, theme_white){
+  
+  if(theme_white == TRUE){
+    theme <- theme_white()
+    features <- "black"
+  }
+  if(theme_white == FALSE){
+    theme <- theme_black()
+    features <- "white"
+  }
+  
 ggplot() + 
   geom_point(data = raw_data, 
              aes(x = abundance_stand, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
@@ -893,7 +804,7 @@ ggplot() +
               alpha = 0.15) +
   labs(y = expression(paste("Ammonium ", (mu*M))), 
        x = "Animal abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
-  theme_black() +
+  theme +
   scale_colour_manual(values = (pal3), drop = FALSE) +
   scale_fill_manual(values = (pal3), drop = FALSE) +
   scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
@@ -902,7 +813,17 @@ ggplot() +
 }
 
 # Plot kelp pee model predictions
-plot_kelp_pred <- function(raw_data, predict_data){
+plot_kelp_pred <- function(raw_data, predict_data, theme_white){
+  
+  if(theme_white == TRUE){
+    theme <- theme_white()
+    features <- "black"
+  }
+  if(theme_white == FALSE){
+    theme <- theme_black()
+    features <- "white"
+  }
+  
 ggplot() + 
   geom_point(data = raw_data %>%
                mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood")) , 
@@ -925,11 +846,16 @@ ggplot() +
        size = "Animals (kg)") +
   scale_size_continuous(range = c(0.5, 10),
                         limits = c(0, 50)) +
-  theme_black() + 
+  theme + 
   scale_colour_manual(values = pal2) +
   scale_fill_manual(values = pal2) +
   scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
-                     labels = c("0", "0.6", "1.2", "1.8"))
+                     labels = c("0", "0.6", "1.2", "1.8")) +
+  geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5) +
+  guides(size = guide_legend(override.aes = 
+                               list(colour = features)),
+         lty = guide_legend(override.aes = list(linewidth = 0.5))) 
+
 }
 
 # Standardize variables -----
