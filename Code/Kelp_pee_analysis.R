@@ -92,9 +92,9 @@ kelp_rls <- kelp_rls1 %>%
   drop_na(total) %>%
   filter(total > 0) %>%
   select(-Total) %>%
-  invert_length_to_weight() %>% # invert length to weight
+  invert_length_to_weight() %>% # invert length to weight function
   length_to_weight() %>% # fish length to weight function
-  home_range() # calculate each fish's home range
+  home_range() # calculate each fish's home range function
 
 # save csv for mapping 
   #kelp_rls_csv <- kelp_rls %>%
@@ -209,18 +209,19 @@ data_all <- pee %>%
 # Remove Second Beach South for in vs out
 data <- data_all %>%
   filter(site_name != "Second Beach South") %>%
+  # I think I want to keep the no kelp data in the model?
+#  filter(Composition != "None") %>%
+#  mutate(kelp_sp = if_else(kelp_sp == "none", "nereo", kelp_sp)) %>%
   # scale factors using function
   scale_vars()
 
-# reduced data for the kelp site model that includes second beach
-data_s <- data_all %>%
-  # scale factors using function
-  scale_vars() %>%
+# reduced data to export a file for mapping
+data_map <- data %>%
   select(site, site_code, survey_id, in_out_avg, nh4_in_avg, nh4_out_avg, nh4_avg, depth_avg, avg_exchange_rate, kelp_sp, BiomassM, kelp_bio_scale, forest_bio_scale, weight_sum, weight_sum_scale, all_weighted_scale, abundance_scale, rich_scale, shannon_scale, simpson_scale, tide_scale, depth_scale, tide_cat) %>%
   unique() %>%
   filter(site != "Wizard_I_North" | kelp_sp != "none") # just getting rid of the duplicate row, bc there wasn't kelp on one transect unique misses this one
 
-#write_csv(data_s, "Output/Output_data/kelp_final.csv")
+# write_csv(data_map, "Output/Output_data/kelp_final.csv")
   
 
 
@@ -328,8 +329,6 @@ mod_in_out2 <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
                       data = data)
 summary(mod_in_out2)
 
-
-
 # Step 4: Check for collinearity of predictors
 
 # car can't handle random effects so make a simplified mod
@@ -342,8 +341,14 @@ car::vif(lm(in_minus_out ~ kelp_bio_scale + tide_scale + weight_sum_scale + shan
 # Maybe try to PCA????? see if there's clustering?
   
 
-# Try to plot in minus out ------
+# Graphing ------
 
+# Palettes
+pal12 <- viridis::viridis(12)
+pal <- viridis::viridis(10)
+pal2 <- c(pal[8], pal[5])
+
+# Save model coefficients 
 # use the no intercept model for plotting
 df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
@@ -359,29 +364,15 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
          se = (upper_CI - estimate)/1.96
   )
 
-# Coefficient plot
-pal12 <- viridis::viridis(12)
-pal <- viridis::viridis(10)
-pal2 <- c(pal[8], pal[5])
-
-# marginal means for cats
-ggplot(df, aes(x = estimate, y = variable, 
-               xmin = lower_CI, xmax = upper_CI, 
-               colour = variable)) +
-  geom_point(size = 10) +
-  geom_errorbar(width = 0, linewidth = 3) +
-  geom_vline(xintercept=0, color="white", linetype="dashed") +
-  labs(x = "Coefficient", y = " ") +
-  scale_y_discrete(limits = rev(levels(df$variable))) +
-  theme_black() +
-  theme(legend.position = "none") + 
-  scale_colour_manual(values = pal12)
+# Use function to plot coefficients
+kelp_coeff_plot <- coeff_plot(coeff_df = df,
+                              pal = pal12,
+                              theme_white = TRUE)
 
 # ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 8, width = 12, dpi = 400)
 
 
-# remake the shitty asymptote fig with the log(kelp) model and actual predictions, with geom_point(aes(colour = tide, size = animal weight))! See what that looks like???
-
+# Model predictions against raw data plot
 # make new mod with untransformed vars
 
 # create range vector
@@ -400,82 +391,26 @@ predict_kelp <- ggpredict(mod_in_out, terms = c("kelp_bio_scale", "tide_scale [v
   filter(tide_cat != "Flood" | kelp_bio_scale < 0.21) %>%
   filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
   
+
 # now plot these predictions
-plot_kelp_pred(data, predict_kelp) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "white", linewidth = 0.5) +
-  guides(size = guide_legend(override.aes = 
-                               list(colour = "white")),
-         lty = guide_legend(override.aes = list(linewidth = 0.5))) 
-
-
-
-# get original axis
-#ggplot(data, aes(BiomassM, kelp_bio_scale)) +
-#  geom_smooth() +
-#  geom_vline(xintercept= 1.8,  color = "red", linewidth = 0.5) +
-#  scale_y_continuous(n.breaks = 50)
+kelp_pred_plot <- plot_kelp_pred(raw_data = data, 
+                                 predict_data = predict_kelp, 
+                                 theme_white = TRUE) 
 
 
 # ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # Figure 3 for pub with white -----
-# plot coeffs on white
-kelp_coeff_plot <- ggplot(df, aes(x = estimate, y = variable, 
-               xmin = lower_CI, xmax = upper_CI, 
-               colour = variable)) +
-  geom_point(size = 10) +
-  geom_errorbar(width = 0, linewidth = 3) +
-  geom_vline(xintercept=0, color="black", linetype="dashed") +
-  labs(x = "Coefficient", y = " ") +
-  scale_y_discrete(limits = rev(levels(df$variable))) +
-  theme_white() +
-  theme(legend.position = "none") + 
-  scale_colour_manual(values = pal12)
-
-# plot predictions on white
-kelp_pred_plot <- plot_kelp_pred(data, predict_kelp) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "white", linewidth = 0.5) +
-  guides(size = guide_legend(override.aes = 
-                               list(colour = "black")),
-         lty = guide_legend(override.aes = list(linewidth = 0.5))) +
-  theme_white()
-
-# Put them together for pub
 kelp_coeff_plot + kelp_pred_plot
 
 # ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
-# # Ammonium at the site level?
-data_s %>%
-  mutate(site = fct_reorder(site, in_out_avg, .fun='median')) %>%
-  ggplot() +
-  geom_point(aes(x = reorder(site, in_out_avg), nh4_out_avg, 
-                 colour = "blue")) +
-  geom_point(aes(x = reorder(site, in_out_avg), nh4_in_avg, 
-                 colour = "green")) +
-  labs(y = "NH4 concentration", x = "Site") + 
-  theme(axis.text.x=element_text(angle = 65, hjust = 1))+
-  scale_color_identity(name = "Sample",
-                       breaks = c("blue", "green"),
-                       labels = c("Outside kelp", "Inside kelp"),
-                       guide = "legend")
-# Ok this is sort of neat, you can see the base ammonium levels and then how different they are, by site. might be neat to arrange these with kelp density instead of site on the x
-ggplot(data) +
-  geom_point(aes(x = kelp_bio_scale, nh4_out_avg, 
-                 colour = "blue")) +
-  geom_point(aes(x = kelp_bio_scale, nh4_in_avg, 
-                 colour = "green")) +
-  labs(y = "NH4 concentration", x = "Kelp biomass") + 
-  theme(axis.text.x=element_text(angle = 65, hjust = 1))+
-  scale_color_identity(name = "Sample",
-                       breaks = c("blue", "green"),
-                       labels = c("Outside kelp", "Inside kelp"),
-                       guide = "legend")
-
 
 # Stats: site to site variation ----
+
+# This is not complete!!!!
 
 # Step 0: Ask my question
   # Is there a link between biodiversity or biomass and ammonium concentration? 
@@ -608,7 +543,7 @@ ggplot(df2, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, 
   theme(legend.position = "none") + 
   scale_colour_manual(values = pal12)
 
- ggsave("Output/Figures/kelp_site_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
+# ggsave("Output/Figures/kelp_site_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # plot model predictions
 ggplot(data = data_s, 
@@ -629,285 +564,3 @@ ggplot(data = data_s,
 
 # Graveyard ------
 
-# are the continuous predictors the same for all kelp species :|
-# what if I make nereo first instead of macro?
-n_data <- data %>%
-  mutate(kelp_sp = factor(kelp_sp, levels = c("nereo", "macro", "mixed", "none")))
-
-mod_in_out_nereo <- glmmTMB(in_minus_out ~ -1 + kelp_sp + kelp_bio_scale*tide_scale*weight_sum_scale + shannon_scale + depth_scale - kelp_bio_scale:tide_scale:weight_sum_scale +
-                              (1|site_code), 
-                            family = 'gaussian',
-                            data = n_data)
-
-summary(mod_in_out_nereo)
-
-# plot model
-tt <- (list(no_mix = mod_in_out2, mix = mod_in_out_nereo)
-       %>% purrr::map_dfr(tidy, effects = "fixed", conf.int = TRUE,
-                          .id = "model")
-       %>% select(model, component, term, estimate, conf.low, conf.high)
-       ## create new 'term' that combines component and term
-       %>% mutate(term_orig = term,
-                  term = forcats::fct_inorder(paste(term, component, sep = "_")))
-)
-
-dwplot(tt)
-
-# it doesn't seem to matter how I order the kelp_sp factor, all of the estimates are EXACTLY the same
-
-
-
-# old kelp pee coeff plot using mod with intercept
-int <- confint(mod_in_out, estimate = TRUE)[1,3]
-
-df2 <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
-  as.data.frame() %>%
-  rownames_to_column() %>%
-  rename(variable = rowname,
-         lower_CI = `2.5 %`,
-         upper_CI = `97.5 %`,
-         estimate = Estimate) %>%
-  head(- 1)  %>%
-  mutate(variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "kelp_spnereo", "kelp_spnone", "shannon_scale", "depth_scale", "kelp_bio_scale", "weight_sum_scale", "tide_scale", "kelp_bio_scale:tide_scale", "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
-                           labels = c("Macro", "Nereo", "No kelp", "Biodiversity", "Depth",  "Kelp biomass", "Animal biomass", "Tide", "Kelp:tide", "Kelp:animals", "Tide:animals")),
-         adj_estimate = case_when(variable == "Nereo" ~ estimate + int,
-                                  variable == "No kelp" ~ estimate + int,
-                                  TRUE ~ estimate),
-         se = (upper_CI - estimate)/1.96,
-         ci.lb_adjust = adj_estimate - (1.96*se),
-         ci.up_adjust = adj_estimate + (1.96*se)
-  )
-
-
-# just urchins
-urchins_kelp <- kelp_rls %>%
-  filter(species_name == "Mesocentrotus franciscanus") %>%
-  group_by(site_code) %>%
-  summarize(urchins = sum(total)) %>%
-  left_join(kelp %>% select(site_code, Composition) %>% unique())
-
-
-# try making a more simple model???
-mod_gam_kelp3 <- glmmTMB(nh4_out_avg ~ weight_sum_scale, 
-                         family = Gamma(link = 'log'),
-                         data = data_s)
-plot(simulateResiduals(mod_gam_kelp3)) # two zig zags but no red
-
-mod_gam_kelp4 <- glmmTMB(nh4_out_avg ~ tide_scale, 
-                         family = Gamma(link = 'log'),
-                         data = data_s)
-plot(simulateResiduals(mod_gam_kelp4)) # super fucked
-
-mod_gam_kelp5 <- glmmTMB(nh4_out_avg ~ kelp_bio_scale, 
-                         family = Gamma(link = 'log'),
-                         data = data_s)
-plot(simulateResiduals(mod_gam_kelp5)) # three zigzags, 2 red
-
-mod_gam_kelp6 <- glmmTMB(nh4_out_avg ~ shannon_scale, 
-                         family = Gamma(link = 'log'),
-                         data = data_s)
-plot(simulateResiduals(mod_gam_kelp6)) # super fucked
-
-mod_gam_kelp7 <- glmmTMB(nh4_out_avg ~ kelp_sp, 
-                         family = Gamma(link = 'log'),
-                         data = data_s)
-plot(simulateResiduals(mod_gam_kelp7)) # no signif problems, useable
-
-mod_gam_kelp8 <- glmmTMB(nh4_out_avg ~ depth_scale, 
-                         family = Gamma(link = 'log'),
-                         data = data_s)
-plot(simulateResiduals(mod_gam_kelp8))  # a little wavy but ok
-
-# mod with just the variables that didn't throw errors for nh4_outside?
-mod_gam_kelp9 <- glmmTMB(nh4_out_avg ~ weight_sum_scale + kelp_sp + depth_scale, 
-                         family = Gamma(link = 'log'),
-                         data = data_s)
-plot(simulateResiduals(mod_gam_kelp9)) # looks ok
-
-aic <- AIC(mod_gam_kelp, mod_gam_kelp2, mod_gam_kelp3, mod_gam_kelp4, mod_gam_kelp5, mod_gam_kelp6, mod_gam_kelp7, mod_gam_kelp8, mod_gam_kelp9)
-# ok so the two model with all the terms and lots of interactions are preferred
-
-
-# so i accidentally ran the models with nh4_in_avg, and kelp_bio_scale*tide_scale + kelp_sp was the "best model" with low residual issues and AIC..... 
-
-# mod with just the variables that didn't throw errors for nh4_inside?
-mod_gam_kelp_in <- glmmTMB(nh4_in_avg ~ kelp_bio_scale*tide_scale + kelp_sp, 
-                           family = Gamma(link = 'log'),
-                           data = data_s)
-summary(mod_gam_kelp_in) 
-plot(simulateResiduals(mod_gam_kelp_in)) # ehhh? U-shape but less fucked
-# dropping the interaction makes it worse
-# forest_bio_scale makes it worse
-# dropping bio mean scale makes it worse
-# dropping tide makes it worse
-# dropping kelp_sp gets rid of red line but all results non signif
-# can't do tide*kelp_sp interaction or kelp_bio_scale*kelp_sp
-
-
-# try to plot visreg output nicer
-p = visreg(mod_best, "kelp_bio_scale", by="weight_sum_scale",
-           overlay = TRUE, partial = FALSE, rug = FALSE,
-           plot=FALSE)
-
-ggplot(p$fit, aes(kelp_bio_scale, visregFit, 
-                  fill = factor(weight_sum_scale))) +
-  geom_ribbon(aes(ymin=visregLwr, ymax=visregUpr), alpha = 0.2) +
-  geom_line(aes(colour = factor(weight_sum_scale)), linewidth = 1) +
-  labs(linetype="weight_sum_scale", fill="weight_sum_scale", colour = "weight_sum_scale")
-
-
-# Old stats -----
-# I don't think this is linear I'm going to have to fit some kind of curve to it.....
-
-# linear model though for fun
-kelp_pee_mod <- lmer(in_minus_out ~ kelp_den + (1|site), data = data)
-summary(kelp_pee_mod)
-visreg(kelp_pee_mod)
-
-# full model for dredging
-model_all <- lmer(in_minus_out ~ den_scale + bio_tran_scale + kelp_bio_scale + area_scale + forest_bio_scale + kelp_sp + (1|site), data = data, na.action = na.fail)
-summary(model_all)
-visreg(model_all)
-
-dredge <- as.data.frame(dredge(model_all)) %>%
-  filter(delta < 3)
-
-# the best model has the mean biomass of the whole forest
-# best has mean bio + total forest biomass
-# second best is just mean bio
-# third is mean bio + total forest biomass + total area
-
-bio_mod <- lmer(in_minus_out ~ kelp_bio_scale + (1|site), data = data)
-summary(bio_mod)
-visreg(bio_mod)
-# Forests with more mean biomass/m2 retain more pee!
-
-# redo dredge with the rest of the vars
-model_all <- lmer(in_minus_out ~ den_scale + bio_tran_scale + kelp_bio_scale + area_scale + forest_bio_scale + kelp_sp +
-                    weight_stand + rich_scale + abundance_scale + tide_scale + depth_stand + (1|site), data = data, na.action = na.fail)
-summary(model_all)
-
-dredge <- as.data.frame(dredge(model_all)) %>%
-  filter(delta < 3)
-
-# plot?
-ggplot(data, aes(kelp_bio_scale, in_minus_out)) +
-  geom_point() +
-  geom_smooth(method = lm) 
-
-# Let's be intelligent and build the model I think would be best
-# I'd guess the biomass/m2 (density x biomass) = bio_tran_scale would matter bc that's the info about the kelp on the transect the samples were taken on
-# And I'd guess the mean biomass/m2 (den x bio) of the kelp forest (how much kelp is around) will matter
-mod1 <- lmer(in_minus_out ~ bio_tran_scale* kelp_bio_scale  + (1|site), data = data, na.action = na.fail)
-summary(mod1)
-visreg(mod1, "bio_tran_scale", by = "kelp_bio_scale")
-# It looks like at high mean biomass, the relationship levels out
-# So maybe there's an asymptote!
-
-# let's try taking the log of the  in_minus_out and see if that improves fit
-
-mod2 <- lmer(log_pee_diff ~ bio_tran_scale* kelp_bio_scale  + (1|site), data = data, na.action = na.fail)
-summary(mod1)
-visreg(mod1, "bio_tran_scale", by = "kelp_bio_scale")
-
-
-# go back to the preferred model with just mean biomass
-bio_mod2 <- lmer(log_pee_diff ~ kelp_bio_scale  + (1|site), data = data)
-summary(bio_mod2)
-visreg(bio_mod2)
-
-# check resid
-mod_cont_resids <- simulateResiduals(bio_mod)
-plot(mod_cont_resids)
-# weight fucking shit
-
-
-
-# Use AIC to see if this improves things
-AIC(bio_mod, bio_mod2, mod1)
-# Yes bio_mod2 is preferred, taking the log of the response variable helps a lot
-
-
-
-# Site level model!
-
-kelp_mod_full <- lm(nh4_out_avg ~ weight_stand + rich_scale + abundance_scale + tide_scale + depth_stand + kelp_bio_scale + 
-                      weight_stand:tide_scale + weight_stand:kelp_bio_scale +
-                      rich_scale:tide_scale + rich_scale:kelp_bio_scale +
-                      abundance_scale:tide_scale +
-                      abundance_scale:kelp_bio_scale +
-                       tide_scale:kelp_bio_scale, data_s)
-summary(kelp_mod_full)
-
-options(na.action = "na.fail")
-dredge <- as.data.frame(dredge(kelp_mod_full)) %>%
-  filter(delta < 3)
-# nh4 avg second best mod was just tide
-# nh4 inside avg second best mod was just bio mean, then just tide
-# nh4 outside avg second best mod just tide
-
-kelp_mod_mean <- lm(nh4_avg ~ weight_stand + tide_scale  + kelp_bio_scale + 
-                      weight_stand:tide_scale + weight_stand:kelp_bio_scale, data_s)
-
-
-summary(kelp_mod_best)
-
-visreg(kelp_mod_best)
-
-
-# Plots ----
-
-ggplot(data, aes(kelp_bio_scale, log_pee_diff)) +
-  geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
-  geom_smooth(method = lm, colour = "blue")+
-  geom_smooth(method = loess, colour = "red")+
-  
-labs(y = "Inside - outside kelp forest ammonium (log(uM))", x = "Forest biomass") 
-  
-
-# each point is a single transect with a pee difference and a kelp density 
-# linear model
-ggplot(data, aes(BiomassM, in_minus_out)) +
-  geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
-  labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Density") +
-  geom_smooth(method = lm,
-              alpha = 0.25)
-
-# try plotting the same data but with a better asymptote?
-ggplot(data, aes(kelp_den, in_minus_out)) +
-  geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
-  labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Density") +
-  geom_smooth(method = "loess",
-              span = 1,
-              alpha = 0.25)
-
-# Percent difference 
-# With a truly heinious curve, thanks loess
-ggplot(data, aes(kelp_den, percent_diff)) +
-  geom_point(aes(pch = kelp_sp, colour = site_code), size =3 )+ 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "red", size = 1.5) +
-  labs(y = "Inside - outside kelp forest ammonium (uM)", x = "Kelp Density") +
-  geom_smooth(method = "loess",
-              span = 1,
-              alpha = 0.25)
-
-#ggsave("Output/Figures/in_out_kelp_pee.png", device = "png",
-#       height = 9, width = 16, dpi = 400)
-
-
-
-# Claire has area, density, biomass
-# Got average individual biomass for each kelp, which you can scale up to the average biomass of each transect
-
-
-# Old Kelp density data -----
-# Also Claire's biomass estimates
-# Basically it would be nice to have a single metric of how much kelp is in each forest
-kcca_summary <- kcca_final %>%
-  group_by(site_code) %>%
-  summarise(kelp_den = mean(kelp_den),
-            in_minus_out = mean(in_minus_out),
-            kelp_sp = kelp_sp)
