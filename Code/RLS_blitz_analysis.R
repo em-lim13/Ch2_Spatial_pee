@@ -79,7 +79,7 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
 fishes <- fish %>%
   length_to_weight() %>% # Use nice length to weight function!
           # careful, the function shrinks the big wolf eel
-  home_range() %>% # calculate each fish's home range
+  home_range() %>% # calculate each fish's home range function
   mutate(biomass_per_indiv = biomass/total) # see how the RLS biomass calc estimated each fish size
 
 # That one huge wolf eel can't be right
@@ -95,9 +95,9 @@ fishes <- fish %>%
 
 # now calc invert weights
 inverts <- invert %>%
-  invert_length_to_weight() %>%
+  invert_length_to_weight() %>% # use function
   mutate(biomass_per_indiv = biomass/total) %>%
-  home_range() # home range + weight, shouldn't change anything
+  home_range() # home range + weight function, shouldn't change anything
 
 # Join all rls data together
 rls <- rbind(fishes, inverts)
@@ -289,18 +289,6 @@ rls_final <-
 # slack = -0.1958187 - 0.1958187
 # ebb = > 0.1958187
 
-# just urchins
-urchins <- rls %>%
-  filter(species_name == "Mesocentrotus franciscanus") %>%
-  group_by(survey_id) %>%
-  summarize(urchins = sum(total)) %>%
-  mutate(Composition = "None") %>%
-  rename(site_code = survey_id) %>%
-  rbind(urchins_kelp)
-
-ggplot(urchins, aes(Composition, urchins, colour = Composition)) +
-  geom_boxplot() +
-  geom_jitter()
 
 # Stats -------
 
@@ -387,8 +375,8 @@ mod_all <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + depth_
                    family = Gamma(link = 'log'),
                    data = rls_final,
                    na.action = na.fail)
- summary(mod_all)
- plot(DHARMa::simulateResiduals(mod_all))
+summary(mod_all)
+plot(DHARMa::simulateResiduals(mod_all))
 
 # dredge <- as.data.frame(dredge(mod_all)) %>% filter(delta < 3)
 
@@ -442,6 +430,7 @@ pie(rep(1, 10), col = pal)
 # Coefficient plot of the model ----
 
 # generate coefficients
+# try using emtrends to generate standard error/ confidence intervals around slope estimates
 rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
   rownames_to_column() %>%
@@ -459,15 +448,9 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
 
 
 # Coefficient plot 
-ggplot(rls_coeffs, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
-    geom_point(size = 10) +
-    geom_errorbar(width = 0, linewidth = 3) +
-    geom_vline(xintercept=0, color="white", linetype="dashed") +
-    labs(x = "Coefficient", y = " ") +
-  scale_y_discrete(limits = rev(levels(rls_coeffs$variable))) +
-  theme_black() +
-  theme(legend.position = "none") + 
-  scale_colour_manual(values = pal6)
+rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs, 
+                             pal = pal6, 
+                             theme_white = TRUE)
 
 # ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
@@ -487,89 +470,38 @@ predict <- ggpredict(mod_brain, terms = c("abundance_stand", "tide_stand [v]")) 
                            levels = c("Ebb", "Slack", "Flood")))
 
 # now plot these predictions
-plot_rls_pred(raw_data = rls_final, predict_data = predict)
+rls_pred_plot <- plot_rls_pred(raw_data = rls_final, 
+                               predict_data = predict,
+                               theme_white = TRUE) +
+  theme(legend.position = c(0.85, 0.9))
 
 #ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 12, dpi = 400)
 
-# just plot each line one by one
-# just ebb
-plot_rls_pred(raw_data = rls_final %>% filter(tide_cat == "Ebb"), 
-              predict_data = predict %>% filter(tide_cat == "Ebb"))
-
-#ggsave("Output/Figures/nh4_abund_tide_ebb.png", device = "png", height = 9, width = 12, dpi = 400)
-
-# add slack
-plot_rls_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"), 
-              predict_data = predict %>% filter(tide_cat != "Flood"))
-
-#ggsave("Output/Figures/nh4_abund_tide_ebb_slack.png", device = "png", height = 9, width = 12, dpi = 400)
-
-
 # White background for Fig 2 -----
-# white background
-rls_coeff_plot <- ggplot(rls_coeffs, aes(x = estimate, y = (variable), xmin = lower_CI, xmax = upper_CI, colour = variable)) +
-  geom_point(size = 10) +
-  geom_errorbar(width = 0, linewidth = 3) +
-  geom_vline(xintercept=0, color="black", linetype="dashed") +
-  labs(x = "Coefficient", y = " ") +
-  scale_y_discrete(limits = rev(levels(rls_coeffs$variable))) +
-  theme_white() +
-  theme(legend.position = "none") + 
-  scale_colour_manual(values = pal6)
-
-
-# white background
-rls_pred_plot <- plot_rls_pred(raw_data = rls_final, predict_data = predict) + 
-  theme_white() +
-  theme(legend.position = c(0.85, 0.9))
-
 rls_coeff_plot + rls_pred_plot
 
 # ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
-# plot mean for each year
-rls_nh4 %>%
-  group_by(site, year) %>%
-  mutate(nh4_avg = mean(nh4_conc)) %>%
-  ungroup() %>%
-  ggplot() +
-  geom_point(aes(x = reorder(site, -nh4_avg), 
-                 nh4_avg, colour = year, fill = year, pch = month),
-             size = 3, alpha = 0.75) +
-  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) +
-  labs(x = "Site", y = "NH4+ Concentration (umol/L)") +
-  scale_colour_manual(values = pal) 
+# Figs for presentations
+# just plot each line one by one for the model prediction vs raw data plot
+# just ebb
+plot_rls_pred(raw_data = rls_final %>% filter(tide_cat == "Ebb"), 
+              predict_data = predict %>% filter(tide_cat == "Ebb"),
+              theme_white = FALSE)
 
+#ggsave("Output/Figures/nh4_abund_tide_ebb.png", device = "png", height = 9, width = 12, dpi = 400)
 
-# Plot the ranking of each site year to year
-# Plot rank
-ggplot(data = rank) +
-  geom_point(aes(reorder(site, -avg_grade), grade2021, colour = "2021"), size = 3) +
-  geom_point(aes(reorder(site, -avg_grade), grade2022, colour = "2022"), size = 3) +
-  geom_point(aes(reorder(site, -avg_grade), grade2023, colour = "2023"), size = 3) +
-  labs(x= "Site", y = "Rank", colour = "Year") +
-  scale_colour_manual(values = pal) + 
-  theme(axis.text.x = element_text(angle = 75, vjust = 0.5)) 
+# add slack
+plot_rls_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"), 
+              predict_data = predict %>% filter(tide_cat != "Flood"),
+              theme_white = FALSE)
 
-# ggsave("Output/Figures/rank_all_years.png", device = "png",
-#        height = 5, width = 8, dpi = 400)
-
-
-# Site vs pee
-ggplot(rls_nh4, aes(nh4_conc, site, fill = site)) +
-  geom_boxplot(colour = "white") +
-  theme_black() +
-  labs(x= "Ammonium concentration (umol/L)", y = "Site") +
-  theme(legend.position = "none")
-
-#ggsave("Output/Figures/RLS_sites_pee.png", device = "png",
-#       height = 9, width = 16, dpi = 400)
+#ggsave("Output/Figures/nh4_abund_tide_ebb_slack.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 
-
-#Data exploration ------
+# Data exploration ------
 # Data checks
 goby <- fish %>%
   filter(species_name == "Rhinogobiops nicholsii") %>%
@@ -640,6 +572,11 @@ hist(goby$size_class)
 # What's the most abundant species?
 rls_abundant_species <- rls %>% 
   count(species_name)
+
+# What's the most abundant species?
+rls_abundant <- fish %>% 
+  group_by(species_name) %>%
+  summarise(total = sum(total))
 
 # where are the most urchins???
 # Can swap for any species
@@ -745,124 +682,3 @@ cor.test(cor_data$nh4_2023, cor_data$nh4_2021,
 
 
 # Graveyard -----
-
-#  mutate(xjit = ifelse(site_code == "BMSC6" | 
-#                         site_code == "BMSC3" |
-#                         site_code == "BMSC21" |
-#                         site_code == "BMSC15" |
-#                         site_code == "BMSC11" |
-#                         site_code == "BMSC19", -0.015, 0.015))
-#
-## Create legend
-#site_names <- as.list(paste(coords$site_num, coords$`Site name`, sep = ": "))
-
-
-#  + geom_text(data = rls_coords,
-#            aes(x = survey_longitude, y = survey_latitude, 
-#                label = site_code),
-#            size = 3,
-#            nudge_x = rls_coords$xjit)
-
-
-# filter inverts and weirdos for rls
-filter(species_name != "Bolinopsis infundibulum") %>%
-  filter(species_name != "Pleuronichthys coenosus") %>%
-  filter(species_name != "Pleurobrachia bachei") %>%
-  filter(species_name != "Polyorchis penicillatus") %>% # Filter inverts
-  filter(species_name != "Actinopterygii spp.") %>% # Remove unidentif fish
-  
-  
-# Put all predictors in a model
-mod_full <- lmer(nh4_avg ~ scale(weight_sum) * scale(shannon) * scale(abundance) * scale(avg_exchange_rate) + (1|site_code), rls_final)
-summary(mod_full)
-
-# Put all predictors in a model + depth
-# Cut the triple + interactions
-mod_fuller <- lmer(nh4_avg ~ scale(weight_sum) + scale(simpson) + scale(abundance) + scale(avg_exchange_rate) + scale(depth_avg) +
-                     scale(weight_sum):scale(simpson) + scale(weight_sum):scale(abundance) + 
-                     scale(weight_sum):scale(avg_exchange_rate) + scale(weight_sum):scale(depth_avg) +
-                     scale(simpson):scale(abundance) + scale(simpson):scale(avg_exchange_rate) + scale(simpson):scale(depth_avg) +
-                     scale(abundance):scale(avg_exchange_rate) + scale(abundance):scale(depth_avg) +
-                     scale(avg_exchange_rate):scale(depth_avg) +
-                     (1|site_code), rls_final)
-summary(mod_fuller)
-
-
-# dredge to compare all models
-options(na.action = "na.fail")
-dred <- dredge(mod_fuller)
-# best model is just the intercept, LOL
-# 2nd best (<delta AIC 2) is just richness
-# 3rd is just weight, but that's > delta AIC 5
-# top 3 models and delta AIC is the same when full mod has all interactions vs when it has none
-
-# When I add depth and only the 2-way interactions top mod = intercept, 2nd = richness (delta 0.73), 3rd is just depth (delta 5.6)
-
-# look at this "best mod"
-mod_rich <- lmer(nh4_avg ~ species_richness + (1|site_code), rls_final)
-summary(mod_rich)
-visreg(mod_rich)
-# Negative relationship between species richness and NH4+...... cool cool cool cool cool
-
-
-
-# What if I put allll the data together?????
-mod_all <- lm(nh4_avg ~ scale(weight_sum) + scale(avg_exchange_rate)  + scale(BiomassM) + 
-                scale(weight_sum):avg_exchange_rate + scale(weight_sum):scale(BiomassM), big_rls)
-
-summary(kelp_mod_best)
-visreg(kelp_mod_best)
-
-
-
-# reduce the df so i can join it with kelp rls data
-rls_final_reduced <- rls_final %>%
-  mutate(BiomassM = 0) %>%
-  select(site, site_code, survey_id, nh4_avg, depth_avg, avg_exchange_rate, BiomassM, weight_sum, species_richness, abundance, avg_exchange_rate,  depth_avg) %>%
-  rename(site_code = site_code)
-
-big_rls <- rbind(rls_final_reduced, data_s_reduced) %>%
-  mutate(weight_stand = scale(weight_sum),
-         rich_stand = scale(species_richness),
-         abundance_stand = scale(abundance),
-         tide_stand = scale(avg_exchange_rate),
-         depth_stand = scale(depth_avg),
-         biomass_mean_stand = scale(BiomassM))
-
-# Just look at temp 
-temp_df <- rls_final %>%
-  drop_na(temp_avg)
-
-mod_temp <- lm(nh4_avg ~ scale(weight_sum) + scale(species_richness) + scale(abundance) + scale(avg_exchange_rate) + scale(temp_avg) + scale(depth_avg), temp_df)
-summary(mod_temp)
-# Interesting. In 2021, there was a slightly negative relationship between temperature and nh4+ concentration
-
-
-# Dot and whisker?
-sum_stats_pee <- ggpredict(simple_model, terms = c("site_code", "year")) %>% 
-  #and then we'll just rename one of the columns so it's easier to plot
-  rename(site_code = x,
-         nh4_conc = predicted,
-         year = group)
-# plot
-ggplot() +
-  geom_point(data = sum_stats_pee, 
-             aes(y = site_code, x = nh4_conc, colour = year),
-             size = 4) +
-  geom_errorbar(data = sum_stats_pee, 
-                aes(y = site_code,
-                    x = nh4_conc,
-                    colour = year,
-                    # and you can decide which type of error to show here
-                    # we're using 95% CI
-                    xmin = conf.low,
-                    xmax = conf.high),
-                width = 0.2,
-                size = 1.2)  +
-  geom_point(data = rls_nh4, aes (y = site_code, x = nh4_conc, colour = year), alpha = 0.5, height = 0, size = 2) +
-  labs(x= "Ammonium concentration (umol/L)", y = "Site") +
-  theme_black() +
-  theme(legend.position="none") 
-
-#ggsave("Output/Figures/RLS_pee_black.png", device = "png",
-#       height = 9, width = 16, dpi = 400)
