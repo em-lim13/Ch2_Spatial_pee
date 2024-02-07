@@ -681,4 +681,15 @@ cor.test(cor_data$nh4_2023, cor_data$nh4_2021,
 # Yes correlated?
 
 
+# Are the sites spatially autocorrelated?
+resids <- DHARMa::simulateResiduals(mod_brain)
+new_resids <- recalculateResiduals(resids, group = rls_final$site_code)
+
+rls_auto <- rls_final %>%
+  left_join(read_csv("Data/RLS/RLS_data/true_coords.csv"), by = "site_code") %>%
+  select(longitude, latitude) %>%
+  unique()
+
+testSpatialAutocorrelation(new_resids, x = rls_auto$longitude, y = rls_auto$latitude)
+
 # Graveyard -----
