@@ -218,3 +218,7 @@ dist2 <- dist %>%
 # next smallest is Dodger to Taylor = 194.05 m 
 
 
+
+# play with making a kml -----
+ggplot() +
+  geom_sf(data = hakai_map, fill = "white", colour = blue)
