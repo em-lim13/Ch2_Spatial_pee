@@ -116,6 +116,7 @@ theme_white = function(base_size = 12, base_family = "") {
 # Calculate nh4+ -----
 # function Nikola built for me!!!
 pee_calc <- function(data_path) {
+  
   data_bf <- read_csv(data_path, show_col_types = FALSE) %>%
     filter(sample == "bf") %>% # just the BF sample
     transmute(bf = (FLU1 + FLU2 + FLU3)/3,
