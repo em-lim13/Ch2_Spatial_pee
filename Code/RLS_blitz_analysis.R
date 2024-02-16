@@ -578,6 +578,13 @@ rls_abundant <- fish %>%
   group_by(species_name) %>%
   summarise(total = sum(total))
 
+# abundant across all surveys
+all_abund <- (fish %>% transmute(species_name = species_name, total = total)) %>%
+  rbind(kelp_rls1 %>% transmute(species_name = Species, total = Total)) %>%
+  left_join(rls %>% select(species_name, family) %>% unique(), by = "species_name") %>%
+  group_by(family) %>%
+  summarise(total = sum(total))
+
 # where are the most urchins???
 # Can swap for any species
 rls_urchins <- rls %>%
