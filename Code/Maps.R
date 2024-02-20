@@ -123,9 +123,7 @@ map_daddy(lat_min = -125.4,
           nh4_var = dummy, 
           point_size = 4, 
           kelp_var = Habitat,
-          map_file = hakai_map,
-          invert = FALSE,
-          white_background = FALSE) +
+          map_file = hakai_map) +
   guides(pch = "none",
          fill = "none")
 
