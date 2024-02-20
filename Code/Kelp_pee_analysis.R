@@ -40,7 +40,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
                              TRUE ~ as.character(kelp_sp))) %>%
   left_join(names, by = "SiteName") %>% 
   replace(is.na(.), 0) %>%
-  # Add the averaged site   level variables from Claire!
+  # Add the averaged site level variables from Claire!
   left_join(read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv"), by = "SiteName") %>%
   group_by(SiteName) %>%
   mutate(BiomassM = mean(Biomassm2kg),
@@ -74,31 +74,29 @@ kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
   rename(
     site_code = `Site No.`,
     site_name = `Site Name`, 
-    common_name = `Common name`
+    common_name = `Common name`,
+    `0` = Inverts,
+    species_name = Species
   )  %>% # Rename columns with spaces
-  mutate(Species = str_to_sentence(Species),
+  mutate(species_name = str_to_sentence(species_name),
          common_name = str_to_sentence(common_name),
          Date = dmy(Date),
-         date_time_survey = ymd_hms(paste(Date, Time))) %>% 
-  filter(Species != "Debris - Metal") %>%
-  filter(Species != "Debris - Other") %>%
-  filter(Species != "Debris - Wood") %>%
-  filter(Species != "Debris - Glass") %>%
-  filter(Species != "Debris - Fishing Gear") %>%
-  filter(Species != "Debris - Zero")  # Cut the non-animal species
+         date_time_survey = ymd_hms(paste(Date, Time))) %>%
+  left_join(read_csv("Output/Output_data/rls_phylo.csv"), by = "species_name") %>%
+  clean_phylo_names() %>% # function to fix naming errors
+  filter(species_name != "Tonicella spp.") %>%
+  filter(species_name != "Cryptochiton stelleri")
 
 # Pivot longer for biomass
 kelp_rls <- kelp_rls1 %>%
-  rename(`0` = Inverts,
-         species_name = Species) %>%
   pivot_longer( cols = `0`:`400`, names_to = "size_class", values_to = "total") %>%
   mutate(size_class = as.numeric(size_class)) %>%
   drop_na(total) %>%
   filter(total > 0) %>%
   select(-Total) %>%
-  invert_length_to_weight() %>% # invert length to weight function
   length_to_weight() %>% # fish length to weight function
   home_range() # calculate each fish's home range function
+  
 
 # save csv for mapping 
   #kelp_rls_csv <- kelp_rls %>%
