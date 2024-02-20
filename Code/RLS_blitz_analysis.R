@@ -511,7 +511,8 @@ plot_rls_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"),
 all_rls <- (rls %>% select(phylum, class, order, family, species_name, total, weight_per_indiv_g)) %>%
   rbind(kelp_rls %>% select(phylum, class, order, family, species_name, total, weight_per_indiv_g))
 
-d <- all_rls %>% count(phylum, class, order, family, species_name)
+d <- all_rls %>% count(phylum, class, order, family, species_name, weight_per_indiv_g)
+write_csv(d %>% filter(phylum != "Chordata"), "Output/Output_data/species_list.csv")
 
 e <- all_rls %>% filter(weight_per_indiv_g == 0.5) %>% count(species_name)
   
@@ -528,7 +529,6 @@ all_abund <- all_rls %>%
   rbind(kelp_rls %>% select(Date, species_name, size_class, total) %>% rename(survey_date = Date) %>% filter(species_name == "Pycnopodia helianthoides"))  %>%
   uncount(total) %>%
   mutate(year = year(survey_date)) %>%
-  group_by()
 ggplot(aes(year, size_class, colour = year)) +
   geom_jitter(width = 0.2) +
   stat_summary(fun = "mean", geom = "point", size = 5, mapping = aes(group = year)) +
