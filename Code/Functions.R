@@ -262,8 +262,7 @@ pee_calc2 <- function(data_path) {
 }
 
 # Clean up messy frigin taxonomy -----
-
-clean_phylo_names <- function(datafile){
+clean_sp_names <- function(datafile) {
   new_data <- datafile %>%
     mutate(
       # species
@@ -272,7 +271,14 @@ clean_phylo_names <- function(datafile){
         species_name == "Parastichopus californicus" ~ "Apostichopus californicus",
         species_name == "Berthella californica" ~ "Berthella chacei",
         species_name == "Henricia leviuscula" ~ "Henricia spp.",
-        TRUE ~ as.character(species_name)),
+        TRUE ~ as.character(species_name)))
+}
+
+# then clean phylo
+clean_phylo_names <- function(datafile){
+  new_data <- datafile %>%
+    clean_sp_names() %>%
+    mutate(
       # Phylum
       phylum = case_when(species_name == "Artedius lateralis" ~ "Chordata",
                          species_name == "Ascelichthys rhodorus" ~ "Chordata",
@@ -280,9 +286,15 @@ clean_phylo_names <- function(datafile){
                          species_name == "Sebastes paucispinis" ~ "Chordata",
                          species_name == "Orthonopias triacis" ~ "Chordata",
                          species_name == "Blepsias cirrhosus" ~ "Chordata",
+                         species_name == "Gobiesox maeandricus" ~ "Chordata",
+                         species_name == "Leptocottus armatus" ~ "Chordata",
+                         species_name == "Rimicola muscarum" ~ "Chordata",
                          species_name == "Triopha spp." ~ "Mollusca",
+                         species_name == "Melibe leonina" ~ "Mollusca",
                          species_name == "Octopus rubescens" ~ "Mollusca",
                          species_name == "Heptacarpus stylus" ~ "Arthropoda",
+                         species_name == "Cryptolithodes sitchensis" ~ "Arthropoda",
+                         species_name == "Pandulus spp." ~ "Arthropoda",
                          TRUE ~ as.character(phylum)),
       # class
       class = case_when(class == "Actinopteri" | class == "Teleostei" ~ "Actinopterygii",
@@ -292,9 +304,15 @@ clean_phylo_names <- function(datafile){
                         species_name == "Sebastes paucispinis" ~ "Actinopterygii",
                         species_name == "Orthonopias triacis" ~ "Actinopterygii",
                         species_name == "Blepsias cirrhosus" ~ "Actinopterygii",
+                        species_name == "Leptocottus armatus" ~ "Actinopterygii",
+                        species_name == "Gobiesox maeandricus" ~ "Actinopterygii",
+                        species_name == "Rimicola muscarum" ~ "Actinopterygii",
                         species_name == "Triopha spp." ~ "Gastropoda",
+                        species_name == "Melibe leonina" ~ "Gastropoda",
                         species_name == "Octopus rubescens" ~ "Cephalopoda",
                         species_name == "Heptacarpus stylus" ~ "Malacostraca",
+                        species_name == "Cryptolithodes sitchensis" ~ "Malacostraca",
+                        species_name == "Pandulus spp." ~ "Malacostraca",
                         TRUE ~ as.character(class)),
       # order
       order = case_when(species_name == "Opalia wroblewskyi" ~ "Caenogastropoda", 
@@ -306,6 +324,9 @@ clean_phylo_names <- function(datafile){
                         order == "Ovalentaria incertae sedis" ~ "Perciformes",
                         order == "Scorpaeniformes" ~ "Perciformes",
                         order == "Gasterosteiformes" ~ "Perciformes",
+                        species_name == "Leptocottus armatus" ~ "Perciformes",
+                        species_name == "Gobiesox maeandricus" ~ "Gobiesociformes",
+                        species_name == "Rimicola muscarum" ~ "Gobiesociformes",
                         species_name == "Unidentified shrimp" ~ "Decapoda",
                         family == "Pectinidae" ~ "Pectinida",
                         family == "Haliotidae" ~ "Lepetellida",
@@ -318,8 +339,11 @@ clean_phylo_names <- function(datafile){
                         species_name == "Orthonopias triacis" ~ "Perciformes",
                         species_name == "Blepsias cirrhosus" ~ "Perciformes",
                         species_name == "Triopha spp." ~ "Nudibranchia",
+                        species_name == "Melibe leonina" ~ "Nudibranchia",
                         species_name == "Octopus rubescens" ~ "Octopoda",
                         species_name == "Heptacarpus stylus" ~ "Decapoda",
+                        species_name == "Cryptolithodes sitchensis" ~ "Decapoda",
+                        species_name == "Pandulus spp." ~ "Decapoda",
                         TRUE ~ as.character(order)),
       # family
       family = case_when(species_name == "Paguroidea spp." ~ "Paguridae", 
@@ -332,9 +356,15 @@ clean_phylo_names <- function(datafile){
                          species_name == "Sebastes paucispinis" ~ "Sebastidae",
                          species_name == "Orthonopias triacis" ~ "Cottidae",
                          species_name == "Blepsias cirrhosus" ~ "Hemitripteridae",
+                         species_name == "Leptocottus armatus" ~ "Cottidae",
+                         species_name == "Gobiesox maeandricus" ~ "Gobiesocidae",
+                         species_name == "Rimicola muscarum" ~ "Gobiesocidae",
                          species_name == "Triopha spp." ~ "Polyceridae",
+                         species_name == "Melibe leonina" ~ "Tethydidae",
                          species_name == "Octopus rubescens" ~ "Octopodidae",
                          species_name == "Heptacarpus stylus" ~ "Thoridae",
+                         species_name == "Pandulus spp." ~ "Pandalidae",
+                         species_name == "Cryptolithodes sitchensis" ~ "Lithodidae",
                          TRUE ~ as.character(family)) ) %>%
         # Cut the non-animal species
         filter(species_name != "Debris - Metal") %>%
@@ -427,6 +457,7 @@ length_to_weight <- function(datafile) {
       species_name == "Porichthys notatus" ~ 0.00562*size_classs^3.16, #plainfin
       species_name == "Gibbonsia metzi" ~ 0.00513*size_classs^3.06,
       species_name == "Citharichthys stigmaeus" ~ 0.00759*size_classs^3.15,
+      species_name == "Rimicola muscarum" ~ 0.00617*size_classs^3.15, #kelp clingfish
 
       # NOW DO THE INVERTS
       
@@ -439,7 +470,10 @@ length_to_weight <- function(datafile) {
       species_name == "Scyra acutifrons" ~ 2, # Hines 1982
       family == "Epialtidae" ~ 1.235, # Hines, for Pugettia richii
       # Lithodidae
+      species_name == "Cryptolithodes sitchensis" ~ 3, # Hines 1982 small crabs avg
+      species_name == "Cryptolithodes typicus" ~ 3, # Hines 1982 small crabs avg
       family == "Lithodidae" ~ 65, # Stewart et al 2015 for Paralithodes rathbuni and Phyllolithodes papillosus
+      
       # Oregoniidae family
       family == "Oregoniidae" ~ 3, # Hines 1982 small crabs avg
       # Panopeidae
@@ -463,13 +497,14 @@ length_to_weight <- function(datafile) {
       species_name == "Leptasterias hexactis" ~ 5.5, # Menge 1975
       species_name == "Orthasterias koehleri" ~ 5.5, # Menge 1975 (Leptastarias)
       species_name == "Pisaster ochraceus" ~ 128, # Sanford 2002
-      species_name == "Stylasterias forreri" ~ 63, # Sanford + p_ochraceus 2019
+      species_name == "Pisaster brevispinus" ~ 146.18, # Peters et al 2019 for Pisaster giganteus
+      species_name == "Stylasterias forreri" ~ 63, # Sanford 2002
       family == "Asteriidae" ~ 5.5, # Menge 1975
       # Pycnopodiidae
       species_name == "Pycnopodia helianthoides" ~ exp(-3.9989)*size_class^3.133, # Lee 2016
       
       # Asterinidae
-      species_name == "Patiria miniata" ~ 26.97, # 6.83 g dry weight Peters
+      species_name == "Patiria miniata" ~ 26.97, # 6.83 g dry weight Peters et al 2019
       family == "Asterinidae" ~ 26.97, # 6.83 g dry weight Peters
       # Echinasteridae
       family == "Echinasteridae" ~ 10, # Menge 1975
@@ -481,14 +516,14 @@ length_to_weight <- function(datafile) {
       family == "Pterasteridae" ~ 5.5, # Menge 1975 (Leptastarias)
       
       # Echinoidea class
-      species_name == "Mesocentrotus franciscanus" ~ 163.41, # Peters
-      species_name == "Strongylocentrotus purpuratus" ~ 85.23, # Peters 
-      species_name == "Strongylocentrotus droebachiensis" ~ 50, # 2.2 gonad weight Siikavuopio
+      species_name == "Mesocentrotus franciscanus" ~ 163.41, # Peters et al 2019
+      species_name == "Strongylocentrotus purpuratus" ~ 85.23, # Peters et al 2019 
+      species_name == "Strongylocentrotus droebachiensis" ~ 50, # 2.2 gonad weight Siikavuopio et al 2007
       family == "Strongylocentrotidae" ~  50, #Siikavuopio
       # Purple urchins in Alaska had 20 grams wet tissue (Stewart et al 2015)
       
       # Holothuroidea
-      species_name == "Apostichopus californicus" ~ 319.31, # Peters 2019
+      species_name == "Apostichopus californicus" ~ 319.31, # Peters et al 2019 
         # 829 was the cuke avg from my measurements but I'm worried that's just a ton of water weight
       
       # MOLLUSCA
