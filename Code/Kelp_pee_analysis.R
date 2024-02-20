@@ -82,6 +82,7 @@ kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
          common_name = str_to_sentence(common_name),
          Date = dmy(Date),
          date_time_survey = ymd_hms(paste(Date, Time))) %>%
+  clean_sp_names() %>%
   left_join(read_csv("Output/Output_data/rls_phylo.csv"), by = "species_name") %>%
   clean_phylo_names() %>% # function to fix naming errors
   filter(species_name != "Tonicella spp.") %>%
