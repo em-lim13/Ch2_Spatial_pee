@@ -25,8 +25,8 @@ colnames(rls) <- colnames(rls) %>%
 # Load just the rls data so I can play with taxonomic level
 rls_sp <- read_csv("Output/Output_data/rls_species.csv", show_col_types = FALSE) %>%
   select(-c(FID, 3:18, 29:38)) %>% # cut extra columns
-  mutate(family = ifelse(species_name == "Paguroidea spp.", "Paguridae", family),
-         match = reporting_name == species_name) %>% 
+  clean_phylo_names() %>% # function to fix naming errors
+  mutate(match = reporting_name == species_name) %>% 
   separate(species_name, c("genus", "species")) %>% # the additional pieced discarded just means it dropped the period for all the spp. species
   mutate(species = ifelse(species == "spp" | species == "shrimp", NA, species),
          genus = ifelse(genus == "Cottidae" |
@@ -35,14 +35,7 @@ rls_sp <- read_csv("Output/Output_data/rls_species.csv", show_col_types = FALSE)
                           genus ==  "Brachyura" |
                           genus == "Actinopterygii" |
                           genus == "Embiotocidae" |
-                          genus == "Percidae", NA, genus),
-         order = case_when(reporting_name == "Opalia wroblewskyi" ~ "Caenogastropoda", 
-                           family == "Fissurellidae" ~ "Lepetellida",
-                           family == "Turbinidae" | 
-                             family == "Calliostomatidae" | 
-                             family == "Tegulidae" ~ "Trochida",
-                           TRUE ~ as.character(order)),
-         class = ifelse(class == "Actinopteri", "Actinopterygii", class)
+                          genus == "Percidae", NA, genus)
          )
 
 # use this to check the species with mismatching reporting vs scientific names
