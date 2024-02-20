@@ -30,6 +30,7 @@ fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
   rbind(read_csv("Data/RLS/RLS_data/cryptobenthic_fish_abundance_sizes_added.csv",
                  show_col_types = FALSE)) %>%
   as.data.frame() %>%
+  clean_phylo_names() %>% # function to fix naming errors
   mutate(survey_date = ymd(survey_date),
          year = as.factor(year(survey_date)),
          site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code)) %>%
@@ -51,16 +52,11 @@ filter(species_name != "Phoca vitulina") # Remove seal, lets just focus on inver
 # Just the mobile inverts
 invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
                    show_col_types = FALSE) %>%
+  clean_phylo_names() %>% # function to fix naming errors
   as.data.frame() %>%
   mutate(survey_date = ymd(survey_date),
          year = as.factor(year(survey_date)),
-         site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code),
-         species_name = case_when(
-           species_name == "Montereina nobilis" ~ "Peltodoris nobilis",
-           species_name == "Parastichopus californicus" ~ "Apostichopus californicus",
-           species_name == "Berthella californica" ~ "Berthella chacei",
-           species_name == "Henricia leviuscula" ~ "Henricia spp.",
-                        TRUE ~ as.character(species_name))) %>%
+         site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code)) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
 
@@ -73,7 +69,10 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
 
 # Use the a and b parameters from FishBase
 # W = exp(log(a) + b*log(L))
+# W = a*L^b
 # Cite Froese R, Thorson JT, Reyes Jr RB. A Bayesian approach for estimating length‐weight relationships in fishes. Journal of Applied Ichthyology. 2014 Feb;30(1):78-85.
+
+# Black rockfish in a paper ranged from 35.4 to 92.5 mm standard length (SL) and 1.10 to 17.78 g wet weight
 
 # Use WL relationships from fishbase to estimate weight of fish in RLS surveys
 fishes <- fish %>%
@@ -95,7 +94,7 @@ fishes <- fish %>%
 
 # now calc invert weights
 inverts <- invert %>%
-  invert_length_to_weight() %>% # use function
+  length_to_weight() %>% # use function
   mutate(biomass_per_indiv = biomass/total) %>%
   home_range() # home range + weight function, shouldn't change anything
 
@@ -111,6 +110,11 @@ rls_survey_info <- rls %>%
   unique() %>%
   mutate(date_time = ymd_hms(paste(survey_date, hour)),
          date = survey_date)
+
+# Extract phylo data! 
+# write_csv(rls %>% 
+#   select(phylum, class, order, family, species_name) %>% 
+#   unique(), "Output/Output_data/rls_phylo.csv")
 
 
 # Pivot the data wider for diversity metrics
@@ -502,6 +506,37 @@ plot_rls_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"),
 
 
 # Data exploration ------
+
+# abundant across all surveys
+all_rls <- (rls %>% select(phylum, class, order, family, species_name, total, weight_per_indiv_g)) %>%
+  rbind(kelp_rls %>% select(phylum, class, order, family, species_name, total, weight_per_indiv_g))
+
+d <- all_rls %>% count(phylum, class, order, family, species_name)
+
+e <- all_rls %>% filter(weight_per_indiv_g == 0.5) %>% count(species_name)
+  
+a <- all_rls %>% filter(species_name == "Cryptolithodes sitchensis")
+
+all_abund <- all_rls %>%
+  group_by(family) %>%
+  summarise(total = sum(total))
+
+# can I save a species list from this?
+
+# pycno size
+(rls %>% select(survey_date, species_name, size_class, total) %>% filter(species_name == "Pycnopodia helianthoides")) %>%
+  rbind(kelp_rls %>% select(Date, species_name, size_class, total) %>% rename(survey_date = Date) %>% filter(species_name == "Pycnopodia helianthoides"))  %>%
+  uncount(total) %>%
+  mutate(year = year(survey_date)) %>%
+  group_by()
+ggplot(aes(year, size_class, colour = year)) +
+  geom_jitter(width = 0.2) +
+  stat_summary(fun = "mean", geom = "point", size = 5, mapping = aes(group = year)) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 1.5, mapping = aes(group = year)) +
+  labs(x = "Date", y = "Pycno diameter (cm)") +
+  theme(legend.position = "null") +
+  scale_x_continuous(breaks = c(2021, 2022, 2023))
+
 # Data checks
 goby <- fish %>%
   filter(species_name == "Rhinogobiops nicholsii") %>%
@@ -578,12 +613,7 @@ rls_abundant <- fish %>%
   group_by(species_name) %>%
   summarise(total = sum(total))
 
-# abundant across all surveys
-all_abund <- (fish %>% transmute(species_name = species_name, total = total)) %>%
-  rbind(kelp_rls1 %>% transmute(species_name = Species, total = Total)) %>%
-  left_join(rls %>% select(species_name, family) %>% unique(), by = "species_name") %>%
-  group_by(family) %>%
-  summarise(total = sum(total))
+
 
 # where are the most urchins???
 # Can swap for any species
@@ -642,7 +672,6 @@ rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   summarise(matrix = mean(matrix))
 # 7.82
 # Go back to the 2021 data and set the ME to 7.82
-
 
 # Correlation analysis -----
 # Make a DF where we only have overlap between sites
