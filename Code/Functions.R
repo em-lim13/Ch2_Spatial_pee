@@ -559,7 +559,7 @@ length_to_weight <- function(datafile) {
 
 # Calculate scallop weight from length from MacDonald et al 1991
 # scallops length to weight
-# scallop <- read_csv("Data/RLS/scallop_l_w.csv") %>%
+# scallop <- read_csv("Data/Size_data/scallop_l_w.csv") %>%
 #  mutate(shell_height_cm = shell_height*0.1,
 #         log_weight = log(body_weight),
 #         log_shell_height = log(shell_height_cm))
@@ -571,7 +571,7 @@ length_to_weight <- function(datafile) {
 # mass = exp(-3.25924)*size_class^2.39442
 
 # Calculate mean wet weight from Peters et al 2019
-# peters <- read_csv("Data/RLS/peters_invertebrate_NH4_excretions.csv") %>%
+# peters <- read_csv("Data/Size_data/peters_invertebrate_NH4_excretions.csv") %>%
 #   unite("species", TAXON_GENUS:TAXON_SPECIES, remove = FALSE)
 # 
 # peters_avg <- peters %>%
@@ -581,14 +581,14 @@ length_to_weight <- function(datafile) {
 
 
 # Calculate means from Jasmin's data
-# schuster <- read_csv("Data/RLS/Schuster_Grazer_Weights.csv") %>%
+# schuster <- read_csv("Data/Size_data/Schuster_Grazer_Weights.csv") %>%
 #   mutate(shell_g = DryWeight_g - AshedWeight_g,
 #     flesh_g = WetWeight_g - shell_g) %>%
 #   group_by(Species) %>%
 #   summarise(avg_flesh = mean(flesh_g, na.rm=TRUE))
 
 # Calculate diameter to weight from Montgomery 2014
-# pycno <- read_csv("Data/RLS/Montgomery_pycno.csv") %>%
+# pycno <- read_csv("Data/Size_data/Montgomery_pycno.csv") %>%
 #   mutate(mass_g = 10^log_wet_mass_g,
 #          arm_length_mm = 10^log_arm_length_mm,
 #          size_class_cm = arm_length_mm*2/10,
