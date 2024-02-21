@@ -507,12 +507,18 @@ plot_rls_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"),
 
 # Data exploration ------
 
+# kill me, try to use rfishbase
+new <- length_weight(species_list = all_rls$species_name,
+                     server = getOption("FISHBASE_API", "fishbase"))
+
+new <- length_weight("Sebastes caurinus")
+
 # abundant across all surveys
 all_rls <- (rls %>% select(phylum, class, order, family, species_name, total, weight_per_indiv_g)) %>%
   rbind(kelp_rls %>% select(phylum, class, order, family, species_name, total, weight_per_indiv_g))
 
 d <- all_rls %>% count(phylum, class, order, family, species_name, weight_per_indiv_g)
-write_csv(d %>% filter(phylum != "Chordata"), "Output/Output_data/species_list.csv")
+#write_csv(d %>% filter(phylum != "Chordata"), "Output/Output_data/species_list.csv")
 
 e <- all_rls %>% filter(weight_per_indiv_g == 0.5) %>% count(species_name)
   
