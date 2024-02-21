@@ -9,6 +9,7 @@
 library(tidyverse)
 library(patchwork)
 library(renv)
+library(rfishbase)
 
 # First let's get our packages sorted out using renv
 
@@ -381,89 +382,91 @@ clean_phylo_names <- function(datafile){
 
 length_to_weight <- function(datafile) {
   new_data <- datafile %>%
-    mutate(size_classs = case_when(
-      size_class < 15 ~ size_class + 2.5, # First bump up size classes 
-      size_class < 40 ~ size_class + 5,
-      size_class == 40 ~ 50,
-      size_class == 50 ~ 62.5,
-      TRUE ~ size_class),
+    mutate(size_class_l = case_when(
+      # either use the low value or the midpoint, do a sensitivity analysis with high and low end and see if it makes  much of a difference
+      size_class < 15 ~ size_class + 1.25, # First bump up size classes 
+      size_class < 40 ~ size_class + 2.5,
+      size_class == 40 ~ 45,
+      size_class == 50 ~ 56.25,
+      size_class == 62.5 ~ 81.25,
+      size_class == 100 ~ 143.75,
+      size_class == 187.5 ~ 187.5),
       # then convert length to weight
       weight_per_indiv_g = case_when(
       
       # Blennies
-      family == "Clinidae" ~ 0.00513*size_classs^3.06,
+      family == "Clinidae" ~ 0.00513*size_class_l^3.06,
         
       # Gobies
-      species_name == "Rhinogobiops nicholsii" ~ 0.01047*size_classs^3.03,
-      family == "Gobiidae" ~ 0.01047*size_classs^3.03,
+      species_name == "Rhinogobiops nicholsii" ~ 0.01047*size_class_l^3.03,
+      family == "Gobiidae" ~ 0.01047*size_class_l^3.03,
       
       # Greenlings
-      species_name == "Hexagrammos decagrammus" ~ 0.00813*size_classs^3.13,
-      species_name == "Hexagrammos stelleri" ~ 0.00692*size_classs^3.16,
-      species_name == "Oxylebius pictus" ~ 0.01122*size_classs^3.04,
-      species_name == "Ophiodon elongatus" ~ 0.00389*size_classs^3.12,
-      species_name == "Hexagrammos spp." ~ 0.00813*size_classs^3.13,
-      family == "Hexagrammidae" ~ 0.00813*size_classs^3.13,
+      species_name == "Hexagrammos decagrammus" ~ 0.00813*size_class_l^3.13,
+      species_name == "Hexagrammos stelleri" ~ 0.00692*size_class_l^3.16,
+      species_name == "Oxylebius pictus" ~ 0.01122*size_class_l^3.04,
+      species_name == "Ophiodon elongatus" ~ 0.00389*size_class_l^3.12,
+      species_name == "Hexagrammos spp." ~ 0.00813*size_class_l^3.13,
+      family == "Hexagrammidae" ~ 0.00813*size_class_l^3.13,
              
       # Rockfish
-      family == "Sebastidae" ~ 0.01000*size_classs^3.09,
-      species_name == "Sebastes paucispinis" ~ 0.01000*size_classs^3.09,
+      family == "Sebastidae" ~ 0.01000*size_class_l^3.09,
 
       # Sculpins
-      species_name == "Jordania zonope" ~ 0.00389*size_classs^3.12,
-      species_name == "Artedius harringtoni" ~ 0.00631*size_classs^3.15,
-      species_name == "Artedius lateralis" ~ 0.00631*size_classs^3.15,
-      species_name == "Artedius fenestralis" ~ 0.00631*size_classs^3.15,
-      species_name == "Hemilepidotus hemilepidotus" ~ 0.00631*size_classs^3.15,
-      species_name == "Cottidae spp." ~ 0.00631*size_classs^3.15,
-      species_name == "Enophrys bison" ~ 0.00794*size_classs^3.13,
-      species_name == "Rhamphocottus richardsonii" ~ 0.01995*size_classs^3.01,
-      species_name == "Scorpaenichthys marmoratus" ~ 0.00389*size_classs^3.12,
-      species_name == "Oligocottus maculosus" ~ 0.00631*size_classs^3.15,
-      species_name == "Leptocottus armatus" ~ 0.01096*size_classs^3.19,
-      species_name == "Blepsias cirrhosus" ~ 0.00631*size_classs^3.14,
-      species_name == "Myoxocephalus polyacanthocephalus" ~ 0.00832*size_classs^3.14,
-      species_name == "Myoxocephalus aenaeus" ~ 0.00832*size_classs^3.14,
-      species_name == "Asemichthys taylori" ~ 0.00631*size_classs^3.15,
-      species_name == "Ascelichthys rhodorus" ~ 0.00676*size_classs^3.17,
-      species_name == "Orthonopias triacis" ~ 0.01000*size_classs^3.04,
+      species_name == "Jordania zonope" ~ 0.00389*size_class_l^3.12,
+      species_name == "Artedius harringtoni" ~ 0.00631*size_class_l^3.15,
+      species_name == "Artedius lateralis" ~ 0.00631*size_class_l^3.15,
+      species_name == "Artedius fenestralis" ~ 0.00631*size_class_l^3.15,
+      species_name == "Hemilepidotus hemilepidotus" ~ 0.00631*size_class_l^3.15,
+      species_name == "Cottidae spp." ~ 0.00631*size_class_l^3.15,
+      species_name == "Enophrys bison" ~ 0.00794*size_class_l^3.13,
+      species_name == "Rhamphocottus richardsonii" ~ 0.01995*size_class_l^3.01,
+      species_name == "Scorpaenichthys marmoratus" ~ 0.00389*size_class_l^3.12,
+      species_name == "Oligocottus maculosus" ~ 0.00631*size_class_l^3.15,
+      species_name == "Leptocottus armatus" ~ 0.01096*size_class_l^3.19,
+      species_name == "Blepsias cirrhosus" ~ 0.00631*size_class_l^3.14,
+      species_name == "Myoxocephalus polyacanthocephalus" ~ 0.00832*size_class_l^3.14,
+      species_name == "Myoxocephalus aenaeus" ~ 0.00832*size_class_l^3.14,
+      species_name == "Asemichthys taylori" ~ 0.00631*size_class_l^3.15,
+      species_name == "Ascelichthys rhodorus" ~ 0.00676*size_class_l^3.17,
+      species_name == "Orthonopias triacis" ~ 0.01000*size_class_l^3.04,
              
       #Perch
-      species_name == "Brachyistius frenatus" ~ 0.01318*size_classs^3.05,
-      species_name == "Embiotoca lateralis" ~ 0.01950*size_classs^2.97,
-      species_name == "Rhacochilus vacca" ~ 0.01950*size_classs^2.97,
-      species_name == "Cymatogaster aggregata" ~ 0.01950*size_classs^2.97,
-      species_name == "Embiotocidae spp." ~ 0.01950*size_classs^2.97,
-      species_name == "Percidae spp." ~ 0.01950*size_classs^2.97,
-      family == "Embiotocidae" ~ 0.01950*size_classs^2.97,
+      species_name == "Brachyistius frenatus" ~ 0.01318*size_class_l^3.05,
+      species_name == "Embiotoca lateralis" ~ 0.01950*size_class_l^2.97,
+      species_name == "Rhacochilus vacca" ~ 0.01950*size_class_l^2.97,
+      species_name == "Cymatogaster aggregata" ~ 0.01950*size_class_l^2.97,
+      species_name == "Embiotocidae spp." ~ 0.01950*size_class_l^2.97,
+      species_name == "Percidae spp." ~ 0.01950*size_class_l^2.97,
+      family == "Embiotocidae" ~ 0.01950*size_class_l^2.97,
       
       # Gunnels + gunnel-like fish
-      species_name == "Anarrhichthys ocellatus" ~ 0.00398*size_classs^3.17,
-      species_name == "Apodichthys flavidus" ~ 0.00102*size_classs^3.06,
-      species_name == "Pholis ornata" ~ 0.00162*size_classs^3.19,
-      species_name == "Pholis laeta" ~ 0.00162*size_classs^3.19,
-      species_name == "Pholis clemensi" ~ 0.00162*size_classs^3.19,
-      species_name == "Pholis spp." ~ 0.00162*size_classs^3.19,
-      species_name == "Lumpenus sagitta" ~ 0.00129*size_classs^2.99,
-      species_name == "Chirolophis nugator" ~ 0.00372*size_classs^3.16,
+      species_name == "Anarrhichthys ocellatus" ~ 0.00398*size_class_l^3.17,
+      species_name == "Apodichthys flavidus" ~ 0.00102*size_class_l^3.06,
+      species_name == "Pholis ornata" ~ 0.00162*size_class_l^3.19,
+      species_name == "Pholis laeta" ~ 0.00162*size_class_l^3.19,
+      species_name == "Pholis clemensi" ~ 0.00162*size_class_l^3.19,
+      species_name == "Pholis spp." ~ 0.00162*size_class_l^3.19,
+      species_name == "Lumpenus sagitta" ~ 0.00129*size_class_l^2.99,
+      species_name == "Chirolophis nugator" ~ 0.00372*size_class_l^3.16,
              
       #Misc
-      species_name == "Liparis florae" ~ 0.00525*size_classs^3.15, #snailfish
-      species_name == "Gobiesox maeandricus" ~ 0.00617*size_classs^3.15, #clingfish
-      species_name == "Aulorhynchus flavidus" ~ 0.00263*size_classs^3.14, #tubesnout
-      species_name == "Syngnathus leptorhynchus" ~ 0.00028*size_classs^3.18, #pipefish
-      species_name == "Clupea pallasii" ~ 0.00603*size_classs^3.13, #herring
-      species_name == "Gasterosteus aculeatus" ~ 0.00977*size_classs^3.09, #stickleback
-      species_name == "Porichthys notatus" ~ 0.00562*size_classs^3.16, #plainfin
-      species_name == "Gibbonsia metzi" ~ 0.00513*size_classs^3.06,
-      species_name == "Citharichthys stigmaeus" ~ 0.00759*size_classs^3.15,
-      species_name == "Rimicola muscarum" ~ 0.00617*size_classs^3.15, #kelp clingfish
+      species_name == "Liparis florae" ~ 0.00525*size_class_l^3.15, #snailfish
+      species_name == "Gobiesox maeandricus" ~ 0.00617*size_class_l^3.15, #clingfish
+      species_name == "Aulorhynchus flavidus" ~ 0.00263*size_class_l^3.14, #tubesnout
+      species_name == "Syngnathus leptorhynchus" ~ 0.00028*size_class_l^3.18, #pipefish
+      species_name == "Clupea pallasii" ~ 0.00603*size_class_l^3.13, #herring
+      species_name == "Gasterosteus aculeatus" ~ 0.00977*size_class_l^3.09, #stickleback
+      species_name == "Porichthys notatus" ~ 0.00562*size_class_l^3.16, #plainfin
+      species_name == "Gibbonsia metzi" ~ 0.00513*size_class_l^3.06,
+      species_name == "Citharichthys stigmaeus" ~ 0.00759*size_class_l^3.15,
+      species_name == "Rimicola muscarum" ~ 0.00617*size_class_l^3.15, #kelp clingfish
 
       # NOW DO THE INVERTS
       
       # ARTHROPODA
       # Cancridae family
-      species_name == "Cancer productus" ~ 200, # rough from my data
+      species_name == "Cancer productus" ~ 200, # mean wet tissue from my data
       family == "Cancridae" ~ 3, # Hines 1982 small crabs avg
       # Epialtidae family
       species_name == "Pugettia producta" ~ 46, # Hines 1982
@@ -483,6 +486,11 @@ length_to_weight <- function(datafile) {
       # Pandalidae 
       family == "Pandalidae" ~ 0.11, # McKinney et al 2004 for Palaemonetes pugio 
       species_name == "Heptacarpus stylus" ~ 0.11, # McKinney et al 2004 for Palaemonetes pugio 
+      species_name == "Unidentified shrimp" ~ 0.11, # McKinney et al 2004 for Palaemonetes pugio
+      # Porcellanidae family
+      family == "Porcellanidae" ~ 4.25, # Stillman and Somero 1996 for Petrolisthes
+      # Misc decapod
+      species_name == "Brachyura spp." ~ 3, # Hines 1982 small crabs avg
       
       # CNIDARIA
       phylum == "Cnidaria" ~ 0.01, # Båmstedt 2015
@@ -495,25 +503,25 @@ length_to_weight <- function(datafile) {
       # Asteriidae 
       species_name == "Evasterias troschelii" ~ 66.5, # lower end of O'Clair 1985 range
       species_name == "Leptasterias hexactis" ~ 5.5, # Menge 1975
-      species_name == "Orthasterias koehleri" ~ 5.5, # Menge 1975 (Leptastarias)
+      species_name == "Orthasterias koehleri" ~ 66.5, # lower end of O'Clair 1985 range
       species_name == "Pisaster ochraceus" ~ 128, # Sanford 2002
       species_name == "Pisaster brevispinus" ~ 146.18, # Peters et al 2019 for Pisaster giganteus
-      species_name == "Stylasterias forreri" ~ 63, # Sanford 2002
-      family == "Asteriidae" ~ 5.5, # Menge 1975
-      # Pycnopodiidae
+      species_name == "Stylasterias forreri" ~ 66.5, # lower end of O'Clair 1985 range
       species_name == "Pycnopodia helianthoides" ~ exp(-3.9989)*size_class^3.133, # Lee 2016
-      
+      family == "Asteriidae" ~ 5.5, # Menge 1975
       # Asterinidae
       species_name == "Patiria miniata" ~ 26.97, # 6.83 g dry weight Peters et al 2019
       family == "Asterinidae" ~ 26.97, # 6.83 g dry weight Peters
       # Echinasteridae
       family == "Echinasteridae" ~ 10, # Menge 1975
       # Asteropseidae
-      family == "Asteropseidae" ~ 26.97, # Peters et al 2019 (bat star)
+      family == "Asteropseidae" ~ 92, # Montgomery 2014
       # Goniasteridae
-      family == "Goniasteridae" ~ 5.5, # Menge 1975 (Leptastarias)
+      family == "Goniasteridae" ~ 10, # Menge 1975 (Henricia)
+      # Solasteridae
+      family == "Solasteridae" ~ 486, # Montgomery 2014 for Solaster stimpsoni
       # Pterasteridae
-      family == "Pterasteridae" ~ 5.5, # Menge 1975 (Leptastarias)
+      family == "Pterasteridae" ~ 10, # Menge 1975 (Henricia)
       
       # Echinoidea class
       species_name == "Mesocentrotus franciscanus" ~ 163.41, # Peters et al 2019
@@ -523,7 +531,7 @@ length_to_weight <- function(datafile) {
       # Purple urchins in Alaska had 20 grams wet tissue (Stewart et al 2015)
       
       # Holothuroidea
-      species_name == "Apostichopus californicus" ~ 319.31, # Peters et al 2019 
+      species_name == "Apostichopus californicus" ~ 319.31, # Peters et al 2019 for Apostichopus parvimensis
         # 829 was the cuke avg from my measurements but I'm worried that's just a ton of water weight
       
       # MOLLUSCA
@@ -539,7 +547,9 @@ length_to_weight <- function(datafile) {
       species_name == "Haliotis kamtschatkana" ~ 0.0000578*(size_class*10)^3.2, # Zhang 2007
       order == "Nudibranchia" ~  0.54, # McKinney et al 2004 gastropods
       species_name == "Triopha spp." ~  0.54, # McKinney et al 2004 gastropods
-      class == "Gastropoda" ~ 1, # ROUGH from Palmer 1982 + 1988
+      class == "Gastropoda" ~ 0.91, # Palmer 1982 for Nucella sp
+      # Flatworm
+      species_name == "Eurylepta leoparda" ~ 0.54, # McKinney et al 2004 gastropods
       
       # Everything else
       TRUE ~ as.numeric(0.5)),
@@ -601,6 +611,14 @@ length_to_weight <- function(datafile) {
 # slope = b = 3.301604
 # mass = exp(-4.368530)*size_class^3.301604
 
+# Evasterias and pisaster from Sharon Kay
+# kay <- read_csv("Data/Size_data/Kay_TableS3_FigS3_data.csv")
+# kay_avg <- kay
+#   group_by(species) %>%
+#   summarise(mean_start = mean(start_weight),
+#             mean_end = mean(end_weight))
+# pisaster <- kay %>% filter(species == "Evasterias")
+# hist(pisaster$start_weight)
 
 # old invert function
 
@@ -1108,9 +1126,9 @@ ggplot() +
   theme + 
   scale_colour_manual(values = pal2) +
   scale_fill_manual(values = pal2) +
+  geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5) +
   scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
                      labels = c("0", "0.6", "1.2", "1.8")) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5) +
   guides(size = guide_legend(override.aes = 
                                list(colour = features)),
          lty = guide_legend(override.aes = list(linewidth = 0.5))) 
