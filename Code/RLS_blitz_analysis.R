@@ -406,9 +406,38 @@ mod_brain <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + dept
 summary(mod_brain)
 plot(DHARMa::simulateResiduals(mod_brain))
 
+# weight instead of abundance
+mod_weight <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = rls_final)
+
+# simpson instead of shannon
+mod_simp <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + simpson_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = rls_final)
+
+mod_richness <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + rich_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                        family = Gamma(link = 'log'),
+                        data = rls_final)
+
+mod_simp_weight <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + simpson_stand + depth_avg_stand + (1|year) + (1|site_code), 
+                    family = Gamma(link = 'log'),
+                    data = rls_final)
+
+
+# table for publication
+AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weight) %>%
+  rownames_to_column() %>%
+  mutate(best = min(AIC),
+         delta = AIC - best,
+         likelihood = exp( -0.5*delta),
+         sum = sum(likelihood),
+         AICw = likelihood/sum) %>%
+  select(rowname, df, AIC, delta, AICw)
+
 
 # what happens when I compare these
-AIC(mod_aic, mod_brain) # ok so obvi the AIC mod is the best, I should probably just stick with that
+AIC(mod_aic, mod_brain,mod_brain_weight) # ok so obvi the AIC mod is the best, I should probably just stick with that
 # Use AIC to get predictors, then show the coefficients and a model output
 
 
