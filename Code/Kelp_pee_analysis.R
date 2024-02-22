@@ -13,6 +13,8 @@ library(lubridate)
 library(DHARMa)
 library(broom.mixed)
 library(dotwhisker)
+library(ggeffects)
+
 
 # set theme and load functions
 theme_set(theme_bw())
@@ -100,13 +102,13 @@ kelp_rls <- kelp_rls1 %>%
   
 
 # save csv for mapping 
-  #kelp_rls_csv <- kelp_rls %>%
-  #  transmute(site_code = site_code,
-  #            latitude = Latitude,
-  #            longitude = Longitude) %>%
-  #  unique()
-  #
-  #write_csv(kelp_rls_csv, "Output/Output_data/kelp_rls.csv")
+#  kelp_rls_csv <- kelp_rls %>%
+#    transmute(site_code = site_code,
+#              latitude = Latitude,
+#              longitude = Longitude) %>%
+#    unique()
+#  
+#  write_csv(kelp_rls_csv, "Output/Output_data/kelp_rls.csv")
 
 
 # extract just one row per survey to join with the pee data and tide data
@@ -321,6 +323,40 @@ mod_in_out <- glmmTMB(in_minus_out ~ kelp_sp +
 
 plot(simulateResiduals(mod_in_out)) # looks fine
 summary(mod_in_out)
+
+# biomass and abundance, shannon vs simpson checks
+mod_abund <- glmmTMB(in_minus_out ~ kelp_sp +
+                        kelp_bio_scale*tide_scale*abundance_scale + 
+                        shannon_scale + depth_scale - 
+                        kelp_bio_scale:tide_scale:abundance_scale +
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data)
+
+mod_simp <- glmmTMB(in_minus_out ~ kelp_sp +
+                        kelp_bio_scale*tide_scale*weight_sum_scale + 
+                        simpson_scale + depth_scale - 
+                        kelp_bio_scale:tide_scale:weight_sum_scale +
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data)
+
+mod_abund_simp <- glmmTMB(in_minus_out ~ kelp_sp +
+                       kelp_bio_scale*tide_scale*abundance_scale + 
+                         simpson_scale + depth_scale - 
+                       kelp_bio_scale:tide_scale:abundance_scale +
+                       (1|site_code),
+                     family = 'gaussian',
+                     data = data)
+
+AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
+  rownames_to_column() %>%
+  mutate(best = min(AIC),
+         delta = AIC - best,
+         likelihood = exp( -0.5*delta),
+         sum = sum(likelihood),
+         AICw = likelihood/sum) %>%
+  select(rowname, df, AIC, delta, AICw)
 
 # run the model without an intercept
 mod_in_out2 <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
@@ -562,6 +598,12 @@ ggplot(data = data_s,
   scale_colour_manual(values = pal5) +
   scale_fill_manual(values = pal5)
 
+# fucking around -----
+
+kcca_table <- pee %>%
+  select(site_code, date) %>%
+  unique() %>%
+  filter(site_code != "KCCA13")
 
 
 
