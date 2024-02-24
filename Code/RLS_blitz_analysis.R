@@ -255,22 +255,28 @@ rls_final <-
   # scale and center variables here
   mutate(
     # the biomass + abundance variables
-    weight_sum_stand = c(scale(weight_sum)),
-    fish_weight_sum_stand = c(scale(fish_weight_sum)),
-    fish_weight_weighted_stand = c(scale(fish_weight_weighted)),
-    all_weighted_stand = c(scale(all_weight_weighted)),
-    abundance_stand = c(scale(abundance)),
+    weight_sum_scale = c(scale(weight_sum)),
+    fish_weight_sum_scale = c(scale(fish_weight_sum)),
+    fish_weight_weighted_scale = c(scale(fish_weight_weighted)),
+    all_weighted_scale = c(scale(all_weight_weighted)),
+    abundance_scale = c(scale(abundance)),
     # biodiversity variables
-    rich_stand = c(scale(species_richness)),
-    shannon_stand = c(scale(shannon)),
-    simpson_stand = c(scale(simpson)),
+    rich_scale = c(scale(species_richness)),
+    shannon_scale = c(scale(shannon)),
+    simpson_scale = c(scale(simpson)),
     # abiotic variables I should control for
-    depth_avg_stand = c(scale(depth_avg)),
-    tide_stand = c(scale(avg_exchange_rate)),
+    depth_avg_scale = c(scale(depth_avg)),
+    tide_scale = c(scale(avg_exchange_rate)),
     tide_cat = factor(as.factor(case_when(avg_exchange_rate < -0.1897325 ~ "Ebb",
                          avg_exchange_rate < 0.1897325 ~ "Slack",
                          avg_exchange_rate > 0.1897325 ~ "Flood")),
-                      levels = c("Ebb", "Slack", "Flood"))
+                      levels = c("Ebb", "Slack", "Flood")),
+    # center instead of scale
+    abundance_center = c(scale(abundance, scale = FALSE)),
+    tide_center = c(scale(avg_exchange_rate, scale = FALSE)),
+    shannon_center = c(scale(shannon, scale = FALSE)),
+    depth_center = c(scale(depth_avg, scale = FALSE)),
+    
   )
 
 
@@ -310,14 +316,14 @@ ggplot(rls_final, aes(x = nh4_avg)) +
 # Gamma is likely the best bet for this!
 
 # Build full model with gaussian distribution
-# mod_norm_full <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+# mod_norm_full <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
 #                          family = 'gaussian',
 #                          data = rls_final)
 # plot(simulateResiduals(mod_norm_full)) 
 
 
 # Build full model with gamma distribution
-# mod_gam_full <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+# mod_gam_full <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
 #                         family = Gamma(link = 'log'),
 #                         data = rls_final)
 # plot(simulateResiduals(mod_gam_full)) 
@@ -375,7 +381,7 @@ ggplot(rls_final, aes(x = nh4_avg)) +
 
 
 # I ran through dredging this model:
-mod_all <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_all <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                    family = Gamma(link = 'log'),
                    data = rls_final,
                    na.action = na.fail)
@@ -385,11 +391,11 @@ plot(DHARMa::simulateResiduals(mod_all))
 # dredge <- as.data.frame(dredge(mod_all)) %>% filter(delta < 3)
 
 # Best according to AIC: just intercept, lol
-# Second best = abundance_stand*tide_stand
+# Second best = abundance_scale*tide_scale
 # Third best = just tide
 
 # so the best AIC model
-mod_aic <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + (1|year) + (1|site_code), 
+mod_aic <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + (1|year) + (1|site_code), 
                    family = Gamma(link = 'log'),
                    data = rls_final)
 summary(mod_aic)
@@ -400,27 +406,27 @@ plot(DHARMa::simulateResiduals(mod_aic))
 # And I prefer shannon diversity over richness bc it's a "better" biodiversity measure
 # And I want to drop depth bc it doesn't seem to matter...
 
-mod_brain <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_brain <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                    family = Gamma(link = 'log'),
                    data = rls_final)
 summary(mod_brain)
 plot(DHARMa::simulateResiduals(mod_brain))
 
 # weight instead of abundance
-mod_weight <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + shannon_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = rls_final)
 
 # simpson instead of shannon
-mod_simp <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + simpson_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_simp <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + simpson_scale + depth_avg_scale + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = rls_final)
 
-mod_richness <- glmmTMB(nh4_avg ~ abundance_stand*tide_stand + rich_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_richness <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + rich_scale + depth_avg_scale + (1|year) + (1|site_code), 
                         family = Gamma(link = 'log'),
                         data = rls_final)
 
-mod_simp_weight <- glmmTMB(nh4_avg ~ weight_sum_stand*tide_stand + simpson_stand + depth_avg_stand + (1|year) + (1|site_code), 
+mod_simp_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + simpson_scale + depth_avg_scale + (1|year) + (1|site_code), 
                     family = Gamma(link = 'log'),
                     data = rls_final)
 
@@ -441,10 +447,18 @@ AIC(mod_aic, mod_brain,mod_brain_weight) # ok so obvi the AIC mod is the best, I
 # Use AIC to get predictors, then show the coefficients and a model output
 
 
+# centered variables instead of scaled for estimates
+mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center* tide_center + shannon_center + depth_center + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = rls_final)
+summary(mod_brain)
+plot(DHARMa::simulateResiduals(mod_brain))
+
+
 # Step 4: Check for collinearity of predictors
 
 # car can't handle random effects so make a simplified mod
-car::vif(lm(nh4_avg ~ abundance_stand + tide_stand + shannon_stand + depth_avg_stand, data = rls_final))
+car::vif(lm(nh4_avg ~ abundance_scale + tide_scale + shannon_scale + depth_avg_scale, data = rls_final))
 # All good, shannon is a little high
 
 
@@ -476,7 +490,7 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
          lower_CI = ifelse(variable == "(Intercept)", exp(lower_CI), lower_CI),
          upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI),
          variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "abundance_stand", "tide_stand", "abundance_stand:tide_stand", "shannon_stand", "depth_avg_stand"),
+                           levels = c("(Intercept)", "abundance_scale", "tide_scale", "abundance_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
                            labels = c("Intercept", "Abundance", "Tide", "Abundance:tide", "Biodiversity", "Depth")))
 
 
@@ -491,12 +505,12 @@ rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs,
 # Plot abundance vs nh4 -----
 tide_means <- rls_final %>%
   group_by(tide_cat) %>%
-  summarise(tide = mean(tide_stand))
+  summarise(tide = mean(tide_scale))
   
 v <- c(-1.067, -0.279, 1.066)
 
-predict <- ggpredict(mod_brain, terms = c("abundance_stand", "tide_stand [v]")) %>% 
-  mutate(abundance_stand = x,
+predict <- ggpredict(mod_brain, terms = c("abundance_scale", "tide_scale [v]")) %>% 
+  mutate(abundance_scale = x,
          tide_cat = factor(as.factor(case_when(group == "-1.067" ~ "Ebb",
                               group == "-0.279" ~ "Slack",
                               group == "1.066" ~ "Flood")),
