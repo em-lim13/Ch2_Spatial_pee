@@ -79,7 +79,7 @@ summary(mod_cu)
 
 # Crab stats ----
 # gamma (positive and continuous) is better than gaussian!
-mod_cr_gamma <- glmmTMB(nh4_conc ~ treatment + (1|day), 
+mod_cr_gamma <- glmmTMB(nh4_conc ~ treatment + (1|day) +(1|week), 
                  family = Gamma(link = "log"),
                  crab_pee)
 
