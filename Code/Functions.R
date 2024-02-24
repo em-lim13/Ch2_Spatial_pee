@@ -1068,13 +1068,13 @@ plot_rls_pred <- function(raw_data, predict_data, theme_white){
   
 ggplot() + 
   geom_point(data = raw_data, 
-             aes(x = abundance_stand, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
+             aes(x = abundance_scale, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
              alpha = 0.8, size = 3) +
   geom_line(data = predict_data,
-            aes(x = abundance_stand, y = predicted, colour = tide_cat),
+            aes(x = abundance_scale, y = predicted, colour = tide_cat),
             linewidth = 2) +
   geom_ribbon(data = predict_data,
-              aes(x = abundance_stand, y = predicted, fill = tide_cat,
+              aes(x = abundance_scale, y = predicted, fill = tide_cat,
                   ymin = conf.low, ymax = conf.high), 
               alpha = 0.15) +
   labs(y = expression(paste("Ammonium ", (mu*M))), 
@@ -1167,5 +1167,12 @@ scale_vars <- function(datafile){
                                          ifelse(avg_exchange_rate < 0.1897325, "Slack", "Flood"))),
                         levels = c("Ebb", "Slack", "Flood")),
       # only slack and flood
+      
+      # try to center instead of scaling
+      kelp_bio_center = c(scale(BiomassM, scale = FALSE)),
+      tide_center = c(scale(avg_exchange_rate, scale = FALSE)),
+      weight_sum_center = c(scale(weight_sum, scale = FALSE)),
+      shannon_center = c(scale(shannon, scale = FALSE)),
+      depth_center = c(scale(depth_avg, scale = FALSE))
     ) 
 }
