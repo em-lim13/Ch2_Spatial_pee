@@ -305,7 +305,7 @@ mod_tran <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale*weight_su
 # best = kelp_bio_scale*tide_scale*weight_sum_scale + kelp_sp + shannon_scale 
 # second best is the same + bio_tran_scale
 
-mod_best <- glmmTMB(in_minus_out ~ +kelp_sp + kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + (1|site_code), 
+mod_best <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + (1|site_code), 
                     family = 'gaussian',
                     data = data)
 
@@ -368,6 +368,17 @@ mod_in_out2 <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
                       data = data)
 summary(mod_in_out2)
 
+# center instead of scale for estimates in normal units
+mod_in_out_c <- glmmTMB(in_minus_out ~ - 1 +kelp_sp +
+                          kelp_bio_center*tide_center*weight_sum_center + 
+                          shannon_center + depth_center - 
+                          kelp_bio_center:tide_center:weight_sum_center +
+                          (1|site_code),
+                        family = 'gaussian',
+                        data = data)
+
+summary(mod_in_out_c)
+
 # Step 4: Check for collinearity of predictors
 
 # car can't handle random effects so make a simplified mod
@@ -419,17 +430,17 @@ tide_means_kelp <- data %>%
   group_by(tide_cat) %>%
   summarise(tide = mean(tide_scale))
 
-v2 <- c(1.5020449, -0.5006816)
+v2 <- c(as.numeric(tide_means_kelp[2,2]), as.numeric(tide_means_kelp[1,2]))
 
 # now make predictions
 predict_kelp <- ggpredict(mod_in_out, terms = c("kelp_bio_scale", "tide_scale [v2]")) %>% 
   mutate(kelp_bio_scale = x,
-         tide_cat = factor(as.factor(ifelse(group == "-0.5006816", "Slack", "Flood")),
+         tide_cat = factor(as.factor(ifelse(group == as.character(tide_means_kelp[1,2]), "Slack", "Flood")),
          levels = c("Ebb", "Slack", "Flood"))
          ) %>%
   filter(tide_cat != "Flood" | kelp_bio_scale < 0.21) %>%
   filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
-  
+
 
 # now plot these predictions
 kelp_pred_plot <- plot_kelp_pred(raw_data = data, 
@@ -443,7 +454,7 @@ kelp_pred_plot <- plot_kelp_pred(raw_data = data,
 # Figure 3 for pub with white -----
 kelp_coeff_plot + kelp_pred_plot
 
-# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+#ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 
