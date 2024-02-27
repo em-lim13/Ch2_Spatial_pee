@@ -20,7 +20,8 @@ source("Code/Functions.R")
 cuke_pee <- read_csv("Output/Output_data/cuke_cages.csv") %>%
   rename(nh4_avg = nh4_conc) %>%
   mutate(cukes = factor(cukes, levels = c("Control", "Mid", "High"),
-                        labels = c("Control", "Medium", "Large"))) %>%
+                        labels = c("Control", "Medium", "Large")),
+         depth_center = c(scale(depth, scale = FALSE))) %>%
   as.data.frame()
 
 # load crab data ------
@@ -55,18 +56,18 @@ crab_labels <- c(Control = "Control",
 
 # Cuke stats -----
 # start with regular gaussian, gamma is worse!
-mod_cu <- glmmTMB(nh4_avg ~ cukes + depth_stand,
+mod_cu <- glmmTMB(nh4_avg ~ cukes + depth_center,
                cuke_pee)
 
 plot(simulateResiduals(mod_cu))
 
 # add interactions?
-mod_cu2 <- glmmTMB(nh4_avg ~ cukes * depth_stand * line
+mod_cu2 <- glmmTMB(nh4_avg ~ cukes * depth_center * line
                    - cukes:depth_stand:line,
                    cuke_pee)
 
 # random effect of line?
-mod_cu3 <- glmmTMB(nh4_avg ~ cukes + depth_stand + (1|line),
+mod_cu3 <- glmmTMB(nh4_avg ~ cukes + depth_center + (1|line),
                    cuke_pee)
 
 AIC(mod_cu, mod_cu2, mod_cu3) # fewer interactions is better
@@ -76,6 +77,7 @@ AIC(mod_cu, mod_cu2, mod_cu3) # fewer interactions is better
 
 # look at model output
 summary(mod_cu)
+
 
 # Crab stats ----
 # gamma (positive and continuous) is better than gaussian!
@@ -93,6 +95,7 @@ AIC(mod_cr_gamma, mod_cr_gamma2)
 # OK so let's use the gamma!
 
 summary(mod_cr_gamma)
+
 
 #Graphing time folks-------
 
