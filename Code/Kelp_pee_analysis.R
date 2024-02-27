@@ -31,28 +31,34 @@ names <- read_csv("Data/Team_kelp/Output_data/site_names.csv")
 
 # transect level kelp biomass + density data from Claire
 kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
-  as.data.frame() %>%
-  mutate(sample = ifelse(Transect == 0, 1, 
-                  ifelse(Transect == 5, 2, 3)),
-         kelp_sp = as.factor(ifelse(Kelp == 0, "none",
-                          ifelse(Macro_5m2 == 0, "nereo", 
-                                 ifelse(Nereo_5m2 == "0", "macro", "mixed")))),
-         # but the "mixed" kelps are actually mostly macro
-         kelp_sp = case_when(kelp_sp == "mixed" ~ "macro", 
-                             TRUE ~ as.character(kelp_sp))) %>%
+  as.data.frame() %>% 
+  mutate(sample = case_when(Transect == 0 ~ 1, 
+                            Transect == 5 ~ 2,
+                            Transect == 10 ~ 3),
+         kelp_sp = as.factor(case_when(
+           Kelp == 0 ~ "none", # no kelp = none
+           SiteName == "Wizard Islet North" ~ "none", # no kelp site that had 2 nereo
+           Macro_5m2 == 0 ~ "nereo", # no macro = nereo
+           TRUE ~ as.character("macro"))) # everything else = macro
+         ) %>% 
   left_join(names, by = "SiteName") %>% 
   replace(is.na(.), 0) %>%
   # Add the averaged site level variables from Claire!
   left_join(read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv"), by = "SiteName") %>%
   group_by(SiteName) %>%
   mutate(BiomassM = mean(Biomassm2kg),
-         Area_m2 = ifelse(Composition == "None", 0, 
-                          ifelse(site_code == "KCCA19", 0.1, Area_m2))) %>%
+         Area_m2 = ifelse(kelp_sp == "none", 0, Area_m2)) %>%
   ungroup() %>%
   rename(kelp_den = Kelp,
-         site_name = SiteName) %>% 
-  filter(Transect != "15") 
+         site_name = SiteName) %>%
+filter(Transect != "15")
+  
     #select(site_code, SiteName, HeightT, BiomassTkg, Biomassm2kg, sample) 
+
+# Less dangerous bay was the "real" no kelp control!!!!
+# Sand town was a super weird outlier, I think that was the site we messed up the samples from, that's AOKAY!!! phew
+# both dropped from Claire's stuff because she's not looking at no kelp sites
+
 
 # Transect level variables:
   # BiomassTkg is kelp density x average biomass for each transect
@@ -208,23 +214,20 @@ data_all <- pee %>%
   # diversity indexes
   left_join(kelp_rls_wide, by = "survey_id") %>%
   # join tide exchange data
-  left_join(tide_exchange_kcca, by = "survey_id") 
+  left_join(tide_exchange_kcca, by = "survey_id")
 
 
 # Remove Second Beach South for in vs out
 data <- data_all %>%
   filter(site_name != "Second Beach South") %>%
-  # I think I want to keep the no kelp data in the model?
-#  filter(Composition != "None") %>%
-#  mutate(kelp_sp = if_else(kelp_sp == "none", "nereo", kelp_sp)) %>%
   # scale factors using function
-  scale_vars()
+  scale_vars() 
 
 # reduced data to export a file for mapping
 data_map <- data %>%
   select(site, site_code, survey_id, in_out_avg, nh4_in_avg, nh4_out_avg, nh4_avg, depth_avg, avg_exchange_rate, kelp_sp, BiomassM, kelp_bio_scale, forest_bio_scale, weight_sum, weight_sum_scale, all_weighted_scale, abundance_scale, rich_scale, shannon_scale, simpson_scale, tide_scale, depth_scale, tide_cat) %>%
-  unique() %>%
-  filter(site != "Wizard_I_North" | kelp_sp != "none") # just getting rid of the duplicate row, bc there wasn't kelp on one transect unique misses this one
+  unique()
+#  filter(site != "Wizard_I_North" | kelp_sp != "none") # just getting rid of the duplicate row, bc there wasn't kelp on one transect unique misses this one
 
 # write_csv(data_map, "Output/Output_data/kelp_final.csv")
   
@@ -289,10 +292,16 @@ ggplot(data, aes(x = in_minus_out)) +
 # Build full model with gaussian distribution
 # This is the transect level model
 # One row per transect, 3 per site
-mod_tran <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale*weight_sum_scale + bio_tran_scale + shannon_scale + depth_scale + (1|site_code), 
-                         family = 'gaussian',
-                         data = data,
+mod_tran <- glmmTMB(in_minus_out ~ -1 + kelp_sp + 
+                      kelp_bio_scale*tide_scale*weight_sum_scale + 
+                      bio_tran_scale + shannon_scale + depth_scale + 
+                      (1|site_code),
+                    family = 'gaussian',
+                    data = data,
                     na.action = na.fail)
+
+plot(simulateResiduals(mod_tran)) # looks fine
+summary(mod_tran)
 
 # Dredge to find best combo of variables
 # dredge <- as.data.frame(dredge(mod_tran)) %>% filter(delta < 3)
@@ -300,10 +309,6 @@ mod_tran <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale*weight_su
 # Without second beach:
 # best = kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + kelp_sp 
 # second best = same + weight_sum_scale:tide_scale
-
-# with Second beach:
-# best = kelp_bio_scale*tide_scale*weight_sum_scale + kelp_sp + shannon_scale 
-# second best is the same + bio_tran_scale
 
 mod_best <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + (1|site_code), 
                     family = 'gaussian',
@@ -349,6 +354,23 @@ mod_abund_simp <- glmmTMB(in_minus_out ~ kelp_sp +
                      family = 'gaussian',
                      data = data)
 
+mod_tran <- glmmTMB(in_minus_out ~ kelp_sp +
+                      bio_tran_scale*tide_scale*weight_sum_scale + 
+                      shannon_scale + depth_scale - 
+                      bio_tran_scale:tide_scale:weight_sum_scale +
+                      (1|site_code),
+                      family = 'gaussian',
+                      data = data)
+
+mod_forest <- glmmTMB(in_minus_out ~ kelp_sp +
+                        forest_bio_scale*tide_scale*weight_sum_scale + 
+                        shannon_scale + depth_scale - 
+                        forest_bio_scale:tide_scale:weight_sum_scale +
+                        (1|site_code),
+                    family = 'gaussian',
+                    data = data)
+
+
 AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
   rownames_to_column() %>%
   mutate(best = min(AIC),
@@ -369,7 +391,7 @@ mod_in_out2 <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
 summary(mod_in_out2)
 
 # center instead of scale for estimates in normal units
-mod_in_out_c <- glmmTMB(in_minus_out ~ - 1 +kelp_sp +
+mod_in_out_c <- glmmTMB(in_minus_out ~ - 1 + kelp_sp +
                           kelp_bio_center*tide_center*weight_sum_center + 
                           shannon_center + depth_center - 
                           kelp_bio_center:tide_center:weight_sum_center +
@@ -382,7 +404,7 @@ summary(mod_in_out_c)
 # Step 4: Check for collinearity of predictors
 
 # car can't handle random effects so make a simplified mod
-car::vif(lm(in_minus_out ~ kelp_bio_scale + tide_scale + weight_sum_scale + shannon_scale + kelp_sp + depth_scale, data = data))
+car::vif(lm(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + weight_sum_scale + shannon_scale +  depth_scale, data = data))
 # Yep this looks fine!
 
 
@@ -619,4 +641,5 @@ kcca_table <- pee %>%
 
 
 # Graveyard ------
-
+data2 <- data %>%
+  select(site, kelp_sp, Composition)
