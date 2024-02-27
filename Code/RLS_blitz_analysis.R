@@ -448,11 +448,17 @@ AIC(mod_aic, mod_brain,mod_brain_weight) # ok so obvi the AIC mod is the best, I
 
 
 # centered variables instead of scaled for estimates
-mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center* tide_center + shannon_center + depth_center + (1|year) + (1|site_code), 
+mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center*tide_center + shannon_center + depth_center + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = rls_final)
-summary(mod_brain)
-plot(DHARMa::simulateResiduals(mod_brain))
+
+mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center*tide_center + shannon_center + depth_center + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = rls_final)
+
+
+summary(mod_brain_c)
+plot(DHARMa::simulateResiduals(mod_brain_c))
 
 
 # Step 4: Check for collinearity of predictors
