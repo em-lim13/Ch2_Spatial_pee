@@ -416,9 +416,9 @@ car::vif(lm(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + weight_sum_sc
 # Graphing ------
 
 # Palettes
-pal12 <- viridis::viridis(12)
-pal <- viridis::viridis(10)
-pal2 <- c(pal[8], pal[5])
+pal12 <- viridis::viridis(11)
+pal_k <- viridis::viridis(10)
+pal2 <- c(pal_k[8], pal_k[5])
 
 # Save model coefficients 
 # use the no intercept model for plotting
@@ -439,7 +439,8 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
 # Use function to plot coefficients
 kelp_coeff_plot <- coeff_plot(coeff_df = df,
                               pal = pal12,
-                              theme_white = TRUE)
+                              theme_white = TRUE) +
+  place_label("(a)")
 
 # ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 8, width = 12, dpi = 400)
 
@@ -467,8 +468,20 @@ predict_kelp <- ggpredict(mod_in_out, terms = c("kelp_bio_scale", "tide_scale [v
 # now plot these predictions
 kelp_pred_plot <- plot_kelp_pred(raw_data = data, 
                                  predict_data = predict_kelp, 
-                                 theme_white = TRUE) 
+                                 pal = pal2,
+                                 theme_white = TRUE) +
+  place_label("(b)")
 
+# try again with new function
+plot_pred(raw_data = (data %>%
+                        mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
+          predict_data = predict_kelp, 
+          plot_type = "kelp",
+          x_var = kelp_bio_scale, y_var = in_minus_out, 
+          lty_var = tide_cat,
+          size_var = weight_sum, 
+          pal = pal2) +
+  place_label("(b)")
 
 # ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 12, dpi = 400)
 
@@ -476,7 +489,7 @@ kelp_pred_plot <- plot_kelp_pred(raw_data = data,
 # Figure 3 for pub with white -----
 kelp_coeff_plot + kelp_pred_plot
 
-#ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+#ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 
