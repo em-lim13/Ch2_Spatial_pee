@@ -5,9 +5,20 @@
 
 # Fuck me I guess
 
+# run one random forest with abundance data in the species cells, and one with the biomass of each species on each survey in each cell
+
+# also remember to split inverts and fish
+  # densities are different! the rectangles were different
+  # maybe split M1 vs M2???
+
+# should i convert my current abundance/biomass 
+
 # Load packages
 library(tidyverse)
 library(randomForest)
+
+# try using rfsrc
+library(randomForestSRC)
 
 # Load data from RLS Blitz analysis
 # rls_final is the df I've been analysing, with a row for each survey
@@ -49,7 +60,7 @@ rls_sp <- read_csv("Output/Output_data/rls_species.csv", show_col_types = FALSE)
 species <- rls_sp %>%
   group_by(genus, species) %>%
   summarise()
-# 110 groups
+# 125 groups
 
 # try grouping by genus 
 genus <- rls_sp %>%
@@ -62,7 +73,7 @@ family <- rls_sp %>%
   group_by(family) %>%
   summarise(n_genus = n_distinct(genus),
             n_species = n_distinct(species))
-# 65 groups
+# 63 groups
 
 # try grouping by order 
 order <- rls_sp %>%
@@ -70,7 +81,7 @@ order <- rls_sp %>%
   summarise(n_family = n_distinct(family),
             n_genus = n_distinct(genus),
             n_species = n_distinct(species))
-# 31 groups
+# 26 groups
 
 # try grouping by class 
 class <- rls_sp %>%
