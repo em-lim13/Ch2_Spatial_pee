@@ -1114,12 +1114,12 @@ plot_pred <- function(raw_data, predict_data,
     new_plot <- base_pred_plot +
 #      scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
 #                         labels = c("300", "600", "900", "1200", "1500")) +
-#      ylim(0, 3) +
+      ylim(0, 3.21) +
       labs(y = expression(paste("Ammonium ", (mu*M))), 
-           x = expression(paste("Animals (#/m"^2,")")),
-           
-           x = "Animal density (#/m2)") +
+           x = expression(paste("Animal abundance/m"^2))) +
       scale_size(guide = 'none') +
+      scale_fill_manual(values = pal, drop = FALSE) +
+      scale_colour_manual(values = (pal3), drop = FALSE) +
       theme(legend.position = c(0.85, 0.89))
       
   }

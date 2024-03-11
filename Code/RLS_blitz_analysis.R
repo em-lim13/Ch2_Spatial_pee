@@ -513,8 +513,7 @@ rls_coeffs <- confint(mod_den, level = 0.95, method = c("wald"), component = c("
 
 # Coefficient plot 
 rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs, 
-                             pal = pal6,
-                             theme = "black") +
+                             pal = pal6) +
   place_label("(a)")
 
 
@@ -545,39 +544,54 @@ rls_pred_plot <-
           predict_data = predict, 
           plot_type = "rls",
           x_var = density, y_var = nh4_avg, 
-          pal = pal3) +
+          pal = pal3,
+          theme = "white") +
   place_label("(b)")
 
-# ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 12, dpi = 400)
-
-# White background for Fig 2 -----
-
-
+# White background for Fig 2
 rls_coeff_plot + rls_pred_plot 
   
 #  plot_annotation(tag_levels = 'a') &
 #  theme(plot.tag.position = c(0, 1),
 #        plot.tag = element_text(hjust = -1, vjust = 0))
 
-ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+#ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
-# Figs for presentations
+# Figs for presentations -----
 # just plot each line one by one for the model prediction vs raw data plot
 # just ebb
-plot_rls_pred(raw_data = rls_final %>% filter(tide_cat == "Ebb"), 
-              predict_data = predict %>% filter(tide_cat == "Ebb"),
-              theme_white = FALSE)
+plot_pred(raw_data = rls_final %>% filter(tide_cat == "Ebb"),
+          predict_data = predict %>% filter(tide_cat == "Ebb"),
+          plot_type = "rls",
+          x_var = density, y_var = nh4_avg, 
+          pal = pal3,
+          theme = "black") +
+  theme(legend.position = "right") 
 
-#ggsave("Output/Figures/nh4_abund_tide_ebb.png", device = "png", height = 9, width = 12, dpi = 400)
+#ggsave("Output/Figures/Fig3ba.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # add slack
-plot_rls_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"), 
-              predict_data = predict %>% filter(tide_cat != "Flood"),
-              theme_white = FALSE)
+plot_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"), 
+          predict_data = predict %>% filter(tide_cat != "Flood"),
+          plot_type = "rls",
+          x_var = density, y_var = nh4_avg, 
+          pal = pal3,
+          theme = "black") +
+  theme(legend.position = "right") 
 
-#ggsave("Output/Figures/nh4_abund_tide_ebb_slack.png", device = "png", height = 9, width = 12, dpi = 400)
+#ggsave("Output/Figures/Fig3bb.png", device = "png", height = 9, width = 12, dpi = 400)
 
+# all of it
+plot_pred(raw_data = rls_final, 
+          predict_data = predict,
+          plot_type = "rls",
+          x_var = density, y_var = nh4_avg, 
+          pal = pal3,
+          theme = "black") +
+  theme(legend.position = "right") 
+
+#ggsave("Output/Figures/Fig3b.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # Data exploration ------
