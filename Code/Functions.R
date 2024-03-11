@@ -30,8 +30,8 @@ theme_black = function(base_size = 12, base_family = "") {
       axis.text.x = element_text(size = base_size*2, color = "white", lineheight = 0.9),  
       axis.text.y = element_text(size = base_size*2, color = "white", lineheight = 0.9),  
       axis.ticks = element_line(color = "white", linewidth  =  0.2),  
-      axis.title.x = element_text(size = base_size*2.5, color = "white", margin = margin(0, 10, 0, 0)),  
-      axis.title.y = element_text(size = base_size*2.5, color = "white", angle = 90, margin = margin(0, 10, 0, 0)),  
+      axis.title.x = element_text(size = base_size*2.5, color = "white", margin = ggplot2::margin(0, 10, 0, 0)),  
+      axis.title.y = element_text(size = base_size*2.5, color = "white", angle = 90, margin = ggplot2::margin(0, 10, 0, 0)),  
       axis.ticks.length = unit(0.3, "lines"),   
       # Specify legend options
       legend.background = element_rect(color = NA, fill = "black"),  
@@ -77,8 +77,8 @@ theme_white = function(base_size = 12, base_family = "") {
       axis.text.x = element_text(size = base_size*2, color = "black", lineheight = 0.9),  
       axis.text.y = element_text(size = base_size*2, color = "black", lineheight = 0.9),  
       axis.ticks = element_line(color = "black", linewidth  =  0.2),  
-      axis.title.x = element_text(size = base_size*2.5, color = "black", margin = margin(0, 10, 0, 0)),  
-      axis.title.y = element_text(size = base_size*2.5, color = "black", angle = 90, margin = margin(0, 10, 0, 0)),  
+      axis.title.x = element_text(size = base_size*2.5, color = "black", margin = ggplot2::margin(0, 10, 0, 0)),  
+      axis.title.y = element_text(size = base_size*2.5, color = "black", angle = 90, margin = ggplot2::margin(0, 10, 0, 0)),  
       axis.ticks.length = unit(0.3, "lines"),   
       # Specify legend options
       legend.background = element_rect(color = NA, fill = "white"),  
@@ -975,8 +975,14 @@ map_daddy_np <- function(lat_min, lat_max, long_min, long_max,
 
 # Plotting -----
 
+# Annotation -----
+place_label <- function(label, size = 10, ...) {
+  annotate("text", label = label, x = -Inf, y = Inf, 
+           vjust = 1.4, hjust = -0.15, size = size, ...)
+}
+
 # Dot Whisker Plot -----
-dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, theme_white){
+dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, pal, theme_white = TRUE){
   
   if(theme_white == TRUE){
     theme <- theme_white()
@@ -988,7 +994,7 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, theme_white){
   ggplot() +
     geom_point(data = {{sum_data}},
                aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}),
-               size = 6) +
+               size = 8) +
     geom_errorbar(data = {{sum_data}},
                   aes(x = {{x_var}},
                       y = {{y_var}},
@@ -999,11 +1005,11 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, theme_white){
                   linewidth = 1.5) +
     geom_jitter(data = {{all_data}}, 
                 aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}), 
-                size = 5, alpha = 0.5, height=0) +
+                size = 5, alpha = 0.5, height=0, width = 0.3) +
     theme + 
     theme(legend.position = "none",
           plot.title = element_text(size = 30)) +
-    scale_colour_manual(values = rev(pal3)) +
+    scale_colour_manual(values = rev(pal)) +
     labs(y = expression(paste("Ammonium"~(mu*M))), x = " ") +
     ylim(c(0, 3.8)) +
     scale_x_discrete(labels = {{labels}}) +
@@ -1055,7 +1061,13 @@ coeff_plot <- function(coeff_df, pal, theme_white){
 
 # Plot model predictions ----
 
-plot_rls_pred <- function(raw_data, predict_data, theme_white){
+plot_pred <- function(raw_data, predict_data, 
+                      plot_type,
+                      x_var, y_var, 
+                      lty_var = NULL,
+                      size_var = 3, 
+                      pal,
+                      theme_white = TRUE){
   
   if(theme_white == TRUE){
     theme <- theme_white()
@@ -1066,72 +1078,57 @@ plot_rls_pred <- function(raw_data, predict_data, theme_white){
     features <- "white"
   }
   
-ggplot() + 
-  geom_point(data = raw_data, 
-             aes(x = abundance_scale, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
-             alpha = 0.8, size = 3) +
-  geom_line(data = predict_data,
-            aes(x = abundance_scale, y = predicted, colour = tide_cat),
-            linewidth = 2) +
-  geom_ribbon(data = predict_data,
-              aes(x = abundance_scale, y = predicted, fill = tide_cat,
-                  ymin = conf.low, ymax = conf.high), 
-              alpha = 0.15) +
-  labs(y = expression(paste("Ammonium ", (mu*M))), 
-       x = "Animal abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
-  theme +
-  scale_colour_manual(values = (pal3), drop = FALSE) +
-  scale_fill_manual(values = (pal3), drop = FALSE) +
-  scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
-                     labels = c("300", "600", "900", "1200", "1500")) +
-  ylim(0, 3)
+  base_pred_plot <-  ggplot() + 
+    geom_point(data = raw_data, 
+               aes(x = {{x_var}}, y = {{y_var}}, 
+                   colour = tide_cat, fill = tide_cat,
+                   size = {{size_var}}), 
+               alpha = 0.8) +
+    geom_line(data = predict_data,
+              aes(x = {{x_var}}, y = predicted, 
+                  colour = tide_cat, lty = {{lty_var}}),
+              linewidth = 2) +
+    geom_ribbon(data = predict_data,
+                aes(x = {{x_var}}, y = predicted, fill = tide_cat,
+                    ymin = conf.low, ymax = conf.high), 
+                alpha = 0.15) +
+    labs(colour = "Tide", fill = "Tide", lty = "Tide") +
+    theme +
+    scale_colour_manual(values = (pal)) +
+    scale_fill_manual(values = (pal))
+  
+  # then add bells and whistles for kelp plot
+  if(plot_type == "kelp"){
+    new_plot <- base_pred_plot +
+      scale_size_continuous(range = c(0.5, 10),
+                            limits = c(0, 110)) +
+      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
+      guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
+             size = guide_legend(override.aes = list(colour = features)) )  +
+      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
+                         labels = c("0", "0.6", "1.2", "1.8")) +
+      labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
+           x = expression(paste("Kelp biomass (kg/m"^2,")")),
+           size = "Animals (kg)")
+  }
+  
+  # extras for rls plot
+  if(plot_type == "rls"){
+    new_plot <- base_pred_plot +
+#      scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
+#                         labels = c("300", "600", "900", "1200", "1500")) +
+#      ylim(0, 3) +
+      labs(y = expression(paste("Ammonium ", (mu*M))), 
+           x = expression(paste("Animals (#/m"^2,")")),
+           
+           x = "Animal density (#/m2)") +
+      scale_size(guide = 'none') +
+      theme(legend.position = c(0.85, 0.89))
+      
+  }
+  print(new_plot)
 }
 
-# Plot kelp pee model predictions
-plot_kelp_pred <- function(raw_data, predict_data, theme_white){
-  
-  if(theme_white == TRUE){
-    theme <- theme_white()
-    features <- "black"
-  }
-  if(theme_white == FALSE){
-    theme <- theme_black()
-    features <- "white"
-  }
-  
-ggplot() + 
-  geom_point(data = raw_data %>%
-               mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood")) , 
-             aes(x = kelp_bio_scale, y = in_minus_out,
-                 size = weight_sum,
-                 colour = tide_cat,
-                 fill = tide_cat), alpha = 0.8) +
-  geom_line(data = predict_data,
-            aes(x = kelp_bio_scale, y = predicted, lty = tide_cat, colour = tide_cat),
-            linewidth = 1.5) +
-  geom_ribbon(data = predict_data,
-              aes(x = kelp_bio_scale, y = predicted, 
-                  fill = tide_cat,
-                  ymin = conf.low, ymax = conf.high), 
-              alpha = 0.2) +
-  labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-       x = expression(paste("Kelp biomass (kg/m"^2,")")),
-       colour = "Tide", fill = "Tide",
-       lty = "Tide",
-       size = "Animals (kg)") +
-  scale_size_continuous(range = c(0.5, 10),
-                        limits = c(0, 110)) +
-  theme + 
-  scale_colour_manual(values = pal2) +
-  scale_fill_manual(values = pal2) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
-  guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
-         size = guide_legend(override.aes = list(colour = features))
-         )  +
-  scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
-                     labels = c("0", "0.6", "1.2", "1.8")) 
-
-}
 
 # Standardize variables -----
 
