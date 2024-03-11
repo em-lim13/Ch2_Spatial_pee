@@ -99,7 +99,9 @@ inverts <- invert %>%
   home_range() # home range + weight function, shouldn't change anything
 
 # Join all rls data together
-rls <- rbind(fishes, inverts)
+rls <- rbind(fishes, inverts) %>%
+  mutate(density_m2 = case_when(method == 1 ~ total/500,
+                                method == 2 ~ total/100))
 
 #write_csv(rls, "Output/Output_data/rls_species.csv")
 
@@ -247,7 +249,9 @@ rls_final <-
               summarize(weight_sum = sum(weight_size_class_sum),
                         all_weight_weighted = sum(weight_weighted),
                         species_richness = n_distinct(species_name),
-                        abundance = sum(total))) %>%
+                        abundance = sum(total),
+                        density = sum(density_m2))
+            ) %>%
   # diversity indexes
   left_join(rls_wide, by = "survey_id") %>%
   # tide exchange 
@@ -260,6 +264,7 @@ rls_final <-
     fish_weight_weighted_scale = c(scale(fish_weight_weighted)),
     all_weighted_scale = c(scale(all_weight_weighted)),
     abundance_scale = c(scale(abundance)),
+    den_scale = c(scale(density)),
     # biodiversity variables
     rich_scale = c(scale(species_richness)),
     shannon_scale = c(scale(shannon)),
@@ -273,10 +278,10 @@ rls_final <-
                       levels = c("Ebb", "Slack", "Flood")),
     # center instead of scale
     abundance_center = c(scale(abundance, scale = FALSE)),
+    den_center = c(scale(density, scale = FALSE)),
     tide_center = c(scale(avg_exchange_rate, scale = FALSE)),
     shannon_center = c(scale(shannon, scale = FALSE)),
-    depth_center = c(scale(depth_avg, scale = FALSE)),
-    
+    depth_center = c(scale(depth_avg, scale = FALSE))
   )
 
 
@@ -412,6 +417,13 @@ mod_brain <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + shannon_scale + dept
 summary(mod_brain)
 plot(DHARMa::simulateResiduals(mod_brain))
 
+# density instead of abundance
+mod_den <- glmmTMB(nh4_avg ~ den_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = rls_final)
+summary(mod_den)
+plot(DHARMa::simulateResiduals(mod_brain))
+
 # weight instead of abundance
 mod_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
@@ -432,7 +444,7 @@ mod_simp_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + simpson_scale
 
 
 # table for publication
-AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weight) %>%
+AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weight, mod_den) %>%
   rownames_to_column() %>%
   mutate(best = min(AIC),
          delta = AIC - best,
@@ -443,7 +455,7 @@ AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weigh
 
 
 # what happens when I compare these
-AIC(mod_aic, mod_brain,mod_brain_weight) # ok so obvi the AIC mod is the best, I should probably just stick with that
+AIC(mod_aic, mod_brain, mod_den) # ok so obvi the AIC mod is the best, I should probably just stick with that
 # Use AIC to get predictors, then show the coefficients and a model output
 
 
@@ -452,13 +464,12 @@ mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center*tide_center + shannon_center +
                      family = Gamma(link = 'log'),
                      data = rls_final)
 
-mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center*tide_center + shannon_center + depth_center + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = rls_final)
-
-
 summary(mod_brain_c)
-plot(DHARMa::simulateResiduals(mod_brain_c))
+
+# centered variables instead of scaled for estimates
+mod_den_c <- glmmTMB(nh4_avg ~ den_center*tide_center + shannon_center + depth_center + (1|year) + (1|site_code), 
+                       family = Gamma(link = 'log'),
+                       data = rls_final)
 
 
 # Step 4: Check for collinearity of predictors
@@ -477,14 +488,14 @@ pal6 <- viridis::viridis(6)
 pal <- viridis::viridis(10)
 pal3 <- c(pal[10], pal[8], pal[5])
 
-pie(rep(1, 10), col = pal)
+#pie(rep(1, 10), col = pal)
 
 
 # Coefficient plot of the model ----
 
 # generate coefficients
 # try using emtrends to generate standard error/ confidence intervals around slope estimates
-rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+rls_coeffs <- confint(mod_den, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
   rownames_to_column() %>%
   rename(variable = rowname,
@@ -496,44 +507,59 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
          lower_CI = ifelse(variable == "(Intercept)", exp(lower_CI), lower_CI),
          upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI),
          variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "abundance_scale", "tide_scale", "abundance_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
-                           labels = c("Intercept", "Abundance", "Tide", "Abundance:tide", "Biodiversity", "Depth")))
+                           levels = c("(Intercept)", "den_scale", "tide_scale", "den_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
+                           labels = c("Intercept", "Density", "Tide", "Density:tide", "Biodiversity", "Depth")))
 
 
 # Coefficient plot 
 rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs, 
                              pal = pal6, 
-                             theme_white = TRUE)
+                             theme_white = TRUE)+
+  place_label("(a)")
+
 
 # ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # Plot abundance vs nh4 -----
+mod_den_plot <- glmmTMB(nh4_avg ~ density*tide_scale + shannon_center + depth_center + (1|year) + (1|site_code), 
+                        family = Gamma(link = 'log'),
+                        data = rls_final)
+
 tide_means <- rls_final %>%
   group_by(tide_cat) %>%
   summarise(tide = mean(tide_scale))
   
 v <- c(-1.067, -0.279, 1.066)
 
-predict <- ggpredict(mod_brain, terms = c("abundance_scale", "tide_scale [v]")) %>% 
-  mutate(abundance_scale = x,
+predict <- ggpredict(mod_den_plot, terms = c("density", "tide_scale [v]")) %>% 
+  mutate(density = x,
          tide_cat = factor(as.factor(case_when(group == "-1.067" ~ "Ebb",
                               group == "-0.279" ~ "Slack",
                               group == "1.066" ~ "Flood")),
                            levels = c("Ebb", "Slack", "Flood")))
 
 # now plot these predictions
-rls_pred_plot <- plot_rls_pred(raw_data = rls_final, 
-                               predict_data = predict,
-                               theme_white = TRUE) +
-  theme(legend.position = c(0.85, 0.9))
+rls_pred_plot <- 
+  plot_pred(raw_data = rls_final,
+          predict_data = predict, 
+          plot_type = "rls",
+          x_var = density, y_var = nh4_avg, 
+          pal = pal3) +
+  place_label("(b)")
 
-#ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 12, dpi = 400)
+# ggsave("Output/Figures/nh4_abund_tide.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # White background for Fig 2 -----
-rls_coeff_plot + rls_pred_plot
 
-# ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
+
+rls_coeff_plot + rls_pred_plot 
+  
+#  plot_annotation(tag_levels = 'a') &
+#  theme(plot.tag.position = c(0, 1),
+#        plot.tag = element_text(hjust = -1, vjust = 0))
+
+ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Figs for presentations
