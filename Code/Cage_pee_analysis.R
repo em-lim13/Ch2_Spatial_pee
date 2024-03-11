@@ -100,8 +100,8 @@ summary(mod_cr_gamma)
 #Graphing time folks-------
 
 # palettes
-pal <- viridis::viridis(6)
-pal3 <- c(pal[1], pal[3], pal[5])
+pal_cu <- viridis::viridis(6)
+pal_c <- c(pal_cu[1], pal_cu[3], pal_cu[5])
 
 # use ggpredict to get estimates for the cuke model
 sum_cukes <- ggpredict(mod_cu, terms = "cukes") %>% 
@@ -122,7 +122,8 @@ cuke_plot <- dot_whisker(sum_data = sum_cukes,
                          x_var = cukes, 
                          y_var = nh4_avg, 
                          labels = cuke_labels,
-                         theme_white = TRUE)
+                         pal = pal_c) +
+  place_label("(a)")
 
 # plot crabs
 crab_plot <- dot_whisker(sum_data = sum_crabs, 
@@ -130,14 +131,14 @@ crab_plot <- dot_whisker(sum_data = sum_crabs,
                          x_var = treatment,
                          y_var = nh4_avg,
                          labels = crab_labels,
-                         theme_white = TRUE)
+                         pal = pal_c) +
+  place_label("(b)")
 
 # plot together
-cuke_plot + crab_plot + 
-  plot_annotation(tag_levels = "a")
+cuke_plot + crab_plot 
 
 # Fig 4 white background for pub ----
-ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 9, width = 16, dpi = 400)
+#ggsave("Output/Pub_figs/Fig5.png", device = "png", height = 9, width = 16, dpi = 400)
 
 #ggsave("Output/Figures/both_cages.png", device = "png", height = 7, width = 16, dpi = 400)
 # og is 9 x 16
