@@ -1,5 +1,85 @@
 # Graveyard ----
 
+# old functions -----
+# Plot kelp pee model predictions
+plot_kelp_pred <- function(raw_data, predict_data, pal, theme_white){
+  
+  if(theme_white == TRUE){
+    theme <- theme_white()
+    features <- "black"
+  }
+  if(theme_white == FALSE){
+    theme <- theme_black()
+    features <- "white"
+  }
+  
+  ggplot() + 
+    geom_point(data = raw_data %>%
+                 mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood")) , 
+               aes(x = kelp_bio_scale, y = in_minus_out,
+                   size = weight_sum,
+                   colour = tide_cat,
+                   fill = tide_cat), alpha = 0.8) +
+    geom_line(data = predict_data,
+              aes(x = kelp_bio_scale, y = predicted, lty = tide_cat, colour = tide_cat),
+              linewidth = 1.5) +
+    geom_ribbon(data = predict_data,
+                aes(x = kelp_bio_scale, y = predicted, 
+                    fill = tide_cat,
+                    ymin = conf.low, ymax = conf.high), 
+                alpha = 0.2) +
+    labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
+         x = expression(paste("Kelp biomass (kg/m"^2,")")),
+         colour = "Tide", fill = "Tide",
+         lty = "Tide",
+         size = "Animals (kg)") +
+    scale_size_continuous(range = c(0.5, 10),
+                          limits = c(0, 110)) +
+    theme + 
+    scale_colour_manual(values = pal) +
+    scale_fill_manual(values = pal) +
+    geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
+    guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
+           size = guide_legend(override.aes = list(colour = features))
+    )  +
+    scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
+                       labels = c("0", "0.6", "1.2", "1.8")) 
+  
+}
+
+plot_rls_pred <- function(raw_data, predict_data, theme_white){
+  
+  if(theme_white == TRUE){
+    theme <- theme_white()
+    features <- "black"
+  }
+  if(theme_white == FALSE){
+    theme <- theme_black()
+    features <- "white"
+  }
+  
+  ggplot() + 
+    geom_point(data = raw_data, 
+               aes(x = abundance_scale, y = nh4_avg, colour = tide_cat, fill = tide_cat), 
+               alpha = 0.8, size = 3) +
+    geom_line(data = predict_data,
+              aes(x = abundance_scale, y = predicted, colour = tide_cat),
+              linewidth = 2) +
+    geom_ribbon(data = predict_data,
+                aes(x = abundance_scale, y = predicted, fill = tide_cat,
+                    ymin = conf.low, ymax = conf.high), 
+                alpha = 0.15) +
+    labs(y = expression(paste("Ammonium ", (mu*M))), 
+         x = "Animal abundance", colour = "Tide", fill = "Tide", lty = "Tide") +
+    theme +
+    scale_colour_manual(values = (pal3), drop = FALSE) +
+    scale_fill_manual(values = (pal3), drop = FALSE) +
+    scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
+                       labels = c("300", "600", "900", "1200", "1500")) +
+    ylim(0, 3)
+}
+
+
 # RLS graveyard -----
 
 # plotting graveyard
