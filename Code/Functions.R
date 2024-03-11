@@ -1097,11 +1097,12 @@ plot_pred <- function(raw_data, predict_data,
   # then add bells and whistles for kelp plot
   if(plot_type == "kelp"){
     new_plot <- base_pred_plot +
-      scale_size_continuous(range = c(0.5, 10),
-                            limits = c(0, 110)) +
+#      scale_size_continuous(range = c(0.5, 10),
+#                            limits = c(0, 110)) +
       geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
       guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
-             size = guide_legend(override.aes = list(colour = features)) )  +
+             size = guide_legend(override.aes = list(colour = features)),
+             colour = guide_legend(override.aes = list(size = 2)))  +
       scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
                          labels = c("0", "0.6", "1.2", "1.8")) +
       labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
@@ -1114,7 +1115,7 @@ plot_pred <- function(raw_data, predict_data,
     new_plot <- base_pred_plot +
 #      scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
 #                         labels = c("300", "600", "900", "1200", "1500")) +
-      ylim(0, 3.21) +
+      ylim(0, 3.671) +
       labs(y = expression(paste("Ammonium ", (mu*M))), 
            x = expression(paste("Animal abundance/m"^2))) +
       scale_size(guide = 'none') +
