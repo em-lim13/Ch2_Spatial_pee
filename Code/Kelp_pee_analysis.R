@@ -39,6 +39,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
            Kelp == 0 ~ "none", # no kelp = none
            SiteName == "Wizard Islet North" ~ "none", # no kelp site that had 2 nereo
            Macro_5m2 == 0 ~ "nereo", # no macro = nereo
+           Nereo_5m2 == 0 ~ "macro",
            TRUE ~ as.character("macro"))) # everything else = macro
          ) %>% 
   left_join(names, by = "SiteName") %>% 
@@ -75,37 +76,44 @@ pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
 
 
 # RLS data ----
-kelp_rls1 <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
+kelp_rls <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
+  # processing required to get this df into the RLS data format
   as.data.frame() %>%
   filter(Method != 0) %>% # get rid of all method 0's
   slice(2:n()) %>% # cuts the first blank row
+  # rename columns
   rename(
     site_code = `Site No.`,
     site_name = `Site Name`, 
     common_name = `Common name`,
     `0` = Inverts,
-    species_name = Species
-  )  %>% # Rename columns with spaces
+    species_name = Species,
+    method = Method
+  )  %>% 
+  # Rename columns with spaces
   mutate(species_name = str_to_sentence(species_name),
          common_name = str_to_sentence(common_name),
          Date = dmy(Date),
          date_time_survey = ymd_hms(paste(Date, Time))) %>%
+  # use function to fix species naming errors
   clean_sp_names() %>%
+  # join phylo names from the rls blitz data
   left_join(read_csv("Output/Output_data/rls_phylo.csv"), by = "species_name") %>%
   clean_phylo_names() %>% # function to fix naming errors
-  filter(species_name != "Tonicella spp.") %>%
-  filter(species_name != "Cryptochiton stelleri")
-
-# Pivot longer for biomass
-kelp_rls <- kelp_rls1 %>%
+  filter(species_name != "Tonicella spp.") %>% # remove chitons
+  filter(species_name != "Cryptochiton stelleri") %>%
+  # Pivot longer for biomass
   pivot_longer( cols = `0`:`400`, names_to = "size_class", values_to = "total") %>%
-  mutate(size_class = as.numeric(size_class)) %>%
   drop_na(total) %>%
   filter(total > 0) %>%
   select(-Total) %>%
+  mutate(size_class = as.numeric(size_class),
+         # correct for rectangle area
+         total = case_when(method == 1 ~ total/500,
+                           method == 2 ~ total/100)) %>%
   length_to_weight() %>% # fish length to weight function
-  home_range() # calculate each fish's home range function
-  
+  home_range()  # calculate each fish's home range function
+
 
 # save csv for mapping 
 #  kelp_rls_csv <- kelp_rls %>%
@@ -438,10 +446,11 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
 
 # Use function to plot coefficients
 kelp_coeff_plot <- coeff_plot(coeff_df = df,
-                              pal = pal12) +
+                              pal = pal12,
+                              theme = "black") +
   place_label("(a)")
 
-# ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 8, width = 12, dpi = 400)
+#ggsave("Output/Pres_figs/Fig4a.png", device = "png", height = 8, width = 12, dpi = 400)
 
 
 # Model predictions against raw data plot
@@ -465,30 +474,25 @@ predict_kelp <- ggpredict(mod_in_out, terms = c("kelp_bio_scale", "tide_scale [v
 
 
 # now plot these predictions
-kelp_pred_plot <- plot_kelp_pred(raw_data = data, 
-                                 predict_data = predict_kelp, 
-                                 pal = pal2,
-                                 theme_white = TRUE) +
-  place_label("(b)")
-
-# try again with new function
-plot_pred(raw_data = (data %>%
+kelp_pred_plot <- plot_pred(raw_data = (data %>%
                         mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
           predict_data = predict_kelp, 
           plot_type = "kelp",
           x_var = kelp_bio_scale, y_var = in_minus_out, 
           lty_var = tide_cat,
           size_var = weight_sum, 
-          pal = pal2) +
+          pal = pal2,
+          theme = "black") +
+#  ylim(c(-0.5, 0.8))
   place_label("(b)")
 
-# ggsave("Output/Figures/kelp_in_out_mod_predict.png", device = "png", height = 9, width = 12, dpi = 400)
+#ggsave("Output/Pres_figs/Fig4b.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
-# Figure 3 for pub with white -----
+# Figure 4 for pub with white -----
 kelp_coeff_plot + kelp_pred_plot
 
-#ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 9, width = 16, dpi = 400)
+#ggsave("Output/Pub_figs/Fig4b.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 
@@ -644,6 +648,16 @@ ggplot(data = data_s,
   scale_fill_manual(values = pal5)
 
 # fucking around -----
+
+ggplot(data) +
+  geom_point(aes(BiomassM, nh4_inside, shape = kelp_sp, colour = "inside")) +
+  geom_point(aes(BiomassM, nh4_outside, shape = kelp_sp, colour = "outside")) +
+  geom_point(aes(BiomassM, in_minus_out, shape = kelp_sp, colour = "delta"), size = 3) +
+  geom_hline(yintercept= 0, linetype = "dashed", linewidth = 0.5) 
+  
+  
+  
+
 
 kcca_table <- pee %>%
   select(site_code, date) %>%
