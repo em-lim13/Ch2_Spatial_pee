@@ -40,7 +40,10 @@ fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
     species_name == "Artedius harringtoni" & size_class == 0 ~ 5,
     species_name == "Jordania zonope" & size_class == 0 ~ 5,
     species_name == "Oxylebius pictus" & size_class == 0 ~ 12.5,
-    TRUE ~ as.numeric(size_class))) %>%
+    TRUE ~ as.numeric(size_class)),
+    # correct for rectangle area
+    total = case_when(method == 1 ~ total/500,
+                      method == 2 ~ total/100)) %>%
   filter(species_name != "Myoxocephalus aenaeus") %>% # Remove east coast fish
 filter(species_name != "Phoca vitulina") # Remove seal, lets just focus on inverts and fish
   
@@ -56,7 +59,10 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
   as.data.frame() %>%
   mutate(survey_date = ymd(survey_date),
          year = as.factor(year(survey_date)),
-         site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code)) %>%
+         site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code),
+         # correct for rectangle area
+         total = case_when(method == 1 ~ total/500,
+                           method == 2 ~ total/100)) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
 
@@ -99,9 +105,7 @@ inverts <- invert %>%
   home_range() # home range + weight function, shouldn't change anything
 
 # Join all rls data together
-rls <- rbind(fishes, inverts) %>%
-  mutate(density_m2 = case_when(method == 1 ~ total/500,
-                                method == 2 ~ total/100))
+rls <- rbind(fishes, inverts)
 
 #write_csv(rls, "Output/Output_data/rls_species.csv")
 
@@ -249,8 +253,7 @@ rls_final <-
               summarize(weight_sum = sum(weight_size_class_sum),
                         all_weight_weighted = sum(weight_weighted),
                         species_richness = n_distinct(species_name),
-                        abundance = sum(total),
-                        density = sum(density_m2))
+                        abundance = sum(total))
             ) %>%
   # diversity indexes
   left_join(rls_wide, by = "survey_id") %>%
@@ -264,7 +267,6 @@ rls_final <-
     fish_weight_weighted_scale = c(scale(fish_weight_weighted)),
     all_weighted_scale = c(scale(all_weight_weighted)),
     abundance_scale = c(scale(abundance)),
-    den_scale = c(scale(density)),
     # biodiversity variables
     rich_scale = c(scale(species_richness)),
     shannon_scale = c(scale(shannon)),
@@ -278,7 +280,6 @@ rls_final <-
                       levels = c("Ebb", "Slack", "Flood")),
     # center instead of scale
     abundance_center = c(scale(abundance, scale = FALSE)),
-    den_center = c(scale(density, scale = FALSE)),
     tide_center = c(scale(avg_exchange_rate, scale = FALSE)),
     shannon_center = c(scale(shannon, scale = FALSE)),
     depth_center = c(scale(depth_avg, scale = FALSE))
@@ -417,13 +418,6 @@ mod_brain <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + shannon_scale + dept
 summary(mod_brain)
 plot(DHARMa::simulateResiduals(mod_brain))
 
-# density instead of abundance
-mod_den <- glmmTMB(nh4_avg ~ den_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = rls_final)
-summary(mod_den)
-plot(DHARMa::simulateResiduals(mod_brain))
-
 # weight instead of abundance
 mod_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
@@ -444,7 +438,7 @@ mod_simp_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + simpson_scale
 
 
 # table for publication
-AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weight, mod_den) %>%
+AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weight) %>%
   rownames_to_column() %>%
   mutate(best = min(AIC),
          delta = AIC - best,
@@ -455,7 +449,7 @@ AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weigh
 
 
 # what happens when I compare these
-AIC(mod_aic, mod_brain, mod_den) # ok so obvi the AIC mod is the best, I should probably just stick with that
+AIC(mod_aic, mod_brain) # ok so obvi the AIC mod is the best, I should probably just stick with that
 # Use AIC to get predictors, then show the coefficients and a model output
 
 
@@ -465,11 +459,6 @@ mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center*tide_center + shannon_center +
                      data = rls_final)
 
 summary(mod_brain_c)
-
-# centered variables instead of scaled for estimates
-mod_den_c <- glmmTMB(nh4_avg ~ den_center*tide_center + shannon_center + depth_center + (1|year) + (1|site_code), 
-                       family = Gamma(link = 'log'),
-                       data = rls_final)
 
 
 # Step 4: Check for collinearity of predictors
@@ -495,7 +484,7 @@ pal3 <- c(pal[10], pal[8], pal[5])
 
 # generate coefficients
 # try using emtrends to generate standard error/ confidence intervals around slope estimates
-rls_coeffs <- confint(mod_den, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
   rownames_to_column() %>%
   rename(variable = rowname,
@@ -507,8 +496,8 @@ rls_coeffs <- confint(mod_den, level = 0.95, method = c("wald"), component = c("
          lower_CI = ifelse(variable == "(Intercept)", exp(lower_CI), lower_CI),
          upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI),
          variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "den_scale", "tide_scale", "den_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
-                           labels = c("Intercept", "Density", "Tide", "Density:tide", "Biodiversity", "Depth")))
+                           levels = c("(Intercept)", "abundance_scale", "tide_scale", "abundance_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
+                           labels = c("Intercept", "Abundance", "Tide", "Abundance:tide", "Biodiversity", "Depth")))
 
 
 # Coefficient plot 
@@ -521,9 +510,10 @@ rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs,
 
 
 # Plot abundance vs nh4 -----
-mod_den_plot <- glmmTMB(nh4_avg ~ density*tide_scale + shannon_center + depth_center + (1|year) + (1|site_code), 
-                        family = Gamma(link = 'log'),
-                        data = rls_final)
+mod_pred_plot <- glmmTMB(nh4_avg ~ abundance*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = rls_final)
+
 
 tide_means <- rls_final %>%
   group_by(tide_cat) %>%
@@ -531,8 +521,8 @@ tide_means <- rls_final %>%
   
 v <- c(-1.067, -0.279, 1.066)
 
-predict <- ggpredict(mod_den_plot, terms = c("density", "tide_scale [v]")) %>% 
-  mutate(density = x,
+predict <- ggpredict(mod_pred_plot, terms = c("abundance", "tide_scale [v]")) %>% 
+  mutate(abundance = x,
          tide_cat = factor(as.factor(case_when(group == "-1.067" ~ "Ebb",
                               group == "-0.279" ~ "Slack",
                               group == "1.066" ~ "Flood")),
@@ -543,7 +533,7 @@ rls_pred_plot <-
   plot_pred(raw_data = rls_final,
           predict_data = predict, 
           plot_type = "rls",
-          x_var = density, y_var = nh4_avg, 
+          x_var = abundance, y_var = nh4_avg, 
           pal = pal3,
           theme = "white") +
   place_label("(b)")
@@ -564,34 +554,34 @@ rls_coeff_plot + rls_pred_plot
 plot_pred(raw_data = rls_final %>% filter(tide_cat == "Ebb"),
           predict_data = predict %>% filter(tide_cat == "Ebb"),
           plot_type = "rls",
-          x_var = density, y_var = nh4_avg, 
+          x_var = abundance, y_var = nh4_avg, 
           pal = pal3,
           theme = "black") +
   theme(legend.position = "right") 
 
-#ggsave("Output/Figures/Fig3ba.png", device = "png", height = 9, width = 12, dpi = 400)
+#ggsave("Output/Pres_figs/Fig3ba.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # add slack
 plot_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"), 
           predict_data = predict %>% filter(tide_cat != "Flood"),
           plot_type = "rls",
-          x_var = density, y_var = nh4_avg, 
+          x_var = abundance, y_var = nh4_avg, 
           pal = pal3,
           theme = "black") +
   theme(legend.position = "right") 
 
-#ggsave("Output/Figures/Fig3bb.png", device = "png", height = 9, width = 12, dpi = 400)
+#ggsave("Output/Pres_figs/Fig3bb.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # all of it
 plot_pred(raw_data = rls_final, 
           predict_data = predict,
           plot_type = "rls",
-          x_var = density, y_var = nh4_avg, 
+          x_var = abundance, y_var = nh4_avg, 
           pal = pal3,
           theme = "black") +
   theme(legend.position = "right") 
 
-#ggsave("Output/Figures/Fig3b.png", device = "png", height = 9, width = 12, dpi = 400)
+#ggsave("Output/Pres_figs/Fig3b.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # Data exploration ------
