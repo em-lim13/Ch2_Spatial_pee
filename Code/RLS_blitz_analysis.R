@@ -513,8 +513,8 @@ rls_coeffs <- confint(mod_den, level = 0.95, method = c("wald"), component = c("
 
 # Coefficient plot 
 rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs, 
-                             pal = pal6, 
-                             theme_white = TRUE)+
+                             pal = pal6,
+                             theme = "black") +
   place_label("(a)")
 
 

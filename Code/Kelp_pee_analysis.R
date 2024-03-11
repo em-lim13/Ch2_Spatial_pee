@@ -438,8 +438,7 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
 
 # Use function to plot coefficients
 kelp_coeff_plot <- coeff_plot(coeff_df = df,
-                              pal = pal12,
-                              theme_white = TRUE) +
+                              pal = pal12) +
   place_label("(a)")
 
 # ggsave("Output/Figures/kelp_in_out_mod_coeff.png", device = "png", height = 8, width = 12, dpi = 400)

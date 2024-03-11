@@ -1035,13 +1035,12 @@ alt_dot_whisker <- function(data_frame, x_var, y_var, group, labels){
 }
 
 # Coeff plots -----
-coeff_plot <- function(coeff_df, pal, theme_white){
+coeff_plot <- function(coeff_df, pal, theme = "white"){
   
-  if(theme_white == TRUE){
+  if(theme == "white"){
     theme <- theme_white()
     features <- "black"
-  }
-  if(theme_white == FALSE){
+  } else {
     theme <- theme_black()
     features <- "white"
   }
@@ -1067,13 +1066,11 @@ plot_pred <- function(raw_data, predict_data,
                       lty_var = NULL,
                       size_var = 3, 
                       pal,
-                      theme_white = TRUE){
-  
-  if(theme_white == TRUE){
+                      theme = "white"){
+  if(theme == "white"){
     theme <- theme_white()
     features <- "black"
-  }
-  if(theme_white == FALSE){
+  } else {
     theme <- theme_black()
     features <- "white"
   }
