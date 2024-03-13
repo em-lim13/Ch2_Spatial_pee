@@ -306,6 +306,149 @@ rls_final <-
 # ebb = > 0.1958187
 
 
+# Dataframe with one row for each family ------
+
+# Make a dataframe where each family we saw on a survey gets a row
+# If we didn't see a certain family on that survey, it doesn't get a row
+# No zeros for abundance!
+family_df_no0_a <- rls_final %>%
+  select(site, site_code, survey_id, year, nh4_avg, depth_avg_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
+  left_join((rls %>%
+               mutate(family = as.factor(family))%>%
+              group_by(survey_id, method, phylum, family) %>%
+              summarise(total_fam = sum(total),
+                        weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
+            by = "survey_id") %>%
+  mutate(abund_fam_scale = c(scale(total_fam)),
+         weight_fam_scale = c(scale(weight_fam_sum_g)))
+  
+# Make another dataframe where each family we saw on any M1 or M2 survey gets a row for each survey
+# If we didn't see a certain family on that survey, it DOES get a row
+# We will have zeros for abundance!
+m1 <- rls %>%
+  filter(method == 1) %>%
+  mutate(family = as.factor(family))%>%
+  group_by(survey_id, method, phylum, family, .drop = FALSE) %>%
+  summarise(total_fam = sum(total),
+            weight_fam_sum_g = 1000*sum(weight_size_class_sum))
+
+m2 <- rls %>%
+  filter(method == 2) %>%
+  mutate(family = as.factor(family))%>%
+  group_by(survey_id, method, phylum, family, .drop = FALSE) %>%
+  summarise(total_fam = sum(total),
+            weight_fam_sum_g = 1000*sum(weight_size_class_sum))
+
+m12 <- rbind(m1, m2)
+
+# put the df with zeros together
+family_df_0s_a <- rls_final %>%
+  select(site, site_code, survey_id, year, nh4_avg, depth_avg_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
+  left_join(m12, by = "survey_id") %>%
+  mutate(abund_fam_scale = c(scale(total_fam)),
+         weight_fam_scale = c(scale(weight_fam_sum_g)))
+
+# what are the top families?
+
+# df for just the surveys I'm looking at
+rls_sm <- rls_final %>%
+  select(survey_id) %>%
+  unique() %>%
+  left_join(rls, by = "survey_id")
+
+# CHOOSE THE FAMILIES TO INCLUDE
+# rank of families by total abundance (density)
+fam_list_total <- rls_sm %>%
+  group_by(family) %>%
+  summarise(sum = sum(total)) %>%
+  drop_na(family) %>%
+  arrange(desc(sum)) %>%
+  transmute(family = family, 
+            sum_total = sum,
+            rank_total = 1:58)
+
+# but which families show up on the most transects?
+fam_list_count <- rls_sm %>%
+  count(family) %>%
+  drop_na(family) %>%
+  arrange(desc(n)) %>%
+  transmute(family = family, 
+            sum_count = n,
+            rank_count = 1:58)
+
+# rank of families by biomass
+fam_list_bio <- rls_sm %>%
+  group_by(family) %>%
+  summarise(sum = sum(weight_size_class_sum)) %>%
+  drop_na(family) %>%
+  arrange(desc(sum)) %>%
+  transmute(family = family, 
+            sum_bio = sum,
+            rank_bio = 1:58)
+
+# join all that fam stuff together
+fam_big_list <- fam_list_total %>%
+  left_join(fam_list_count, by = "family") %>%
+  left_join(fam_list_bio, by = "family") %>%
+  mutate(rank_all = (rank_total + rank_count + rank_bio)/3)
+
+# OK so how do I make sense of this
+# plot all rankings together
+ggplot(fam_big_list) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_total, colour = "density"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_count, colour = "count"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_bio, colour = "biomass"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_all, colour = "all"), alpha = 0.5) +
+  geom_vline(xintercept = 15, lty = "dashed") +
+  geom_hline(yintercept = "Echinasteridae", lty = "dashed") +
+  labs(y = "Family", x = "Rank", colour = "Rank Type")
+
+# just the families I want to keep
+fam_list_cut <- fam_big_list %>%
+  filter(rank_all <= 15) %>%
+  select(family) 
+
+# OK and now I want to make a final df where the top 15 families are named, and everything else is "other"
+
+# make this final df for the df without 0's
+family_df_no0 <- family_df_no0_a %>%
+  filter(family %in% fam_list_cut$family) %>%
+  # now make all the other families "other"
+  rbind(family_df_no0_a %>%
+          filter(!family %in% fam_list_cut$family) %>%
+          mutate(family = "other"))
+
+# make this final df again for the df WITH 0's
+family_df_0s <- family_df_0s_a %>%
+  filter(family %in% fam_list_cut$family) %>%
+  # now make all the other families "other"
+  rbind(family_df_0s_a %>%
+          filter(!family %in% fam_list_cut$family) %>%
+          mutate(family = "other"))
+
+# IF i wanted to use the no zeros dataframe, I could do sort of a hurdle? If a species is present or not, does that impact ammonium???
+# And then if it is present, does it's abundance predict ammonium 
+
+# mess around with orders next time!!!!!! ------
+
+# rank of orders by abundance
+order_list_total <- rls_sm %>%
+  group_by(order) %>%
+  summarise(sum = sum(total)) %>%
+  drop_na(order) %>%
+  arrange(desc(sum))
+
+# rank orders by biomass
+order_list_bio <- rls_sm %>%
+  group_by(order) %>%
+  summarise(sum = sum(weight_size_class_sum)) %>%
+  drop_na(order) %>%
+  arrange(desc(sum))
+
 # Stats -------
 
 # Step 0: Ask my question
@@ -447,9 +590,6 @@ AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weigh
          AICw = likelihood/sum) %>%
   select(rowname, df, AIC, delta, AICw)
 
-
-# what happens when I compare these
-AIC(mod_aic, mod_brain) # ok so obvi the AIC mod is the best, I should probably just stick with that
 # Use AIC to get predictors, then show the coefficients and a model output
 
 
@@ -459,6 +599,60 @@ mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center*tide_center + shannon_center +
                      data = rls_final)
 
 summary(mod_brain_c)
+
+
+# Family level stats ----
+
+# first model the df without zeros
+# On surveys that we saw a family, does that family abundance ~ nh4 ???
+mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_avg_scale -
+                     abund_fam_scale:family:tide_scale +
+                     (1|year) + (1|site_code), 
+                   family = Gamma(link = 'log'),
+                   data = family_df_no0)
+summary(mod_fam_no0)
+# abund_fam_scale:tide_scale 
+# abund_fam_scale:familyHexagrammidae
+# familyHexagrammidae
+plot(DHARMa::simulateResiduals(mod_fam_no0)) # fucked
+
+
+# now model the df WITH zeros
+# Across all surveys, does family abundance ~ nh4 ???
+mod_fam_0s <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_avg_scale -
+                         abund_fam_scale:family:tide_scale +
+                         (1|year) + (1|site_code), 
+                       family = Gamma(link = 'log'),
+                       data = family_df_0s)
+summary(mod_fam_0s)
+# depth_avg_scale
+plot(DHARMa::simulateResiduals(mod_fam_0s)) # EVEN MORE fucked
+
+# need to check random effects!!!! ------
+
+# plot greenlings?
+mod_green <- glmmTMB(nh4_avg ~ total_fam*tide_scale + depth_avg_scale -
+                     (1|year) + (1|site_code), 
+                   family = Gamma(link = 'log'),
+                   data = family_df_no0 %>% filter(family == "Hexagrammidae"))
+summary(mod_green)
+plot(DHARMa::simulateResiduals(mod_green)) # actually pretty ok????
+
+# predict greenling model?
+predict_g <- ggpredict(mod_green, 
+                       terms = c("total_fam", "tide_scale [v]")) %>% 
+  mutate(total_fam = x,
+         tide_cat = factor(as.factor(case_when(group == "-1.067" ~ "Ebb",
+                                               group == "-0.279" ~ "Slack",
+                                               group == "1.066" ~ "Flood")),
+                           levels = c("Ebb", "Slack", "Flood")))
+
+# now plot these predictions
+plot_pred(raw_data = family_df_no0 %>% filter(family == "Hexagrammidae"),
+          predict_data = predict_g, 
+          plot_type = "rls",
+          x_var = total_fam, y_var = nh4_avg, 
+          pal = pal3)
 
 
 # Step 4: Check for collinearity of predictors
