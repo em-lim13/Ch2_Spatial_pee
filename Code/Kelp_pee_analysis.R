@@ -300,7 +300,7 @@ ggplot(data, aes(x = in_minus_out)) +
 # Build full model with gaussian distribution
 # This is the transect level model
 # One row per transect, 3 per site
-mod_tran <- glmmTMB(in_minus_out ~ -1 + kelp_sp + 
+mod_tran <- glmmTMB(in_minus_out ~ kelp_sp + 
                       kelp_bio_scale*tide_scale*weight_sum_scale + 
                       bio_tran_scale + shannon_scale + depth_scale + 
                       (1|site_code),
@@ -318,7 +318,8 @@ summary(mod_tran)
 # best = kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + kelp_sp 
 # second best = same + weight_sum_scale:tide_scale
 
-mod_best <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + (1|site_code), 
+mod_best <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*tide_scale + 
+                      weight_sum_scale + shannon_scale + (1|site_code), 
                     family = 'gaussian',
                     data = data)
 
@@ -363,12 +364,14 @@ mod_abund_simp <- glmmTMB(in_minus_out ~ kelp_sp +
                      data = data)
 
 mod_tran <- glmmTMB(in_minus_out ~ kelp_sp +
-                      bio_tran_scale*tide_scale*weight_sum_scale + 
-                      shannon_scale + depth_scale - 
-                      bio_tran_scale:tide_scale:weight_sum_scale +
+                      bio_tran_scale*tide_scale + weight_sum_scale + 
+                      shannon_scale + depth_scale +
                       (1|site_code),
                       family = 'gaussian',
                       data = data)
+
+plot(simulateResiduals(mod_tran)) # looks fine
+summary(mod_tran)
 
 mod_forest <- glmmTMB(in_minus_out ~ kelp_sp +
                         forest_bio_scale*tide_scale*weight_sum_scale + 
@@ -379,7 +382,7 @@ mod_forest <- glmmTMB(in_minus_out ~ kelp_sp +
                     data = data)
 
 
-AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
+AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp, mod_forest, mod_tran, mod_best) %>%
   rownames_to_column() %>%
   mutate(best = min(AIC),
          delta = AIC - best,
@@ -409,6 +412,17 @@ mod_in_out_c <- glmmTMB(in_minus_out ~ - 1 + kelp_sp +
 
 summary(mod_in_out_c)
 
+# reduced mod
+mod_in_out3 <- glmmTMB(in_minus_out ~ kelp_sp +
+                        kelp_bio_scale + tide_scale + weight_sum_scale + 
+                        shannon_scale + depth_scale +
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data)
+
+summary(mod_in_out3)
+
+
 # Step 4: Check for collinearity of predictors
 
 # car can't handle random effects so make a simplified mod
@@ -419,8 +433,10 @@ car::vif(lm(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + weight_sum_sc
 # Notes from stats beers!
 #  Double check that the negative in – out sites aren’t the places where the transect was on the other side of the forest.
 # Maybe try to PCA????? see if there's clustering?
-  
 
+ggplot(data, aes(site, bio_tran_scale, colour = site)) +
+  geom_point() + 
+  stat_summary(fun = "mean", size = 1) 
 # Graphing ------
 
 # Palettes
