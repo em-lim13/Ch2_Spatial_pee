@@ -982,13 +982,14 @@ place_label <- function(label, size = 10, ...) {
 }
 
 # Dot Whisker Plot -----
-dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, pal, theme_white = TRUE){
+dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, pal, theme ="white"){
   
-  if(theme_white == TRUE){
+  if(theme == "white"){
     theme <- theme_white()
-  }
-  if(theme_white == FALSE){
+    features <- "black"
+  } else {
     theme <- theme_black()
+    features <- "white"
   }
   
   ggplot() +
@@ -1115,7 +1116,7 @@ plot_pred <- function(raw_data, predict_data,
     new_plot <- base_pred_plot +
 #      scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
 #                         labels = c("300", "600", "900", "1200", "1500")) +
-      ylim(0, 3.671) +
+#      ylim(0, 3.671) +
       labs(y = expression(paste("Ammonium ", (mu*M))), 
            x = expression(paste("Animal abundance/m"^2))) +
       scale_size(guide = 'none') +
@@ -1170,4 +1171,80 @@ scale_vars <- function(datafile){
       shannon_center = c(scale(shannon, scale = FALSE)),
       depth_center = c(scale(depth_avg, scale = FALSE))
     ) 
+}
+
+
+# Random forest stuff
+
+# Model predictions for each family
+plot_pred_fam <- function(raw_data, predict_data, 
+                          x_var, y_var, 
+                          pal,
+                          theme = "white"){
+  if(theme == "white"){
+    theme <- theme_white()
+    features <- "black"
+  } else {
+    theme <- theme_black()
+    features <- "white"
+  }
+  
+  ggplot() + 
+    geom_point(data = raw_data, 
+               aes(x = {{x_var}}, y = {{y_var}}), 
+               alpha = 0.8) +
+    geom_line(data = predict_data,
+              aes(x = {{x_var}}, y = predicted),
+              linewidth = 2) +
+    geom_ribbon(data = predict_data,
+                aes(x = {{x_var}}, y = predicted,
+                    ymin = conf.low, ymax = conf.high), 
+                alpha = 0.15) +
+    theme +
+    scale_colour_manual(values = (pal3), drop = TRUE) +
+    scale_fill_manual(values = (pal), drop = TRUE)+
+   # ylim(0, 3.671) +
+    labs(y = expression(paste("Ammonium ", (mu*M))), 
+         x = expression(paste("Animal abundance/m"^2))) +
+    theme(legend.position = "null")
+  
+}
+
+# Function for plotting sp x nh4 curves ----
+plot_sp_fun <- function(m_data, family, diagnose = FALSE) {
+  
+  fam1 <- m_data %>% filter(family == {{family}}) %>%
+    group_by(survey_id) %>%
+    summarise(total = sum(total),
+              weight_size_class_sum = sum(weight_size_class_sum)) %>%
+    mutate(total_weight_g = weight_size_class_sum*1000)
+  
+  fam <- rls %>%
+    left_join(fam1, by = "survey_id") %>%
+    replace_na(list(total = 0, total_weight_g = 0))
+  
+  # model?
+  mod_fam <- glmmTMB(nh4_avg ~ total_weight_g + 
+                       (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = fam)
+  
+  if(diagnose == TRUE){
+    print(summary(mod_fam))
+    print(plot(DHARMa::simulateResiduals(mod_fam)))
+  }
+  
+  # plot predictions
+  v <- c(-1.067, -0.279, 1.066)
+  
+  predict_fam <- ggpredict(mod_fam, terms = c("total_weight_g")) %>% 
+    mutate(total_weight_g = x)
+  
+  # now plot these predictions
+  plot_fam <- plot_pred_fam(raw_data = fam,
+                            predict_data = predict_fam, 
+                            x_var = total_weight_g, y_var = nh4_avg, 
+                            pal = pal3) +
+    ggtitle({{family}})
+  
 }
