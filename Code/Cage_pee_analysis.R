@@ -103,6 +103,9 @@ summary(mod_cr_gamma)
 pal_cu <- viridis::viridis(6)
 pal_c <- c(pal_cu[1], pal_cu[3], pal_cu[5])
 
+pal_cu2 <- viridis::viridis(11)
+pal_c2 <- c(pal_cu2[11], pal_cu2[10], pal_cu2[7])
+
 # use ggpredict to get estimates for the cuke model
 sum_cukes <- ggpredict(mod_cu, terms = "cukes") %>% 
   dplyr::rename(cukes = x,
@@ -122,7 +125,8 @@ cuke_plot <- dot_whisker(sum_data = sum_cukes,
                          x_var = cukes, 
                          y_var = nh4_avg, 
                          labels = cuke_labels,
-                         pal = pal_c) +
+                         pal = pal_c2,
+                         theme = "black") +
   place_label("(a)")
 
 # plot crabs
@@ -131,17 +135,20 @@ crab_plot <- dot_whisker(sum_data = sum_crabs,
                          x_var = treatment,
                          y_var = nh4_avg,
                          labels = crab_labels,
-                         pal = pal_c) +
+                         pal = pal_c2,
+                         theme = "black") +
   place_label("(b)")
 
 # plot together
 cuke_plot + crab_plot 
 
+ggsave("Output/Pres_figs/Fig5.png", device = "png", height = 7, width = 12, dpi = 400)
+# og is 9 x 16
+
 # Fig 4 white background for pub ----
 #ggsave("Output/Pub_figs/Fig5.png", device = "png", height = 9, width = 16, dpi = 400)
 
-#ggsave("Output/Figures/both_cages.png", device = "png", height = 7, width = 16, dpi = 400)
-# og is 9 x 16
+
 
 
 
