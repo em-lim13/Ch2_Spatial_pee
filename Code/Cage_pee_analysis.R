@@ -98,7 +98,7 @@ summary(mod_cr_gamma)
 
 
 #Graphing time folks-------
-
+set.seed(1991)
 # palettes
 pal_cu <- viridis::viridis(6)
 pal_c <- c(pal_cu[1], pal_cu[3], pal_cu[5])
@@ -140,9 +140,11 @@ crab_plot <- dot_whisker(sum_data = sum_crabs,
   place_label("(b)")
 
 # plot together
-cuke_plot + crab_plot 
+cuke_plot + crab_plot & 
+  plot_annotation(theme = theme(plot.background = 
+      element_rect(color = "black", fill = "black")))
 
-ggsave("Output/Pres_figs/Fig5.png", device = "png", height = 7, width = 12, dpi = 400)
+ggsave("Output/Pres_figs/Fig5.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
 
 # Fig 4 white background for pub ----
