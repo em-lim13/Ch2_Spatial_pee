@@ -15,6 +15,11 @@ library(TMB)
 library(glmmTMB) # better for random effects?
 library(patchwork)
 
+#library(devtools)
+#remotes::install_github("rvlenth/emmeans", dependencies = TRUE, build_opts = "")
+#library(emmeans)
+
+
 # Source pretty functions
 source("Code/Functions.R") # Length to weight function here!
 
@@ -751,7 +756,8 @@ ggplot() +
               aes(x = total_fam, y = predicted, fill = tide_cat,
                   ymin = conf.low, ymax = conf.high), 
               alpha = 0.15) +
-  theme(strip.text.x = element_text(size = 9, color = "black"),
+  theme(strip.text.x = element_text(size = 8, color = "black", 
+                                    margin = ggplot2::margin(0, 0, 0, 0, "cm")),
         axis.text.x = element_text(size = 8, color = "black", lineheight = 0.5),
         axis.text.y = element_text(size = 8, color = "black", lineheight = 0.5),
         axis.title.x = element_text(size = 9),
@@ -760,7 +766,11 @@ ggplot() +
         
   )
 
-ggsave("Output/Figures/families.png", device = "png")
+#ggsave("Output/Figures/families.png", device = "png")
+
+# OK CAN I ADD R2 OR SLOPE P-VALUES TO THESE?
+
+d <- emtrends(mod_fam_plot)
 
 # Step 4: Check for collinearity of predictors
 
