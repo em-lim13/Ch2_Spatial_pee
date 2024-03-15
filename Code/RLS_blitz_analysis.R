@@ -630,30 +630,137 @@ plot(DHARMa::simulateResiduals(mod_fam_0s)) # EVEN MORE fucked
 
 # need to check random effects!!!! ------
 
-# plot greenlings?
+# plot greenlings? -----
+df_g <- family_df_no0 %>% filter(family == "Hexagrammidae")
+
+# model
 mod_green <- glmmTMB(nh4_avg ~ total_fam*tide_scale + depth_avg_scale -
                      (1|year) + (1|site_code), 
                    family = Gamma(link = 'log'),
-                   data = family_df_no0 %>% filter(family == "Hexagrammidae"))
+                   data = df_g)
 summary(mod_green)
 plot(DHARMa::simulateResiduals(mod_green)) # actually pretty ok????
 
 # predict greenling model?
-predict_g <- ggpredict(mod_green, 
-                       terms = c("total_fam", "tide_scale [v]")) %>% 
+
+min_g <- min(df_g$total_fam)
+max_g <- max(df_g$total_fam)
+spread_g <- (max_g - min_g)/100
+v_g <- seq(min_g, max_g, spread_g)
+
+# get mean tide for each level
+tide_means <- rls_final %>%
+  group_by(tide_cat) %>%
+  summarise(tide = mean(tide_scale))
+
+v2 <- c(as.numeric(tide_means[1,2]), # ebb
+         as.numeric(tide_means[2,2]), # slack
+         as.numeric(tide_means[3,2])) # flood
+
+# ggpredict
+predict_g <- ggpredict(mod_green, terms = c("total_fam[v_g]", "tide_scale [v2]")) %>%
   mutate(total_fam = x,
-         tide_cat = factor(as.factor(case_when(group == "-1.067" ~ "Ebb",
-                                               group == "-0.279" ~ "Slack",
-                                               group == "1.066" ~ "Flood")),
-                           levels = c("Ebb", "Slack", "Flood")))
+         tide_cat = factor(as.factor(case_when(
+           group == as.numeric(tide_means[1,2]) ~ "Ebb",
+           group == as.numeric(tide_means[2,2]) ~ "Slack",
+           group == as.numeric(tide_means[3,2]) ~ "Flood")),
+           levels = c("Ebb", "Slack", "Flood")))
 
 # now plot these predictions
-plot_pred(raw_data = family_df_no0 %>% filter(family == "Hexagrammidae"),
+plot_pred(raw_data = df_g,
           predict_data = predict_g, 
           plot_type = "rls",
           x_var = total_fam, y_var = nh4_avg, 
           pal = pal3)
 
+
+# PLOT ALL FAMILIES???? -------
+mod_fam_plot <- glmmTMB(nh4_avg ~ total_fam * family * tide_scale + depth_avg_scale -
+                         abund_fam_scale:family:tide_scale +
+                         (1|year) + (1|site_code), 
+                       family = Gamma(link = 'log'),
+                       data = family_df_no0)
+
+# max and min 
+min_g <- min(family_df_no0$total_fam)
+max_g <- max(family_df_no0$total_fam)
+spread_g <- (max_g - min_g)/1000
+v_g <- seq(min_g, max_g, spread_g)
+
+# get mean tide for each level
+tide_means <- rls_final %>%
+  group_by(tide_cat) %>%
+  summarise(tide = mean(tide_scale))
+
+v2 <- c(as.numeric(tide_means[1,2]), # ebb
+        as.numeric(tide_means[2,2]), # slack
+        as.numeric(tide_means[3,2])) # flood
+
+# ggpredict
+predict_g <- ggpredict(mod_fam_plot, 
+                       terms = c("total_fam[v_g]", "tide_scale [v2]",
+                                 "family")) %>%
+  mutate(total_fam = x,
+         tide_cat = factor(as.factor(case_when(
+           group == as.numeric(tide_means[1,2]) ~ "Ebb",
+           group == as.numeric(tide_means[2,2]) ~ "Slack",
+           group == as.numeric(tide_means[3,2]) ~ "Flood")),
+           levels = c("Ebb", "Slack", "Flood")),
+         family = facet)
+
+# try to filter based on max and min values
+max_min <- family_df_no0 %>%
+  group_by(family) %>%
+  summarise(min = min(total_fam) - 0.005,
+            max = max(total_fam) + 0.005)
+
+# try to filter
+predict_g3 <- predict_g2 %>%
+  left_join(max_min, by = "family") %>%
+  rowwise %>%
+  filter(between(total_fam, min, max))
+
+# now plot these predictions
+#plot_pred(raw_data = family_df_no0,
+#          predict_data = predict_g, 
+#          plot_type = "rls",
+#          x_var = total_fam, y_var = nh4_avg, 
+#          pal = pal3) +
+#  theme(legend.position = "null") +
+#  facet_wrap(~family)
+
+# do it manually
+ggplot() + 
+  geom_point(data = family_df_no0, 
+             aes(x = total_fam, y = nh4_avg, 
+                 colour = tide_cat, fill = tide_cat), 
+             alpha = 0.8) +
+  labs(colour = "Tide", fill = "Tide", lty = "Tide") +
+  theme_white() +
+  scale_colour_manual(values = (pal3)) +
+  scale_fill_manual(values = (pal3)) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Animal abundance/m"^2))) +
+  theme(legend.position = "null") +
+  facet_wrap(~family, scales = 'free_x') +
+  geom_line(data = predict_g3,
+            aes(x = total_fam, y = predicted, 
+                colour = tide_cat, lty = tide_cat),
+            linewidth = 1) +
+  geom_ribbon(data = predict_g3,
+              aes(x = total_fam, y = predicted, fill = tide_cat,
+                  ymin = conf.low, ymax = conf.high), 
+              alpha = 0.15) +
+  theme(strip.text.x = element_text(size = 9, color = "black"),
+        axis.text.x = element_text(size = 8, color = "black", lineheight = 0.5),
+        axis.text.y = element_text(size = 8, color = "black", lineheight = 0.5),
+        axis.title.x = element_text(size = 9),
+        axis.title.y = element_text(size = 9),
+        strip.background = element_rect(fill = "grey", color = "grey")
+        
+  )
+
+ggsave("Output/Figures/families.png", device = "png")
 
 # Step 4: Check for collinearity of predictors
 
@@ -708,18 +815,19 @@ mod_pred_plot <- glmmTMB(nh4_avg ~ abundance*tide_scale + shannon_scale + depth_
                      family = Gamma(link = 'log'),
                      data = rls_final)
 
-
+# get mean tide for each level
 tide_means <- rls_final %>%
   group_by(tide_cat) %>%
   summarise(tide = mean(tide_scale))
-  
-v <- c(-1.067, -0.279, 1.066)
 
+v <- c(as.numeric(tide_means[1,2]), as.numeric(tide_means[2,2]), as.numeric(tide_means[3,2]))
+
+# ggpredict
 predict <- ggpredict(mod_pred_plot, terms = c("abundance", "tide_scale [v]")) %>% 
   mutate(abundance = x,
-         tide_cat = factor(as.factor(case_when(group == "-1.067" ~ "Ebb",
-                              group == "-0.279" ~ "Slack",
-                              group == "1.066" ~ "Flood")),
+         tide_cat = factor(as.factor(case_when(group == as.numeric(tide_means[1,2]) ~ "Ebb",
+                              group == as.numeric(tide_means[2,2]) ~ "Slack",
+                              group == as.numeric(tide_means[3,2]) ~ "Flood")),
                            levels = c("Ebb", "Slack", "Flood")))
 
 # now plot these predictions
