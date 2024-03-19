@@ -17,8 +17,9 @@ library(patchwork)
 
 #library(devtools)
 #remotes::install_github("rvlenth/emmeans", dependencies = TRUE, build_opts = "")
-#library(emmeans)
+library(emmeans)
 
+renv::snapshot()
 
 # Source pretty functions
 source("Code/Functions.R") # Length to weight function here!
