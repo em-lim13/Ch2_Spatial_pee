@@ -1248,3 +1248,58 @@ plot_sp_fun <- function(m_data, family, diagnose = FALSE) {
     ggtitle({{family}})
   
 }
+
+
+
+# New family function  ------
+v_fun <- function(df, family){
+  
+  df_fam <- df %>% filter(family == {{family}})
+  
+  # predict greenling model?
+  min_fam <- min(df_fam$total_fam)
+  max_fam <- max(df_fam$total_fam)
+  spread_fam <- (max_fam - min_fam)/100
+  v_fam <- seq(min_fam, max_fam, spread_fam)
+
+}
+  
+# Now function to get predictions
+fam_fun <- function(df, family, diagnose = FALSE) {
+  
+  df_fam <- df %>% filter(family == {{family}})
+
+  # model
+  mod_fam <- glmmTMB(nh4_avg ~ total_fam +
+                       (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = df_fam)
+
+  if(diagnose == TRUE){
+    print(summary(mod_fam))
+    print(plot(DHARMa::simulateResiduals(mod_fam)))
+  }
+
+  #slope_df <- emtrends(mod_fam, var = "total_fam")$emtrends %>%
+  #  as.data.frame() %>%
+  #  mutate(slope = total_fam.trend) %>%
+  #  transmute(family = {{family}},
+  #            slope = slope)
+  
+  # ggpredict
+  predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]")) %>%
+    mutate(total_fam = x,
+           family = {{family}}) 
+  #  left_join(slope_df, by = family)
+  
+#  predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]", "tide_scale [v2]")) %>%
+#    mutate(total_fam = x,
+#           tide_cat = factor(as.factor(case_when(
+#             group == as.numeric(tide_means[1,2]) ~ "Ebb",
+#             group == as.numeric(tide_means[2,2]) ~ "Slack",
+#             group == as.numeric(tide_means[3,2]) ~ "Flood")),
+#             levels = c("Ebb", "Slack", "Flood")),
+#           family = {{family}})
+
+}
+
