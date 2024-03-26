@@ -14,12 +14,11 @@ library(MuMIn) # for dredge?
 library(TMB)
 library(glmmTMB) # better for random effects?
 library(patchwork)
-
-#library(devtools)
-#remotes::install_github("rvlenth/emmeans", dependencies = TRUE, build_opts = "")
 library(emmeans)
+#library(Matrix)
 
-renv::snapshot()
+# package version control
+library(renv)
 
 # Source pretty functions
 source("Code/Functions.R") # Length to weight function here!
@@ -51,8 +50,10 @@ fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
     total = case_when(method == 1 ~ total/500,
                       method == 2 ~ total/100)) %>%
   filter(species_name != "Myoxocephalus aenaeus") %>% # Remove east coast fish
-filter(species_name != "Phoca vitulina") # Remove seal, lets just focus on inverts and fish
-  
+filter(species_name != "Phoca vitulina") %>% # Remove seal, lets just focus on inverts and fish
+  filter(!(family == "Gobiidae" & method == 1)) %>% 
+  filter(!(family == "Cottidae" & method == 1)) %>% 
+  filter(!(family == "Hexagrammidae" & method == 2)) 
 
 # Rhinogobiops nicholsii 7.5 avg
 # Artedius harringtoni avg 5
@@ -250,9 +251,18 @@ rls_final <-
   unique() %>%
   # rls fish biomass 
   left_join(fishes %>%
+              filter(phylum == "Chordata") %>%
               group_by(survey_id) %>%
               summarize(fish_weight_sum = sum(weight_size_class_sum),
-                        fish_weight_weighted = sum(weight_weighted))) %>%
+                        fish_weight_weighted = sum(weight_weighted),
+                        fish_abund = sum(total))) %>%
+  # invert biomass
+  left_join(inverts %>%
+              filter(phylum != "Chordata") %>%
+              group_by(survey_id) %>%
+              summarize(invert_weight_sum = sum(weight_size_class_sum),
+                        invert_weight_weighted = sum(weight_weighted),
+                        invert_abund = sum(total))) %>%
   # rls survey richness and abundance and total biomass
   left_join(rls %>%
               group_by(survey_id) %>%
@@ -271,6 +281,10 @@ rls_final <-
     weight_sum_scale = c(scale(weight_sum)),
     fish_weight_sum_scale = c(scale(fish_weight_sum)),
     fish_weight_weighted_scale = c(scale(fish_weight_weighted)),
+    fish_abund_scale = c(scale(fish_abund)),
+    invert_weight_sum_scale = c(scale(invert_weight_sum)),
+    invert_weight_weighted_scale = c(scale(invert_weight_weighted)),
+    invert_abund_scale = c(scale(invert_abund)),
     all_weighted_scale = c(scale(all_weight_weighted)),
     abundance_scale = c(scale(abundance)),
     # biodiversity variables
@@ -321,7 +335,7 @@ family_df_no0_a <- rls_final %>%
   select(site, site_code, survey_id, year, nh4_avg, depth_avg_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
   left_join((rls %>%
                mutate(family = as.factor(family))%>%
-              group_by(survey_id, method, phylum, family) %>%
+              group_by(survey_id, method, phylum, family) %>% # if i want methods split up, add it back here
               summarise(total_fam = sum(total),
                         weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
             by = "survey_id") %>%
@@ -375,6 +389,8 @@ fam_list_total <- rls_sm %>%
 
 # but which families show up on the most transects?
 fam_list_count <- rls_sm %>%
+  select(survey_id, family) %>%
+  unique() %>%
   count(family) %>%
   drop_na(family) %>%
   arrange(desc(n)) %>%
@@ -410,12 +426,13 @@ ggplot(fam_big_list) +
   geom_point(aes(y = reorder(family, -rank_all), 
                  x = rank_all, colour = "all"), alpha = 0.5) +
   geom_vline(xintercept = 15, lty = "dashed") +
-  geom_hline(yintercept = "Echinasteridae", lty = "dashed") +
+  geom_hline(yintercept = "Sebastidae", lty = "dashed") +
   labs(y = "Family", x = "Rank", colour = "Rank Type")
 
 # just the families I want to keep
 fam_list_cut <- fam_big_list %>%
-  filter(rank_all <= 15) %>%
+  arrange(rank_all) %>%
+  head(15) %>%
   select(family) 
 
 # OK and now I want to make a final df where the top 15 families are named, and everything else is "other"
@@ -427,6 +444,7 @@ family_df_no0 <- family_df_no0_a %>%
   rbind(family_df_no0_a %>%
           filter(!family %in% fam_list_cut$family) %>%
           mutate(family = "other"))
+  
 
 # make this final df again for the df WITH 0's
 family_df_0s <- family_df_0s_a %>%
@@ -434,7 +452,8 @@ family_df_0s <- family_df_0s_a %>%
   # now make all the other families "other"
   rbind(family_df_0s_a %>%
           filter(!family %in% fam_list_cut$family) %>%
-          mutate(family = "other"))
+          mutate(family = "other")) %>%
+  mutate(abund_binary = ifelse(total_fam == 0, 0, 1))
 
 # IF i wanted to use the no zeros dataframe, I could do sort of a hurdle? If a species is present or not, does that impact ammonium???
 # And then if it is present, does it's abundance predict ammonium 
@@ -567,10 +586,26 @@ mod_brain <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + shannon_scale + dept
 summary(mod_brain)
 plot(DHARMa::simulateResiduals(mod_brain))
 
+# just look at fish weights
+mod_fish <- glmmTMB(nh4_avg ~ fish_abund_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
+                    family = Gamma(link = 'log'),
+                    data = rls_final)
+summary(mod_fish)
+plot(DHARMa::simulateResiduals(mod_fish)) # ok so neither fish abundance or fish biomass significantly predict nh4
+
+# just look at invert weights
+mod_invert <- glmmTMB(nh4_avg ~ invert_abund_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
+                    family = Gamma(link = 'log'),
+                    data = rls_final)
+summary(mod_invert)
+plot(DHARMa::simulateResiduals(mod_invert)) # invert abundance has a negative abundance:tide interaction and the model output looks the same as the total abundance model
+
+
 # weight instead of abundance
 mod_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = rls_final)
+summary(mod_weight)
 
 # simpson instead of shannon
 mod_simp <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + simpson_scale + depth_avg_scale + (1|year) + (1|site_code), 
@@ -598,7 +633,6 @@ AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weigh
 
 # Use AIC to get predictors, then show the coefficients and a model output
 
-
 # centered variables instead of scaled for estimates
 mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center*tide_center + shannon_center + depth_center + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
@@ -611,16 +645,27 @@ summary(mod_brain_c)
 
 # first model the df without zeros
 # On surveys that we saw a family, does that family abundance ~ nh4 ???
-mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_avg_scale -
-                     abund_fam_scale:family:tide_scale +
+mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_avg_scale +
+                         #abund_fam_scale:family:tide_scale +
                      (1|year) + (1|site_code), 
                    family = Gamma(link = 'log'),
                    data = family_df_no0)
+# do I want the triple interaction or not
 summary(mod_fam_no0)
-# abund_fam_scale:tide_scale 
-# abund_fam_scale:familyHexagrammidae
-# familyHexagrammidae
-plot(DHARMa::simulateResiduals(mod_fam_no0)) # fucked
+plot(DHARMa::simulateResiduals(mod_fam_no0)) # less bad with the triple
+
+# can I emtrends to get the slopes
+df <- emtrends(mod_fam_no0, pairwise ~ family, var = "abund_fam_scale")$emtrends %>%
+  as.data.frame()
+
+
+ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.trend), xmin = asymp.LCL, xmax = asymp.UCL)) +
+  geom_point(size = 2.7) +
+  geom_errorbar(width = 0, linewidth = 0.5) +
+  geom_vline(xintercept=0, color="black", linetype="dashed")
+
+# For fish: Hexagrammidae, Sebastidae, Cottidae, Gobiidae
+# For inverts: Asteriidae, Muricidae, Acmaeidae, Echinasteridae by size of slope
 
 
 # now model the df WITH zeros
@@ -631,59 +676,178 @@ mod_fam_0s <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_av
                        family = Gamma(link = 'log'),
                        data = family_df_0s)
 summary(mod_fam_0s)
+#performance::r2(mod_fam_0s)
 # depth_avg_scale
 plot(DHARMa::simulateResiduals(mod_fam_0s)) # EVEN MORE fucked
 
 # need to check random effects!!!! ------
 
-# plot greenlings? -----
-df_g <- family_df_no0 %>% filter(family == "Hexagrammidae")
+# plot each fish family model -----
+# since I'm working with each family seperately I want to change density back to abundance
+fam_df_no0 <- family_df_no0 %>%
+  mutate(total_fam = case_when(method == 1 ~ total_fam*500,
+                               method == 2 ~ total_fam*100),
+         abund_fam_scale = c(scale(total_fam)))
 
-# model
-mod_green <- glmmTMB(nh4_avg ~ total_fam*tide_scale + depth_avg_scale -
-                     (1|year) + (1|site_code), 
-                   family = Gamma(link = 'log'),
-                   data = df_g)
-summary(mod_green)
-plot(DHARMa::simulateResiduals(mod_green)) # actually pretty ok????
+# should I do a model for each species?
+v_fam <- v_fun(fam_df_no0, "Hexagrammidae")
+predict_green <- fam_fun(fam_df_no0, "Hexagrammidae", diagnose = TRUE)
+# total_fam  9.4316940  3.9924145   2.362  0.01816 * 
 
-# predict greenling model?
+v_fam <- v_fun(fam_df_no0, "Sebastidae")
+predict_rock <- fam_fun(fam_df_no0, "Sebastidae", diagnose = TRUE)
 
-min_g <- min(df_g$total_fam)
-max_g <- max(df_g$total_fam)
-spread_g <- (max_g - min_g)/100
-v_g <- seq(min_g, max_g, spread_g)
+v_fam <- v_fun(fam_df_no0, "Cottidae")
+predict_scul <- fam_fun(fam_df_no0, "Cottidae", diagnose = TRUE)
 
-# get mean tide for each level
-tide_means <- rls_final %>%
-  group_by(tide_cat) %>%
-  summarise(tide = mean(tide_scale))
+v_fam <- v_fun(fam_df_no0, "Gobiidae")
+predict_gob <- fam_fun(fam_df_no0, "Gobiidae", diagnose = TRUE)
 
-v2 <- c(as.numeric(tide_means[1,2]), # ebb
-         as.numeric(tide_means[2,2]), # slack
-         as.numeric(tide_means[3,2])) # flood
+predict_fish <- rbind(predict_green, predict_rock, predict_scul, predict_gob)%>%
+  mutate(family = factor(family, levels = 
+                           c("Hexagrammidae", "Gobiidae", "Sebastidae", "Cottidae")))
 
-# ggpredict
-predict_g <- ggpredict(mod_green, terms = c("total_fam[v_g]", "tide_scale [v2]")) %>%
-  mutate(total_fam = x,
-         tide_cat = factor(as.factor(case_when(
-           group == as.numeric(tide_means[1,2]) ~ "Ebb",
-           group == as.numeric(tide_means[2,2]) ~ "Slack",
-           group == as.numeric(tide_means[3,2]) ~ "Flood")),
-           levels = c("Ebb", "Slack", "Flood")))
+# make a df of just those species
+fish_fam_data <- fam_df_no0 %>%
+  filter(family == "Hexagrammidae" |
+           family == "Sebastidae" |
+           family == "Cottidae" |
+           family == "Gobiidae") %>%
+  mutate(family = factor(family, levels = 
+                           c("Hexagrammidae", "Gobiidae", "Sebastidae", "Cottidae")),
+         slope = case_when(family == "Hexagrammidae" ~ "slope = 0.02, p = 0.025",
+                           family == "Sebastidae" ~ "slope = 0.002, p = 0.64",
+                           family == "Cottidae" ~ "slope = -0.0008, p = 0.95",
+                           family == "Gobiidae" ~ "slope = 0.002, p = 0.19"))
 
-# now plot these predictions
-plot_pred(raw_data = df_g,
-          predict_data = predict_g, 
-          plot_type = "rls",
-          x_var = total_fam, y_var = nh4_avg, 
-          pal = pal3)
+# plot these curves for the fish 
+ggplot() + 
+  geom_point(data = fish_fam_data, 
+             aes(x = total_fam, y = nh4_avg), colour = pal1,
+             alpha = 0.8) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Abundance"))) +
+  facet_wrap(~family, scales = 'free_x') +
+  geom_line(data = predict_fish,
+            aes(x = total_fam, y = predicted), colour = pal1,
+            linewidth = 1) +
+  geom_ribbon(data = predict_fish,
+              aes(x = total_fam, y = predicted, 
+                  ymin = conf.low, ymax = conf.high), fill = pal1,
+              alpha = 0.15) +
+#  theme_classic() +
+#  theme(strip.text.x = element_text(size = 10, color = "black", 
+#                                    margin = ggplot2::margin(0, 0, 0, 0, "cm")),
+#        axis.text.x = element_text(size = 10, color = "black", lineheight = 0.5),
+#        axis.text.y = element_text(size = 10, color = "black", lineheight = 0.5),
+#        axis.title.x = element_text(size = 9),
+#        axis.title.y = element_text(size = 9),
+#        strip.background = element_rect(fill = "grey", color = "grey"),
+#        legend.position = c(0.88, 0.89)) +
+  theme_white() +
+  theme(strip.background = element_rect(fill = "grey", color = "grey")) +
+  geom_text(
+    data = fish_fam_data %>% select(family, slope) %>% unique(),
+    mapping = aes(x = Inf, y = Inf, label = slope),
+    hjust   = 1.1,
+    vjust   = 1.5,
+    size = 9)
 
+# ggsave("Output/Figures/fish_families.png", device = "png", height = 9, width = 12, dpi = 400)
+ 
+
+# invert models???
+# Asteriidae, Muricidae, Acmaeidae, Echinasteridae are the four inverts with the biggest slope estimates
+v_fam <- v_fun(fam_df_no0, "Asteriidae")
+predict_star1 <- fam_fun(fam_df_no0, "Asteriidae", diagnose = TRUE)
+# total_fam    0.005981   0.005526   1.082   0.2791  
+
+v_fam <- v_fun(fam_df_no0, "Muricidae")
+predict_muri <- fam_fun(fam_df_no0, "Muricidae", diagnose = TRUE)
+# total_fam    0.005143   0.003292   1.562   0.1182  
+
+v_fam <- v_fun(fam_df_no0, "Acmaeidae")
+predict_limp <- fam_fun(fam_df_no0, "Acmaeidae", diagnose = TRUE)
+# total_fam    0.009755   0.004300   2.269  0.02328 * 
+
+v_fam <- v_fun(fam_df_no0, "Echinasteridae")
+predict_star2 <- fam_fun(fam_df_no0, "Echinasteridae", diagnose = TRUE)
+#total_fam    0.00201    0.01598   0.126   0.8999  
+
+
+# check other inverts to make sure
+v_fam <- v_fun(fam_df_no0, "Strongylocentrotidae")
+predict_urchin <- fam_fun(fam_df_no0, "Strongylocentrotidae", diagnose = TRUE)
+# throws error
+
+v_fam <- v_fun(fam_df_no0, "Stichopodidae")
+predict_cuke <- fam_fun(fam_df_no0, "Stichopodidae", diagnose = TRUE)
+# total_fam   -0.002382   0.002496  -0.955    0.340
+
+v_fam <- v_fun(fam_df_no0, "Turbinidae")
+predict_turb <- fam_fun(fam_df_no0, "Turbinidae", diagnose = TRUE)
+# throws error
+
+v_fam <- v_fun(fam_df_no0, "Haliotidae")
+predict_aba <- fam_fun(fam_df_no0, "Haliotidae", diagnose = TRUE)
+# total_fam   -0.002996   0.002880  -1.040   0.2983  
+
+v_fam <- v_fun(fam_df_no0, "Asteropseidae")
+predict_ast <- fam_fun(fam_df_no0, "Asteropseidae", diagnose = TRUE)
+# total_fam   -0.013190   0.008198  -1.609    0.108
+
+v_fam <- v_fun(fam_df_no0, "Pectinidae")
+predict_pect <- fam_fun(fam_df_no0, "Pectinidae", diagnose = TRUE)
+# total_fam   -0.007614   0.005788  -1.315   0.1883  
+
+
+# put inverts together
+predict_invert <- rbind(predict_star1, predict_muri, predict_limp, predict_star2)%>%
+  mutate(family = factor(family, levels = 
+                           c("Asteriidae", "Muricidae", "Acmaeidae", "Echinasteridae")))
+
+# make a df of just those species
+invert_fam_data <- fam_df_no0 %>%
+  filter(family == "Asteriidae" |
+           family == "Muricidae" |
+           family == "Acmaeidae" |
+           family == "Echinasteridae") %>%
+  mutate(family = factor(family, levels = 
+                           c("Acmaeidae", "Muricidae", "Asteriidae", "Echinasteridae")),
+         slope = case_when(family == "Asteriidae" ~ "slope = 0.006, p = 0.28",
+                           family == "Muricidae" ~ "slope = 0.005, p = 0.12",
+                           family == "Acmaeidae" ~ "slope = 0.01, p = 0.023",
+                           family == "Echinasteridae" ~ "slope = 0.002, p = 0.90"))
+
+# plot these curves for the inverts 
+ggplot() + 
+  geom_point(data = invert_fam_data, 
+             aes(x = total_fam, y = nh4_avg), colour = pal1,
+             alpha = 0.8) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Abundance"))) +
+  facet_wrap(~family, scales = 'free_x') +
+  geom_line(data = predict_invert,
+            aes(x = total_fam, y = predicted), colour = pal1,
+            linewidth = 1) +
+  geom_ribbon(data = predict_invert,
+              aes(x = total_fam, y = predicted, 
+                  ymin = conf.low, ymax = conf.high), fill = pal1,
+              alpha = 0.15) +
+  theme_white() +
+  theme(strip.background = element_rect(fill = "grey", color = "grey"))+
+  geom_text(
+    data = invert_fam_data %>% select(family, slope) %>% unique(),
+    mapping = aes(x = Inf, y = Inf, label = slope),
+    hjust   = 1.1,
+    vjust   = 1.5,
+    size = 9)
+
+ #ggsave("Output/Figures/invert_families.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # PLOT ALL FAMILIES???? -------
-mod_fam_plot <- glmmTMB(nh4_avg ~ total_fam * family * tide_scale + depth_avg_scale -
-                         abund_fam_scale:family:tide_scale +
-                         (1|year) + (1|site_code), 
+mod_fam_plot <- glmmTMB(nh4_avg ~ total_fam * family * tide_scale + depth_avg_scale +
+                          (1|year) + (1|site_code), 
                        family = Gamma(link = 'log'),
                        data = family_df_no0)
 
@@ -693,16 +857,7 @@ max_g <- max(family_df_no0$total_fam)
 spread_g <- (max_g - min_g)/1000
 v_g <- seq(min_g, max_g, spread_g)
 
-# get mean tide for each level
-tide_means <- rls_final %>%
-  group_by(tide_cat) %>%
-  summarise(tide = mean(tide_scale))
-
-v2 <- c(as.numeric(tide_means[1,2]), # ebb
-        as.numeric(tide_means[2,2]), # slack
-        as.numeric(tide_means[3,2])) # flood
-
-# ggpredict
+# ggpredict takes a little while because there's so many terms for each family
 predict_g <- ggpredict(mod_fam_plot, 
                        terms = c("total_fam[v_g]", "tide_scale [v2]",
                                  "family")) %>%
@@ -714,6 +869,12 @@ predict_g <- ggpredict(mod_fam_plot,
            levels = c("Ebb", "Slack", "Flood")),
          family = facet)
 
+# add slope estimates 
+df <- emtrends(mod_fam_plot, pairwise ~ family, var = "total_fam")$emtrends %>%
+  as.data.frame() %>%
+  mutate(slope = total_fam.trend) %>%
+  select(family, slope)
+
 # try to filter based on max and min values
 max_min <- family_df_no0 %>%
   group_by(family) %>%
@@ -721,23 +882,23 @@ max_min <- family_df_no0 %>%
             max = max(total_fam) + 0.005)
 
 # try to filter
-predict_g3 <- predict_g2 %>%
+predict_g3 <- predict_g %>%
   left_join(max_min, by = "family") %>%
   rowwise %>%
-  filter(between(total_fam, min, max))
+  filter(between(total_fam, min, max)) %>%
+  left_join(df, by = "family") %>%
+  arrange(desc(slope)) %>%               # sort your dataframe
+  mutate(family = factor(family, unique(family)),
+         slope = round(slope, 2)) # reset your factor-column based on that order
 
-# now plot these predictions
-#plot_pred(raw_data = family_df_no0,
-#          predict_data = predict_g, 
-#          plot_type = "rls",
-#          x_var = total_fam, y_var = nh4_avg, 
-#          pal = pal3) +
-#  theme(legend.position = "null") +
-#  facet_wrap(~family)
+family_df_no0_f <- family_df_no0 %>%
+  left_join(df, by = "family") %>%
+  arrange(desc(slope)) %>%               # sort your dataframe
+  mutate(family = factor(family, unique(family)))
 
-# do it manually
+# plot these curves
 ggplot() + 
-  geom_point(data = family_df_no0, 
+  geom_point(data = family_df_no0_f, 
              aes(x = total_fam, y = nh4_avg, 
                  colour = tide_cat, fill = tide_cat), 
              alpha = 0.8) +
@@ -763,15 +924,43 @@ ggplot() +
         axis.text.y = element_text(size = 8, color = "black", lineheight = 0.5),
         axis.title.x = element_text(size = 9),
         axis.title.y = element_text(size = 9),
-        strip.background = element_rect(fill = "grey", color = "grey")
-        
-  )
+        strip.background = element_rect(fill = "grey", color = "grey") )
+#  geom_text(
+#    data = predict_g3 %>% select(family, slope) %>% unique(),
+#    mapping = aes(x = Inf, y = Inf, label = slope),
+#    hjust   = 1.1,
+#    vjust   = 1.5)
 
 #ggsave("Output/Figures/families.png", device = "png")
 
-# OK CAN I ADD R2 OR SLOPE P-VALUES TO THESE?
-
-d <- emtrends(mod_fam_plot)
+# just greeen
+ggplot() + 
+  geom_point(data = family_df_no0_f %>% filter(family == "Hexagrammidae"), 
+             aes(x = total_fam, y = nh4_avg, 
+                 colour = tide_cat, fill = tide_cat), 
+             alpha = 0.8) +
+  labs(colour = "Tide", fill = "Tide", lty = "Tide") +
+  theme_white() +
+  scale_colour_manual(values = (pal3)) +
+  scale_fill_manual(values = (pal3)) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Animal abundance/m"^2))) +
+  theme(legend.position = "null") +
+  geom_line(data = predict_g3 %>% filter(family == "Hexagrammidae"),
+            aes(x = total_fam, y = predicted, 
+                colour = tide_cat, lty = tide_cat),
+            linewidth = 1) +
+  geom_ribbon(data = predict_g3%>% filter(family == "Hexagrammidae"),
+              aes(x = total_fam, y = predicted, fill = tide_cat,
+                  ymin = conf.low, ymax = conf.high), 
+              alpha = 0.15) +
+  theme(strip.text.x = element_text(size = 8, color = "black", 
+                                    margin = ggplot2::margin(0, 0, 0, 0, "cm")),
+        axis.text.x = element_text(size = 8, color = "black", lineheight = 0.5),
+        axis.text.y = element_text(size = 8, color = "black", lineheight = 0.5),
+        axis.title.x = element_text(size = 9),
+        axis.title.y = element_text(size = 9),
+        strip.background = element_rect(fill = "grey", color = "grey") )
 
 # Step 4: Check for collinearity of predictors
 
@@ -788,6 +977,7 @@ car::vif(lm(nh4_avg ~ abundance_scale + tide_scale + shannon_scale + depth_avg_s
 pal6 <- viridis::viridis(6)
 pal <- viridis::viridis(10)
 pal3 <- c(pal[10], pal[8], pal[5])
+pal1 <- pal[5]
 
 #pie(rep(1, 10), col = pal)
 
@@ -852,11 +1042,10 @@ rls_pred_plot <-
   place_label("(b)")
 
 # White background for Fig 2
-rls_coeff_plot + rls_pred_plot 
-  
-#  plot_annotation(tag_levels = 'a') &
-#  theme(plot.tag.position = c(0, 1),
-#        plot.tag = element_text(hjust = -1, vjust = 0))
+rls_coeff_plot + rls_pred_plot +
+  plot_annotation(tag_levels = 'a') &
+  theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(hjust = -1, vjust = 0))
 
 #ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
