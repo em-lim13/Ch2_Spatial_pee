@@ -645,8 +645,8 @@ summary(mod_brain_c)
 
 # first model the df without zeros
 # On surveys that we saw a family, does that family abundance ~ nh4 ???
-mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_avg_scale +
-                         #abund_fam_scale:family:tide_scale +
+mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_avg_scale -
+                         abund_fam_scale:family:tide_scale +
                      (1|year) + (1|site_code), 
                    family = Gamma(link = 'log'),
                    data = family_df_no0)
@@ -1037,6 +1037,7 @@ rls_pred_plot <-
           predict_data = predict, 
           plot_type = "rls",
           x_var = abundance, y_var = nh4_avg, 
+          lty_var = tide_cat,
           pal = pal3,
           theme = "white") +
   place_label("(b)")
