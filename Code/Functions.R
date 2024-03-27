@@ -1079,15 +1079,15 @@ plot_pred <- function(raw_data, predict_data,
   base_pred_plot <-  ggplot() + 
     geom_point(data = raw_data, 
                aes(x = {{x_var}}, y = {{y_var}}, 
-                   colour = tide_cat, fill = tide_cat,
+                   colour = {{lty_var}}, fill = {{lty_var}},
                    size = {{size_var}}), 
                alpha = 0.8) +
     geom_line(data = predict_data,
               aes(x = {{x_var}}, y = predicted, 
-                  colour = tide_cat, lty = {{lty_var}}),
+                  colour = {{lty_var}}, lty = {{lty_var}}),
               linewidth = 2) +
     geom_ribbon(data = predict_data,
-                aes(x = {{x_var}}, y = predicted, fill = tide_cat,
+                aes(x = {{x_var}}, y = predicted, fill = {{lty_var}},
                     ymin = conf.low, ymax = conf.high), 
                 alpha = 0.15) +
     labs(colour = "Tide", fill = "Tide", lty = "Tide") +
@@ -1104,8 +1104,8 @@ plot_pred <- function(raw_data, predict_data,
       guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
              size = guide_legend(override.aes = list(colour = features)),
              colour = guide_legend(override.aes = list(size = 2)))  +
-      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
-                         labels = c("0", "0.6", "1.2", "1.8")) +
+#      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
+#                         labels = c("0", "0.6", "1.2", "1.8")) +
       labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
            x = expression(paste("Kelp biomass (kg/m"^2,")")),
            size = "Animals (kg)")
