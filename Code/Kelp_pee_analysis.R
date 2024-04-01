@@ -598,7 +598,7 @@ plots <- kelp_sp_plot + kelp_pred_plot + abund_pred_plot + depth_pred_plot
 
 kelp_coeff_plot + plots
   
-ggsave("Output/Figures/Fig4.png", device = "png", height = 13.5, width = 24, dpi = 400)
+#ggsave("Output/Figures/Fig4.png", device = "png", height = 13.5, width = 24, dpi = 400)
   
   
 
