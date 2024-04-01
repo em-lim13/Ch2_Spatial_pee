@@ -982,7 +982,8 @@ place_label <- function(label, size = 10, ...) {
 }
 
 # Dot Whisker Plot -----
-dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, pal, theme ="white"){
+dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL, 
+                        labels, pal, theme ="white"){
   
   if(theme == "white"){
     theme <- theme_white()
@@ -994,7 +995,7 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, pal, theme ="w
   
   ggplot() +
     geom_point(data = {{sum_data}},
-               aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}),
+               aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}),
                size = 8) +
     geom_errorbar(data = {{sum_data}},
                   aes(x = {{x_var}},
@@ -1012,7 +1013,6 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, labels, pal, theme ="w
           plot.title = element_text(size = 30)) +
     scale_colour_manual(values = rev(pal)) +
     labs(y = expression(paste("Ammonium"~(mu*M))), x = " ") +
-    ylim(c(0, 3.8)) +
     scale_x_discrete(labels = {{labels}}) +
     theme(axis.text.x = ggtext::element_markdown())
 }
@@ -1065,7 +1065,9 @@ plot_pred <- function(raw_data, predict_data,
                       plot_type,
                       x_var, y_var, 
                       lty_var = NULL,
+                      pch_var = NULL,
                       size_var = 3, 
+                      x_axis_lab = NULL,
                       pal,
                       theme = "white"){
   if(theme == "white"){
@@ -1080,6 +1082,7 @@ plot_pred <- function(raw_data, predict_data,
     geom_point(data = raw_data, 
                aes(x = {{x_var}}, y = {{y_var}}, 
                    colour = {{lty_var}}, fill = {{lty_var}},
+                   pch = {{pch_var}},
                    size = {{size_var}}), 
                alpha = 0.8) +
     geom_line(data = predict_data,
@@ -1123,8 +1126,17 @@ plot_pred <- function(raw_data, predict_data,
       scale_fill_manual(values = pal, drop = FALSE) +
       scale_colour_manual(values = (pal3), drop = FALSE) +
       theme(legend.position = c(0.85, 0.89))
-      
   }
+  
+  # then add bells and whistles for new kelp plot
+  if(plot_type == "new_kelp"){
+    new_plot <- base_pred_plot +
+      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
+      labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
+           x = x_axis_lab) +
+      theme(legend.position = "null")
+  }
+  
   print(new_plot)
 }
 
@@ -1168,7 +1180,9 @@ scale_vars <- function(datafile){
       kelp_bio_center = c(scale(BiomassM, scale = FALSE)),
       tide_center = c(scale(avg_exchange_rate, scale = FALSE)),
       weight_sum_center = c(scale(weight_sum, scale = FALSE)),
+      abundance_center = c(scale(abundance, scale = FALSE)),
       shannon_center = c(scale(shannon, scale = FALSE)),
+      simpson_center = c(scale(simpson, scale = FALSE)),
       depth_center = c(scale(depth_avg, scale = FALSE))
     ) 
 }
