@@ -127,6 +127,7 @@ cuke_plot <- dot_whisker(sum_data = sum_cukes,
                          labels = cuke_labels,
                          pal = pal_c2,
                          theme = "black") +
+  ylim(c(0, 3.8)) +
   place_label("(a)")
 
 # plot crabs
@@ -137,6 +138,7 @@ crab_plot <- dot_whisker(sum_data = sum_crabs,
                          labels = crab_labels,
                          pal = pal_c2,
                          theme = "black") +
+  ylim(c(0, 3.8)) +
   place_label("(b)")
 
 # plot together
