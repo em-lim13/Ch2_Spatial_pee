@@ -23,8 +23,6 @@ source("Code/Functions.R")
 # Kelp data ----
 
 #Should I drop the no kelp control from the model and just say we found no diff in ammonium on the sand? Basically using the no kelp control as a methods control but not using it in the model
-#Also double check that less dangerous bay was the no kelp control sand site???
-#Bc now I can’t remember which site we didn’t write down the inside vs outside and probably got it messed up.. 
 
 # load site names
 names <- read_csv("Data/Team_kelp/Output_data/site_names.csv")
@@ -47,7 +45,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   # Add the averaged site level variables from Claire!
   left_join(read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv"), by = "SiteName") %>%
   group_by(SiteName) %>%
-  mutate(BiomassM = mean(Biomassm2kg),
+  mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(Biomassm2kg)),
          Area_m2 = ifelse(kelp_sp == "none", 0, Area_m2)) %>%
   ungroup() %>%
   rename(kelp_den = Kelp,
@@ -233,7 +231,9 @@ data_all <- pee %>%
 data <- data_all %>%
   filter(site_name != "Second Beach South") %>%
   # scale factors using function
-  scale_vars() 
+  scale_vars() %>%
+  mutate(exp_kelp = exp(BiomassM),
+         exp_abund = exp(abundance))
 
 # reduced data to export a file for mapping
 data_map <- data %>%
@@ -302,12 +302,40 @@ ggplot(data, aes(x = in_minus_out)) +
 # Only kelp:tide interaction! 
 
 # Let's plot out some of these interactions to make sure everything makes sense
-ggplot(data, aes(depth_avg, in_out_avg,
-                 colour = kelp_sp # kelp_biomass:tide interaction
-           )) +
+ggplot(data, aes(kelp_bio_scale, in_out_avg, colour = kelp_sp)) +
   geom_point(aes(pch = kelp_sp))+
   geom_smooth(method = lm) +
   geom_hline(yintercept = 0, lty = "dashed")
+# looks like a positive delta vs kelp biomass
+
+ggplot(data, aes(BiomassM, in_minus_out)) +
+  geom_point()+
+  geom_smooth(method = lm) +
+  geom_hline(yintercept = 0, lty = "dashed")
+
+ggplot(data, aes(bio_tran_scale, in_minus_out, colour = kelp_sp)) +
+  geom_point(aes(pch = kelp_sp))+
+  geom_smooth(method = lm) +
+  geom_hline(yintercept = 0, lty = "dashed")
+# on the transect scale it also looks like there's a positive delta vs kelp trend
+
+ggplot(data, aes(weight_sum_scale, in_out_avg, colour = kelp_sp)) +
+  geom_point(aes(pch = kelp_sp))+
+  geom_smooth(method = lm) +
+  geom_hline(yintercept = 0, lty = "dashed")
+# looks like a positive delta vs animal biomass/abundance
+
+ggplot(data, aes(depth_scale, in_out_avg, colour = kelp_sp)) +
+  geom_point(aes(pch = kelp_sp))+
+  geom_smooth(method = lm) +
+  geom_hline(yintercept = 0, lty = "dashed")
+# maybe no depth relationship, but it looks like it's positive for nereo
+
+ggplot(data, aes(tide_scale, in_out_avg, colour = kelp_sp)) +
+  geom_point(aes(pch = kelp_sp))+
+  geom_smooth(method = lm) +
+  geom_hline(yintercept = 0, lty = "dashed")
+# maybe negative delta vs tide relationship 
 
 # looks like there might be a kelp:tide interaction but I'm worried about the kelp species
   # there's only one nereo site at flood tide, and only three macro sites at flood
@@ -336,27 +364,38 @@ summary(mod_tran)
 # best = kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + kelp_sp 
 # new best = abundance_scale + depth_scale + kelp_bio_scale + kelp_sp + tide_scale + abundance_scale:kelp_bio_scale + abundance_scale:tide_scale + kelp_bio_scale:tide_scale
 
-mod_best <- glmmTMB(in_minus_out ~ abundance_scale + depth_scale + kelp_bio_scale + kelp_sp + tide_scale + abundance_scale:kelp_bio_scale + abundance_scale:tide_scale + kelp_bio_scale:tide_scale + (1|site_code), 
+mod_best <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + abundance_scale + depth_scale + tide_scale + abundance_scale:kelp_bio_scale + abundance_scale:tide_scale + kelp_bio_scale:tide_scale + (1|site_code), 
                     family = 'gaussian',
-                    data = data)
+                    data = data )
 
 plot(simulateResiduals(mod_best)) # looks fine
 summary(mod_best)
 
 # use my stupid brain to think of a good model
 # I now know abundance is actually better than weight, the resids look better with abundance
+# no interactions bc I don't think I have the data to do that
 mod_in_out <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
                         abundance_scale + shannon_scale + depth_scale + 
                         (1|site_code),
                       family = 'gaussian',
                       data = data) # when I remove no kelp sites the coeffs hardly change
 
-plot(simulateResiduals(mod_in_out)) # looks fine
+plot(simulateResiduals(mod_in_out)) # looks ok but not perfect
 summary(mod_in_out)
 
-# nereo might be a litttle higher slope than macro but there's not enough data points to run the model
+# what if i just add the abundance:kelp interaction
+mod_int <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale*abundance_scale +
+                     tide_scale + shannon_scale + depth_scale + 
+                     (1|site_code),
+                      family = 'gaussian',
+                      data = data) # when I remove no kelp sites the coeffs hardly change
 
-# what if I remove no kelp and add kelp sp interaction
+plot(simulateResiduals(mod_int)) # looks better! no red
+summary(mod_int)
+# seems like the other 2 2-way interactions only come out when the kelp:tide interaction is also involved. if the kelp:tide interaction isn't valid to include, maybe none of them are???
+
+
+# what if I add kelp sp interaction
 # I can't do a triple kelp_sp*kelp_bio_scale*tide_scale interaction bc no nereo flood
 # I want to know if the tide:kelp interaction is the same for nereo and macro
     # there is no tide:nereo interaction bc nereo only measured at slack tide
@@ -365,42 +404,39 @@ summary(mod_in_out)
 # looks like it is???? but there's not enough data points to run the model with just nereo
 
 # biomass and abundance, shannon vs simpson checks
-mod_abund <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
-                       abundance_scale + shannon_scale + depth_scale + 
+mod_weight <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
+                       weight_sum_scale + shannon_scale + depth_scale + 
                        (1|site_code),
                      family = 'gaussian',
                      data = data)
 
 mod_simp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
-                      weight_sum_scale + simpson_scale + depth_scale + 
+                      abundance_scale + simpson_scale + depth_scale + 
                       (1|site_code),
                     family = 'gaussian',
                     data = data)
 
 # Abundance simpson's is the best AIC mod
-mod_abund_simp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
-                            abundance_scale + simpson_scale + depth_scale + 
+mod_weight_simp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
+                            weight_sum_scale + simpson_scale + depth_scale + 
                             (1|site_code),
                           family = 'gaussian',
                           data = data)
 
-plot(simulateResiduals(mod_abund_simp)) # looks fine
-summary(mod_abund_simp)
-
 mod_tran <- glmmTMB(in_minus_out ~ kelp_sp + bio_tran_scale + tide_scale +
-                      weight_sum_scale + shannon_scale + depth_scale +
+                      abundance_scale + shannon_scale + depth_scale +
                       (1|site_code),
                       family = 'gaussian',
                       data = data)
 
 mod_forest <- glmmTMB(in_minus_out ~ kelp_sp + forest_bio_scale + tide_scale +
-                        weight_sum_scale + shannon_scale + depth_scale +
+                        abundance_scale + shannon_scale + depth_scale +
                         (1|site_code),
                       family = 'gaussian',
                       data = data)
 
 
-AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp, mod_forest, mod_tran, mod_best) %>%
+AIC_tab_kelp <- AIC(mod_in_out, mod_weight, mod_simp, mod_weight_simp, mod_forest, mod_tran, mod_best, mod_int) %>%
   rownames_to_column() %>%
   mutate(best = min(AIC),
          delta = AIC - best,
@@ -408,45 +444,49 @@ AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp, mod_forest,
          sum = sum(likelihood),
          AICw = likelihood/sum) %>%
   select(rowname, df, AIC, delta, AICw)
+# ooof the model with the three t-way interactions are super preferred 
 
-# ooof the interactions are super preferred 
+# let's look at those interactions some more:
 
+# Kelp:Tide
 visreg(mod_best, "kelp_bio_scale", by = "tide_scale", overlay=TRUE)
+# the range for low and high tide exchange rates is pretty small
+visreg(mod_best, "tide_scale", by = "kelp_bio_scale", overlay=TRUE)
+# looking at it the other way, there's a good range of tides across the med kelp density, but not at low or high kelp
+# I don't think this tide:kelp interaction is valid!
 
+# Abundance:Kelp
 visreg(mod_best, "abundance_scale", by = "kelp_bio_scale", overlay=TRUE)
 visreg(mod_best, "kelp_bio_scale", by = "abundance_scale", overlay=TRUE)
+# looks like an ok spread, 2 groups only have 3 sites, tho
+# this basically looks like: at high kelp or high animals, you get a large delta nh4. But if one of the variables is med/low, increasing the other will increase delta
+# I think this is my "asympote"
 
-visreg(mod_best, "abundance_scale", by = "tide_scale", overlay=TRUE)
+# Abundance:tide
+visreg(mod_int, "abundance_scale", by = "tide_scale", overlay=TRUE)
+
+# OK so tide isn't actually a reasonable thing to include!!!!! the spead of kelp biomass across tides is pittiful, it's trying to estimate slopes for two clumps of points and I don't trust that those slopes are actually different
+
+# what does the visreg look like with no interactions
+visreg(mod_in_out)
 
 
 # run the model without an intercept
 mod_in_out2 <- glmmTMB(in_minus_out ~ -1 + kelp_sp + kelp_bio_scale + tide_scale + 
-                         abundance_scale + shannon_scale + depth_scale +
+                         abundance_scale + simpson_scale + depth_scale +
                          (1|site_code),
                       family = 'gaussian',
-                      data = data %>% filter(kelp_sp != "none"))
+                      data = data)
 summary(mod_in_out2)
 
-# center instead of scale for estimates in normal units
-mod_in_out_c <- glmmTMB(in_minus_out ~ - 1 + kelp_sp +
-                          kelp_bio_center*tide_center*weight_sum_center + 
-                          shannon_center + depth_center - 
-                          kelp_bio_center:tide_center:weight_sum_center +
+# don't scale variables for estimates in normal units
+mod_in_out_c <- glmmTMB(in_minus_out ~ - 1 + kelp_sp + kelp_bio_center + tide_center + 
+                          abundance_center + simpson_center + depth_center +
                           (1|site_code),
                         family = 'gaussian',
                         data = data)
 
 summary(mod_in_out_c)
-
-# reduced mod
-mod_in_out3 <- glmmTMB(in_minus_out ~ kelp_sp +
-                        kelp_bio_scale + tide_scale + weight_sum_scale + 
-                        shannon_scale + depth_scale +
-                        (1|site_code),
-                      family = 'gaussian',
-                      data = data)
-
-summary(mod_in_out3)
 
 
 # Step 4: Check for collinearity of predictors
@@ -460,13 +500,10 @@ car::vif(lm(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + weight_sum_sc
 #  Double check that the negative in – out sites aren’t the places where the transect was on the other side of the forest.
 # Maybe try to PCA????? see if there's clustering?
 
-ggplot(data, aes(site, bio_tran_scale, colour = site)) +
-  geom_point() + 
-  stat_summary(fun = "mean", size = 1) 
 # Graphing ------
 
 # Palettes
-pal12 <- viridis::viridis(11)
+pal12 <- viridis::viridis(8)
 pal_k <- viridis::viridis(10)
 pal2 <- c(pal_k[8], pal_k[5])
 
@@ -481,8 +518,8 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
          estimate = Estimate) %>%
   head(- 1)  %>%
   mutate(variable = factor(as.factor(variable), 
-                           levels = c("kelp_spmacro", "kelp_spnereo", "kelp_bio_scale", "abundance_scale", "depth_scale", "shannon_scale", "tide_scale"),
-                           labels = c("Macro", "Nereo", "Kelp biomass", "Animal abund", "Depth", "Biodiversity", "Tide")),
+                           levels = c("kelp_spmacro", "kelp_spnereo", "kelp_spnone", "kelp_bio_scale", "abundance_scale", "depth_scale", "simpson_scale", "tide_scale"),
+                           labels = c("Macro", "Nereo", "None", "Kelp biomass", "Animal abund", "Depth", "Biodiversity", "Tide")),
          se = (upper_CI - estimate)/1.96
   )
 
@@ -493,8 +530,82 @@ kelp_coeff_plot <- coeff_plot(coeff_df = df,
 
 #ggsave("Output/Pres_figs/Fig4a.png", device = "png", height = 8, width = 12, dpi = 400)
 
+# Plot kelp species predictions ----
+predict_sp <- ggpredict(mod_in_out, terms = "kelp_sp") %>% 
+  dplyr::rename(kelp_sp = x,
+                in_minus_out = predicted
+         ) 
 
-# Model predictions against raw data plot
+sp_labs <- c(macro = "Macro", nereo = "Nereo", none = "None")
+
+kelp_sp_plot <- 
+  dot_whisker(sum_data = predict_sp, 
+              all_data = data,
+              x_var = kelp_sp,
+              y_var = in_minus_out,
+              pch_var = kelp_sp,
+              labels = sp_labs,
+              pal = c(pal12[3], pal12[2],pal12[1])) +
+    geom_hline(yintercept = 0, lty = "dashed") +
+    place_label("(b)")
+
+# Plot kelp_biomass predictions ----
+predict_kelp_bio <- ggpredict(mod_in_out, terms = "kelp_bio_scale") %>% 
+  dplyr::rename(kelp_bio_scale = x)
+
+kelp_pred_plot <- plot_pred(raw_data = data,
+                            predict_data = predict_kelp_bio, 
+                            plot_type = "new_kelp",
+                            x_var = kelp_bio_scale, y_var = in_minus_out, 
+                            pch_var = kelp_sp,
+                            x_axis_lab = expression(paste("Kelp biomass (kg/m"^2,")")),
+                            pal = pal12[4],
+                            lty_var = pal12[4]) +
+  place_label("(c)")
+
+
+# Plot animal abundance predictions ----
+predict_abund <- ggpredict(mod_in_out, terms = "abundance_scale") %>% 
+  dplyr::rename(abundance_scale = x)
+
+abund_pred_plot <- plot_pred(raw_data = data,
+                             predict_data = predict_abund, 
+                             plot_type = "new_kelp",
+                             x_var = abundance_scale, y_var = in_minus_out,
+                             pch_var = kelp_sp,
+                             x_axis_lab = "Abundance",
+                             pal = pal12[5],
+                             lty_var = pal12[5]) +  
+  place_label("(d)")
+
+# Plot depth? ---- 
+predict_depth <- ggpredict(mod_in_out, terms = "depth_scale") %>% 
+  dplyr::rename(depth_scale = x)
+
+depth_pred_plot <- plot_pred(raw_data = data,
+                             predict_data = predict_depth, 
+                             plot_type = "new_kelp",
+                             x_var = depth_scale, y_var = in_minus_out, 
+                             pch_var = kelp_sp,
+                             x_axis_lab = "Depth",
+                             pal = pal12[6],
+                             lty_var = pal12[6]) +  
+  place_label("(e)")
+
+# Put them allll together????
+
+plots <- kelp_sp_plot + kelp_pred_plot + abund_pred_plot + depth_pred_plot
+
+kelp_coeff_plot + plots
+  
+ggsave("Output/Figures/Fig4.png", device = "png", height = 13.5, width = 24, dpi = 400)
+  
+  
+
+
+
+
+# OLD Model predictions against raw data plot ----
 # make new mod with untransformed vars
 
 # create range vector
@@ -543,7 +654,7 @@ data_kelp <- data %>%
                          kelp_sp == "nereo" & tide_cat == "Slack" ~ "nereo_slack",
                          kelp_sp == "nereo" & tide_cat == "Flood" ~ "nereo_flood"))
 
-mod_sp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + abundance_scale + 
+mod_sp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + abundance_scale + 
                     shannon_scale + depth_scale +
                     (1|site_code),
                   family = 'gaussian',
@@ -552,19 +663,8 @@ mod_sp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + abundan
 plot(simulateResiduals(mod_sp)) # looks fine
 summary(mod_sp)
 
-data_n <- data %>%
-  select(in_out_avg, kelp_sp, kelp_bio_scale, tide_scale, abundance_scale, shannon_scale, depth_scale) %>%
-  unique()
-
-mod_sp <- glmmTMB(in_out_avg ~ kelp_sp + kelp_bio_scale*tide_scale + abundance_scale + 
-                    shannon_scale + depth_scale,
-                  family = 'gaussian',
-                  data = data_n)
-plot(simulateResiduals(mod_sp)) # looks fine
-summary(mod_sp)
 
 visreg(mod_sp, "kelp_bio_scale", by = "abundance_scale", overlay = TRUE)
-
 
 # max min
 max_min_sp <- data_kelp %>%
@@ -596,6 +696,11 @@ ggplot() +
                  colour = kelp_sp, fill = kelp_sp,
                  pch = kelp_sp), 
              alpha = 0.8) +
+  geom_smooth(data = data_kelp, 
+              aes(x = kelp_bio_scale, y = in_minus_out, 
+                  colour = kelp_sp, fill = kelp_sp),
+              method = lm)
+  
   geom_line(data = predict_kelp_sp,
             aes(x = kelp_bio_scale, y = predicted, 
                 colour = kelp_sp, lty = kelp_sp),
@@ -603,7 +708,11 @@ ggplot() +
   geom_ribbon(data = predict_kelp_sp,
               aes(x = kelp_bio_scale, y = predicted, fill = kelp_sp,
                   ymin = conf.low, ymax = conf.high), 
-              alpha = 0.15) 
+              alpha = 0.15) +
+  stat_summary(data = (data %>% filter(kelp_sp == "none")), 
+               aes(x = kelp_bio_scale, y = in_minus_out, group = kelp_sp), 
+               fun = "mean",
+               fun.data = "mean_cl_boot") 
 
   labs(colour = "Tide", fill = "Tide", lty = "Tide") +
   theme +
