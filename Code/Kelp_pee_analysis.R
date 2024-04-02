@@ -403,48 +403,6 @@ summary(mod_int)
 # and i want to know if the kelp biomass slope is same for macro and nereo
 # looks like it is???? but there's not enough data points to run the model with just nereo
 
-# biomass and abundance, shannon vs simpson checks
-mod_weight <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
-                       weight_sum_scale + shannon_scale + depth_scale + 
-                       (1|site_code),
-                     family = 'gaussian',
-                     data = data)
-
-mod_simp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
-                      abundance_scale + simpson_scale + depth_scale + 
-                      (1|site_code),
-                    family = 'gaussian',
-                    data = data)
-
-# Abundance simpson's is the best AIC mod
-mod_weight_simp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
-                            weight_sum_scale + simpson_scale + depth_scale + 
-                            (1|site_code),
-                          family = 'gaussian',
-                          data = data)
-
-mod_tran <- glmmTMB(in_minus_out ~ kelp_sp + bio_tran_scale + tide_scale +
-                      abundance_scale + shannon_scale + depth_scale +
-                      (1|site_code),
-                      family = 'gaussian',
-                      data = data)
-
-mod_forest <- glmmTMB(in_minus_out ~ kelp_sp + forest_bio_scale + tide_scale +
-                        abundance_scale + shannon_scale + depth_scale +
-                        (1|site_code),
-                      family = 'gaussian',
-                      data = data)
-
-
-AIC_tab_kelp <- AIC(mod_in_out, mod_weight, mod_simp, mod_weight_simp, mod_forest, mod_tran, mod_best, mod_int) %>%
-  rownames_to_column() %>%
-  mutate(best = min(AIC),
-         delta = AIC - best,
-         likelihood = exp( -0.5*delta),
-         sum = sum(likelihood),
-         AICw = likelihood/sum) %>%
-  select(rowname, df, AIC, delta, AICw)
-# ooof the model with the three t-way interactions are super preferred 
 
 # let's look at those interactions some more:
 
@@ -478,16 +436,6 @@ mod_in_out2 <- glmmTMB(in_minus_out ~ -1 + kelp_sp + kelp_bio_scale + tide_scale
                       family = 'gaussian',
                       data = data)
 summary(mod_in_out2)
-
-# don't scale variables for estimates in normal units
-mod_in_out_c <- glmmTMB(in_minus_out ~ - 1 + kelp_sp + kelp_bio_center + tide_center + 
-                          abundance_center + simpson_center + depth_center +
-                          (1|site_code),
-                        family = 'gaussian',
-                        data = data)
-
-summary(mod_in_out_c)
-
 
 # Step 4: Check for collinearity of predictors
 
@@ -578,7 +526,7 @@ abund_pred_plot <- plot_pred(raw_data = data,
                              lty_var = pal12[5]) +  
   place_label("(d)")
 
-# Plot depth? ---- 
+# Plot depth predictions ---- 
 predict_depth <- ggpredict(mod_in_out, terms = "depth_scale") %>% 
   dplyr::rename(depth_scale = x)
 
@@ -601,43 +549,6 @@ kelp_coeff_plot + plots
 #ggsave("Output/Figures/Fig4.png", device = "png", height = 13.5, width = 24, dpi = 400)
   
   
-
-
-
-
-# OLD Model predictions against raw data plot ----
-# make new mod with untransformed vars
-
-# create range vector
-tide_means_kelp <- data %>%
-  group_by(tide_cat) %>%
-  summarise(tide = mean(tide_scale))
-
-v2 <- c(as.numeric(tide_means_kelp[2,2]), as.numeric(tide_means_kelp[1,2]))
-
-# now make predictions
-predict_kelp <- ggpredict(mod_abund, terms = c("kelp_bio_scale", "tide_scale [v2]")) %>% 
-  mutate(kelp_bio_scale = x,
-         tide_cat = factor(as.factor(ifelse(group == as.character(tide_means_kelp[1,2]), "Slack", "Flood")),
-         levels = c("Ebb", "Slack", "Flood"))
-         ) %>%
-  filter(tide_cat != "Flood" | kelp_bio_scale < 0.21) %>%
-  filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
-
-
-# now plot these predictions
-kelp_pred_plot <- plot_pred(raw_data = (data %>%
-                        mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
-          predict_data = predict_kelp, 
-          plot_type = "kelp",
-          x_var = kelp_bio_scale, y_var = in_minus_out, 
-          lty_var = tide_cat,
-          size_var = weight_sum, 
-          pal = pal2) +
-#  ylim(c(-0.5, 0.8))
-  place_label("(b)")
-
-#ggsave("Output/Pres_figs/Fig4b.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # Figure 4 for pub with white -----
@@ -740,6 +651,237 @@ plot_pred(raw_data = data_kelp,
 
 
 # so basically for Macrocystis, there's a positive interaction between kelp biomass and tide exchange. But that's only driven by two high in - out sites and one low in - out site at flood tide.... so is that interaction real
+
+
+# Family level ------
+
+# No zeros for abundance!
+
+data_fam_no0_a <- data %>%
+  select(site, site_code, in_out_avg, kelp_bio_scale, kelp_sp, depth_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
+  unique() %>%
+  left_join((kelp_rls %>%
+               mutate(family = as.factor(family))%>%
+               group_by(site_code, method, phylum, family) %>% # if i want methods split up, add it back here
+               summarise(total_fam = sum(total),
+                         weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
+            by = "site_code") %>%
+  mutate(abund_fam_scale = c(scale(total_fam)),
+         weight_fam_scale = c(scale(weight_fam_sum_g)))
+
+
+# what are the top families?
+
+# df for just the surveys I'm looking at
+kelp_sm <- data %>%
+  select(site_code) %>%
+  unique() %>%
+  left_join(kelp_rls, by = "site_code")
+
+# CHOOSE THE FAMILIES TO INCLUDE
+# rank of families by total abundance (density)
+kelp_fam_list_total <- kelp_sm %>%
+  group_by(family) %>%
+  summarise(sum = sum(total)) %>%
+  drop_na(family) %>%
+  arrange(desc(sum)) %>%
+  transmute(family = family, 
+            sum_total = sum,
+            rank_total = 1:43)
+
+# but which families show up on the most transects?
+kelp_fam_list_count <- kelp_sm %>%
+  select(site_code, family) %>%
+  unique() %>%
+  count(family) %>%
+  drop_na(family) %>%
+  arrange(desc(n)) %>%
+  transmute(family = family, 
+            sum_count = n,
+            rank_count = 1:43)
+
+# rank of families by biomass
+kelp_fam_list_bio <- kelp_sm %>%
+  group_by(family) %>%
+  summarise(sum = sum(weight_size_class_sum)) %>%
+  drop_na(family) %>%
+  arrange(desc(sum)) %>%
+  transmute(family = family, 
+            sum_bio = sum,
+            rank_bio = 1:43)
+
+# join all that fam stuff together
+kelp_fam_big_list <- kelp_fam_list_total %>%
+  left_join(kelp_fam_list_count, by = "family") %>%
+  left_join(kelp_fam_list_bio, by = "family") %>%
+  mutate(rank_all = (rank_total + rank_count + rank_bio)/3)
+
+# OK so how do I make sense of this
+# plot all rankings together
+ggplot(kelp_fam_big_list) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_total, colour = "density"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_count, colour = "count"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_bio, colour = "biomass"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_all, colour = "all"), alpha = 0.5) +
+  geom_vline(xintercept = 15, lty = "dashed") +
+  geom_hline(yintercept = "Muricidae", lty = "dashed") +
+  labs(y = "Family", x = "Rank", colour = "Rank Type")
+
+# just the families I want to keep
+kelp_fam_list_cut <- fam_big_list %>%
+  arrange(rank_all) %>%
+  head(15) %>%
+  select(family) 
+
+# OK and now I want to make a final df where the top 15 families are named, and everything else is "other"
+
+# make this final df for the df without 0's
+data_fam_no0 <- data_fam_no0_a %>%
+  filter(family %in% kelp_fam_list_cut$family) %>%
+  # now make all the other families "other"
+  rbind(data_fam_no0_a %>%
+          filter(!family %in% kelp_fam_list_cut$family) %>%
+          mutate(family = "other"))
+
+# Family stats ----
+mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + kelp_bio_scale + tide_scale + 
+                        family*abund_fam_scale + depth_scale ,
+                      family = 'gaussian',
+                      data = data_fam_no0)
+summary(mod_fam)
+plot(DHARMa::simulateResiduals(mod_fam)) 
+
+# what the fuuuck???? Are limpets significant again???
+
+df <- emtrends(mod_fam, pairwise ~ family, var = "abund_fam_scale")$emtrends %>%
+  as.data.frame()
+
+# look at those slopes
+ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.trend), xmin = lower.CL, xmax = upper.CL)) +
+  geom_point(size = 2.7) +
+  geom_errorbar(width = 0, linewidth = 0.5) +
+  geom_vline(xintercept=0, color="black", linetype="dashed")
+
+# For fish: Hexagrammidae, Sebastidae, Embiotocidae, Cottidae
+# For inverts: Echinasteridae, Asteropseidae, Muricidae, Asteriidae,  Stichopodidae by size of slope
+
+# plot each fish family model -----
+# since I'm working with each family seperately I want to change density back to abundance
+data_fam_no0s <- data_fam_no0 %>%
+  mutate(total_fam = case_when(method == 1 ~ total_fam*500,
+                               method == 2 ~ total_fam*100),
+         abund_fam_scale = c(scale(total_fam)))
+
+# should I do a model for each species?
+v_fam <- v_fun(data_fam_no0s, "Hexagrammidae")
+predict_green <- fam_fun2(data_fam_no0s, "Hexagrammidae", diagnose = FALSE)
+# total_fam  9.4316940  3.9924145   2.362  0.01816 * 
+
+v_fam <- v_fun(data_fam_no0s, "Sebastidae")
+predict_rock <- fam_fun2(data_fam_no0s, "Sebastidae", diagnose = FALSE)
+
+v_fam <- v_fun(data_fam_no0s, "Embiotocidae")
+predict_per <- fam_fun2(data_fam_no0s, "Embiotocidae", diagnose = TRUE)
+
+v_fam <- v_fun(data_fam_no0s, "Cottidae")
+predict_scul <- fam_fun2(data_fam_no0s, "Cottidae", diagnose = TRUE)
+
+predict_fish <- rbind(predict_green, predict_rock, predict_per, predict_scul)%>%
+  mutate(family = factor(family, levels = 
+                           c("Hexagrammidae", "Sebastidae", "Embiotocidae", "Cottidae")))
+
+# make a df of just those species
+fish_fam_data <- data_fam_no0s %>%
+  filter(family == "Hexagrammidae" |
+           family == "Sebastidae" |
+           family == "Cottidae" |
+           family == "Embiotocidae") %>%
+  mutate(family = factor(family, levels = 
+                           c("Hexagrammidae", "Sebastidae", "Embiotocidae", "Cottidae")),
+         slope = case_when(family == "Hexagrammidae" ~ "slope = 0.009, p = 0.0002",
+                           family == "Sebastidae" ~ "slope = 0.0009, p = 0.10",
+                           family == "Cottidae" ~ "slope = 0.003, p = 0.01",
+                           family == "Embiotocidae" ~ "slope = 0.0007, p = 0.0001"))
+
+# plot these curves for the fish 
+pal <- viridis::viridis(10)
+pal1 <- pal[5]
+
+ggplot() + 
+  geom_point(data = fish_fam_data, 
+             aes(x = total_fam, y = in_out_avg), colour = pal1,
+             alpha = 0.8) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Abundance"))) +
+  facet_wrap(~family, scales = 'free_x') +
+  geom_line(data = predict_fish,
+            aes(x = total_fam, y = predicted), colour = pal1,
+            linewidth = 1) +
+  geom_ribbon(data = predict_fish,
+              aes(x = total_fam, y = predicted, 
+                  ymin = conf.low, ymax = conf.high), fill = pal1,
+              alpha = 0.15) +
+  theme_white() +
+  theme(strip.background = element_rect(fill = "grey", color = "grey")) +
+  geom_text(
+    data = fish_fam_data %>% select(family, slope) %>% unique(),
+    mapping = aes(x = Inf, y = Inf, label = slope),
+    hjust   = 1.1,
+    vjust   = 1.5,
+    size = 9)
+
+# ggsave("Output/Figures/fish_families_kelp.png", device = "png", height = 9, width = 12, dpi = 400)
+
+
+# Next do inverts! -----
+
+# Model selection checks------
+# biomass and abundance, shannon vs simpson checks
+mod_weight <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
+                        weight_sum_scale + shannon_scale + depth_scale + 
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data)
+
+mod_simp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
+                      abundance_scale + simpson_scale + depth_scale + 
+                      (1|site_code),
+                    family = 'gaussian',
+                    data = data)
+
+# Abundance simpson's is the best AIC mod
+mod_weight_simp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + 
+                             weight_sum_scale + simpson_scale + depth_scale + 
+                             (1|site_code),
+                           family = 'gaussian',
+                           data = data)
+
+mod_tran <- glmmTMB(in_minus_out ~ kelp_sp + bio_tran_scale + tide_scale +
+                      abundance_scale + shannon_scale + depth_scale +
+                      (1|site_code),
+                    family = 'gaussian',
+                    data = data)
+
+mod_forest <- glmmTMB(in_minus_out ~ kelp_sp + forest_bio_scale + tide_scale +
+                        abundance_scale + shannon_scale + depth_scale +
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data)
+
+
+AIC_tab_kelp <- AIC(mod_in_out, mod_weight, mod_simp, mod_weight_simp, mod_forest, mod_tran, mod_best, mod_int) %>%
+  rownames_to_column() %>%
+  mutate(best = min(AIC),
+         delta = AIC - best,
+         likelihood = exp( -0.5*delta),
+         sum = sum(likelihood),
+         AICw = likelihood/sum) %>%
+  select(rowname, df, AIC, delta, AICw)
+# ooof the model with the three t-way interactions are super preferred 
 
 # Stats: site to site variation ----
 
@@ -911,5 +1053,43 @@ kcca_table <- pee %>%
 
 
 # Graveyard ------
+
+
+# OLD Model predictions against raw data plot ----
+# make new mod with untransformed vars
+
+# create range vector
+tide_means_kelp <- data %>%
+  group_by(tide_cat) %>%
+  summarise(tide = mean(tide_scale))
+
+v2 <- c(as.numeric(tide_means_kelp[2,2]), as.numeric(tide_means_kelp[1,2]))
+
+# now make predictions
+predict_kelp <- ggpredict(mod_abund, terms = c("kelp_bio_scale", "tide_scale [v2]")) %>% 
+  mutate(kelp_bio_scale = x,
+         tide_cat = factor(as.factor(ifelse(group == as.character(tide_means_kelp[1,2]), "Slack", "Flood")),
+                           levels = c("Ebb", "Slack", "Flood"))
+  ) %>%
+  filter(tide_cat != "Flood" | kelp_bio_scale < 0.21) %>%
+  filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
+
+
+# now plot these predictions
+kelp_pred_plot <- plot_pred(raw_data = (data %>%
+                                          mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
+                            predict_data = predict_kelp, 
+                            plot_type = "kelp",
+                            x_var = kelp_bio_scale, y_var = in_minus_out, 
+                            lty_var = tide_cat,
+                            size_var = weight_sum, 
+                            pal = pal2) +
+  #  ylim(c(-0.5, 0.8))
+  place_label("(b)")
+
+#ggsave("Output/Pres_figs/Fig4b.png", device = "png", height = 9, width = 12, dpi = 400)
+
+
+
 data2 <- data %>%
   select(site, kelp_sp, Composition)
