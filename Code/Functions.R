@@ -1317,3 +1317,26 @@ fam_fun <- function(df, family, diagnose = FALSE) {
 
 }
 
+
+fam_fun2 <- function(df, family, diagnose = FALSE) {
+  
+  df_fam <- df %>% filter(family == {{family}})
+  
+  # model
+  mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + kelp_bio_scale + tide_scale + 
+                       total_fam + depth_scale, 
+                     family = 'gaussian',
+                     data = df_fam)
+  
+  if(diagnose == TRUE){
+    print(summary(mod_fam))
+    print(plot(DHARMa::simulateResiduals(mod_fam)))
+  }
+  
+  # ggpredict
+  predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]")) %>%
+    mutate(total_fam = x,
+           family = {{family}}) 
+  
+}
+
