@@ -616,13 +616,15 @@ mod_richness <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + rich_scale + dept
                         family = Gamma(link = 'log'),
                         data = rls_final)
 
+summary(mod_richness)
+
 mod_simp_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + simpson_scale + depth_avg_scale + (1|year) + (1|site_code), 
                     family = Gamma(link = 'log'),
                     data = rls_final)
 
 
 # table for publication
-AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_richness, mod_simp_weight) %>%
+AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_simp_weight) %>%
   rownames_to_column() %>%
   mutate(best = min(AIC),
          delta = AIC - best,
@@ -641,6 +643,13 @@ mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center*tide_center + shannon_center +
 summary(mod_brain_c)
 
 
+# Step 4: Check for collinearity of predictors
+
+# car can't handle random effects so make a simplified mod
+car::vif(lm(nh4_avg ~ abundance_scale + tide_scale + shannon_scale + depth_avg_scale, data = rls_final))
+# All good, shannon is a little high
+
+
 # Family level stats ----
 
 # first model the df without zeros
@@ -652,7 +661,7 @@ mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_a
                    data = family_df_no0)
 # do I want the triple interaction or not
 summary(mod_fam_no0)
-plot(DHARMa::simulateResiduals(mod_fam_no0)) # less bad with the triple
+plot(DHARMa::simulateResiduals(mod_fam_no0)) # less bad with the triple,
 
 # can I emtrends to get the slopes
 df <- emtrends(mod_fam_no0, pairwise ~ family, var = "abund_fam_scale")$emtrends %>%
@@ -859,7 +868,7 @@ v_g <- seq(min_g, max_g, spread_g)
 
 # ggpredict takes a little while because there's so many terms for each family
 predict_g <- ggpredict(mod_fam_plot, 
-                       terms = c("total_fam[v_g]", "tide_scale [v2]",
+                       terms = c("total_fam[v_g]", "tide_scale [v]",
                                  "family")) %>%
   mutate(total_fam = x,
          tide_cat = factor(as.factor(case_when(
@@ -962,19 +971,13 @@ ggplot() +
         axis.title.y = element_text(size = 9),
         strip.background = element_rect(fill = "grey", color = "grey") )
 
-# Step 4: Check for collinearity of predictors
-
-# car can't handle random effects so make a simplified mod
-car::vif(lm(nh4_avg ~ abundance_scale + tide_scale + shannon_scale + depth_avg_scale, data = rls_final))
-# All good, shannon is a little high
-
 
 # Graphing ----
 
 # ALRIGHT I'M GOING WITH MOD_BRAIN
 # Just using AIC blindly isn't good! I had reasons for all these predictors and I'm gonna keep them!!!
 
-pal6 <- viridis::viridis(6)
+pal6 <- viridis::viridis(5)
 pal <- viridis::viridis(10)
 pal3 <- c(pal[10], pal[8], pal[5])
 pal1 <- pal[5]
@@ -993,13 +996,16 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
          lower_CI = `2.5 %`,
          upper_CI = `97.5 %`,
          estimate = Estimate) %>%
-  head(- 2)  %>%
+  head(- 2)  %>% # remove random effects
   mutate(estimate = ifelse(variable == "(Intercept)", exp(estimate), estimate),
          lower_CI = ifelse(variable == "(Intercept)", exp(lower_CI), lower_CI),
-         upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI),
+         upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI)) %>%
+  tail(-1) %>%
+  mutate(
          variable = factor(as.factor(variable), 
-                           levels = c("(Intercept)", "abundance_scale", "tide_scale", "abundance_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
-                           labels = c("Intercept", "Abundance", "Tide", "Abundance:tide", "Biodiversity", "Depth")))
+                           levels = c("abundance_scale", "tide_scale", "abundance_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
+                           labels = c("Abundance", "Tide", "Abundance:tide", "Biodiversity", "Depth")))
+  
 
 
 # Coefficient plot 
@@ -1048,7 +1054,7 @@ rls_coeff_plot + rls_pred_plot +
   theme(plot.tag.position = c(0, 1),
         plot.tag = element_text(hjust = -1, vjust = 0))
 
-#ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Figs for presentations -----
