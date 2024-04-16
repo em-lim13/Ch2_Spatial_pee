@@ -854,6 +854,39 @@ ggplot() +
 
  #ggsave("Output/Figures/invert_families.png", device = "png", height = 9, width = 12, dpi = 400)
 
+# plot invert + fish fams???? -----
+
+rls_fam <- rbind(fish_fam_data, invert_fam_data)
+
+rls_fam_predict <- rbind(predict_fish, predict_invert)
+
+# plot all 
+ggplot() + 
+  geom_point(data = rls_fam, 
+             aes(x = total_fam, y = nh4_avg), colour = pal1,
+             alpha = 0.8) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Abundance"))) +
+  facet_wrap(~family, scales = 'free_x', ncol = 2) +
+  geom_line(data = rls_fam_predict,
+            aes(x = total_fam, y = predicted), colour = pal1,
+            linewidth = 1) +
+  geom_ribbon(data = rls_fam_predict,
+              aes(x = total_fam, y = predicted, 
+                  ymin = conf.low, ymax = conf.high), fill = pal1,
+              alpha = 0.15) +
+  theme_white() +
+  theme(strip.background = element_rect(fill = "grey", color = "grey"))+
+  geom_text(
+    data = rls_fam %>% select(family, slope) %>% unique(),
+    mapping = aes(x = Inf, y = Inf, label = slope),
+    hjust   = 1.1,
+    vjust   = 1.5,
+    size = 9)
+
+ggsave("Output/Figures/rls_families.png", device = "png", height = 18, width = 12, dpi = 400)
+
+  
 # PLOT ALL FAMILIES???? -------
 mod_fam_plot <- glmmTMB(nh4_avg ~ total_fam * family * tide_scale + depth_avg_scale +
                           (1|year) + (1|site_code), 
@@ -1054,7 +1087,7 @@ rls_coeff_plot + rls_pred_plot +
   theme(plot.tag.position = c(0, 1),
         plot.tag = element_text(hjust = -1, vjust = 0))
 
-ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Figs for presentations -----
