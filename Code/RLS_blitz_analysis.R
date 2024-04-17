@@ -636,10 +636,11 @@ mod_simp_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + simpson_scale
 AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_simp_weight) %>%
   rownames_to_column() %>%
   mutate(best = min(AIC),
-         delta = AIC - best,
+         delta = round((AIC - best), digits = 2),
          likelihood = exp( -0.5*delta),
          sum = sum(likelihood),
-         AICw = likelihood/sum) %>%
+         AICw = round((likelihood/sum), digits = 2),
+         AIC = round(AIC, digits = 2)) %>%
   select(rowname, df, AIC, delta, AICw)
 
 # Use AIC to get predictors, then show the coefficients and a model output
