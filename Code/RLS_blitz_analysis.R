@@ -93,6 +93,15 @@ fishes <- fish %>%
           # careful, the function shrinks the big wolf eel
   home_range() %>% # calculate each fish's home range function
   mutate(biomass_per_indiv = biomass/total) # see how the RLS biomass calc estimated each fish size
+#  mutate(size_class_sum_g = weight_size_class_sum*1000)
+
+#d <- fishes %>% select(species_name, total, biomass, size_class_sum_g) %>%
+#  mutate(biomass_per = biomass/total,
+#         weight_per = size_class_sum_g/total,
+#    diff = biomass_per - weight_per) %>%
+#  filter(species_name != "Anarrhichthys ocellatus" )
+
+#ggplot(d, aes(diff, species_name)) + geom_jitter()
 
 # That one huge wolf eel can't be right
 # Fishbase: max size = 240 cm, max weight = 18.4 kg
