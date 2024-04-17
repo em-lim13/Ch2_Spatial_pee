@@ -382,15 +382,7 @@ clean_phylo_names <- function(datafile){
 
 length_to_weight <- function(datafile) {
   new_data <- datafile %>%
-    mutate(size_class_l = case_when(
-      # either use the low value or the midpoint, do a sensitivity analysis with high and low end and see if it makes  much of a difference
-      size_class < 15 ~ size_class + 1.25, # First bump up size classes 
-      size_class < 40 ~ size_class + 2.5,
-      size_class == 40 ~ 45,
-      size_class == 50 ~ 56.25,
-      size_class == 62.5 ~ 81.25,
-      size_class == 100 ~ 143.75,
-      size_class == 187.5 ~ 187.5),
+    mutate(
       # then convert length to weight
       weight_per_indiv_g = case_when(
       
