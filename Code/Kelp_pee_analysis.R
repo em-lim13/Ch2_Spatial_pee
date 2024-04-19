@@ -670,7 +670,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
 
 
 
-ggsave("Output/Figures/Fig4_new3.png", device = "png", height = 16, width = 16, dpi = 400)
+ggsave("Output/Figures/Fig4_new2.png", device = "png", height = 16, width = 16, dpi = 400)
   
 # comparing the coeff plots, making depth a random effect doesn't really change anything REAL. It just makes the no kelp coeff LOOK like its not signif diff from 0, but when you estimate the delta at the mean no kelp biomass (0) it's basically the same estimate as the model with depth
   
