@@ -471,7 +471,7 @@ kelp_sp_plot <-
        x = "Kelp species") +
     geom_hline(yintercept = 0, lty = "dashed") +
     place_label("(b)") +
-  ylim(c(-0.79, 1.1))
+  ylim(c(-0.79, 1.05))
 
 set.seed(234444)
 kelp_sp_plot <- 
@@ -564,6 +564,7 @@ kelp_tide_int_plot <-
 #  ylim(c(-0.5, 0.8))
   place_label("(c)")
 
+
 # Plot kelp biomass vs abundance interaction -----
 visreg(mod_in_out2, "weight_sum_scale", by = "kelp_bio_scale", 
        overlay=TRUE,
@@ -575,7 +576,9 @@ hist(data$kelp_bio_scale)
 
 d <- data %>%
   group_by(kelp_cat) %>%
-  summarise(mean = mean(kelp_bio_scale))
+  summarise(mean = mean(kelp_bio_scale),
+            min = min(weight_sum_scale) - 0.2,
+            max = max(weight_sum_scale) + 0.5)
 
 v6 <- c(d$mean[1], d$mean[2], d$mean[3])
 
@@ -585,6 +588,7 @@ v4 <- c(-0.822849, 0, 1.813896)
 v4 <- c(-0.822849, 0, 1.5)
 v5 <- c(-1, 0, 1.75) # based on eyeballed means of the three bins looking at the hist
 
+
 # now make predictions
 predict_abund_kelp <- ggpredict(mod_in_out2, terms = c("weight_sum_scale", "kelp_bio_scale [v6]")) %>% 
   mutate(weight_sum_scale = x,
@@ -592,9 +596,11 @@ predict_abund_kelp <- ggpredict(mod_in_out2, terms = c("weight_sum_scale", "kelp
            group == d$mean[1] ~ "Low",
            group == d$mean[2] ~ "Mid",
            group == d$mean[3] ~ "High")),
-                           levels = c("Low", "Mid", "High"))) 
-#  filter(tide_cat != "Flood" | kelp_bio_scale < 0.21) %>%
-#  filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
+                           levels = c("Low", "Mid", "High"))) %>%
+  left_join(d, by = "kelp_cat") %>%
+  rowwise() %>%
+  filter(between(weight_sum_scale, min, max))
+  
 
 # now plot these predictions
 abund_kelp_int_plot <- 
@@ -611,7 +617,8 @@ abund_kelp_int_plot <-
         axis.title.y = element_blank()) +
   labs(colour = "Kelp", fill = "Kelp", lty = "Kelp") +
   place_label("(d)") +
-  ylim(c(-0.79, 1.1))
+  ylim(c(-0.79, 1.05))
+
 
 # Plot abundance vs tide interaction ------
 visreg(mod_in_out, "weight_sum_scale", by = "tide_scale", overlay=TRUE)
@@ -624,14 +631,21 @@ tide_means_kelp <- data %>%
 
 v2 <- c(as.numeric(tide_means_kelp[2,2]), as.numeric(tide_means_kelp[1,2]))
 
+# range of animal vs tide
+d2 <- data %>%
+  group_by(tide_cat) %>%
+  summarise(min = min(weight_sum_scale) - 0.3,
+            max = max(weight_sum_scale) + 0.5)
+
 # now make predictions
 predict_abund_tide <- ggpredict(mod_in_out2, terms = c("weight_sum_scale", "tide_scale [v2]")) %>% 
   mutate(weight_sum_scale = x,
          tide_cat = factor(as.factor(ifelse(
            group == as.character(tide_means_kelp[1,2]), "Slack", "Flood")),
-           levels = c("Ebb", "Slack", "Flood"))) 
- # filter(tide_cat != "Flood" | kelp_bio_scale < 0.21) %>%
- # filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
+           levels = c("Ebb", "Slack", "Flood"))) %>%
+  left_join(d2, by = "tide_cat") %>%
+  rowwise() %>%
+  filter(between(weight_sum_scale, min, max))
 
 # now plot these predictions
 abund_tide_int_plot <- 
@@ -656,11 +670,7 @@ plots <- kelp_sp_plot + kelp_pred_plot + abund_pred_plot + depth_pred_plot
 kelp_coeff_plot + plots
 
 
-# plot interactions
-kelp_sp_plot + kelp_tide_int_plot + abund_kelp_int_plot + abund_tide_int_plot
-
 # plot coeffs + interactions
-
 squish <- theme(axis.title.y = element_text(margin = margin(r = -200, unit = "pt")))
 
 kelp_coeff_plot/ ((kelp_sp_plot + squish) +
@@ -670,7 +680,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
 
 
 
-ggsave("Output/Figures/Fig4_new2.png", device = "png", height = 16, width = 16, dpi = 400)
+ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 16, width = 14, dpi = 400)
   
 # comparing the coeff plots, making depth a random effect doesn't really change anything REAL. It just makes the no kelp coeff LOOK like its not signif diff from 0, but when you estimate the delta at the mean no kelp biomass (0) it's basically the same estimate as the model with depth
   
