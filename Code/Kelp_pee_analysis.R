@@ -530,7 +530,8 @@ depth_pred_plot <- plot_pred(raw_data = data,
   place_label("(e)")
 
 # Plot kelp biomass vs tide interaction ------
-visreg(mod_in_out, "kelp_bio_scale", by = "tide_scale", overlay=TRUE)
+visreg(mod_in_out, "kelp_bio_scale", by = "tide_scale", overlay=TRUE,
+       xlab = "Kelp biomass (kg/m2)")
 
 # create range vector
 tide_means_kelp <- data %>%
@@ -568,7 +569,6 @@ kelp_tide_int_plot <-
 # Plot kelp biomass vs abundance interaction -----
 visreg(mod_in_out2, "weight_sum_scale", by = "kelp_bio_scale", 
        overlay=TRUE,
-       ylab = "Delta NH4+",
        xlab = "Animal biomass (kg/m2)") # looks better
 # create range vector based on visreg numbers
 
@@ -621,7 +621,8 @@ abund_kelp_int_plot <-
 
 
 # Plot abundance vs tide interaction ------
-visreg(mod_in_out, "weight_sum_scale", by = "tide_scale", overlay=TRUE)
+visreg(mod_in_out, "weight_sum_scale", by = "tide_scale", overlay=TRUE,
+       xlab = "Animal biomass (kg/m2)")
 visreg(mod_in_out, "tide_scale", by = "weight_sum_scale", overlay=TRUE)
 
 # create range vector
@@ -954,7 +955,7 @@ ggplot() +
     vjust   = 1.5,
     size = 9)
 
-# ggsave("Output/Figures/fish_families_kelp.png", device = "png", height = 9, width = 12, dpi = 400)
+ ggsave("Output/Figures/fish_families_kelp.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # Next do inverts! -----
