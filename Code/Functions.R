@@ -86,8 +86,8 @@ theme_white = function(base_size = 12, base_family = "") {
       legend.key.size = unit(1.2, "lines"),  
       legend.key.height = NULL,  
       legend.key.width = NULL,      
-      legend.text = element_text(size = base_size*2, color = "black"),  
-      legend.title = element_text(size = base_size*2.2, face = "bold", hjust = 0, color = "black"),  
+      legend.text = element_text(size = base_size*1.8, color = "black"),  
+      legend.title = element_text(size = base_size*2, face = "bold", hjust = 0, color = "black"),  
       legend.position = "right",  
       legend.text.align = NULL,  
       legend.title.align = NULL,  
@@ -1010,18 +1010,18 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL,
 }
 
 # Alt dot whisker -----
-alt_dot_whisker <- function(data_frame, x_var, y_var, group, labels){
+alt_dot_whisker <- function(data_frame, x_var, y_var, group, labels, pal){
   ggplot(data = data_frame,
          aes(x = {{x_var}}, y = {{y_var}}, colour = {{group}})) +
-    geom_jitter(size = 5, alpha = 0.5, height = 0) +
+    geom_jitter(size = 5, alpha = 0.5, height = 0, width = 0.3) +
     stat_summary(fun = "mean", geom = "point", size = 8) +
     stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.4, linewidth = 1.5) +
     theme_white() + 
     theme(legend.position = "none",
           plot.title = element_text(size = 30)) +
-    scale_colour_manual(values = rev(pal3)) +
+    scale_colour_manual(values = pal) +
     labs(y = expression(paste("Ammonium"~(mu*M)))) +
-    ylim(c(0, 3.8)) +
+    #ylim(c(0, 3.8)) +
     labs(x = "") +
     scale_x_discrete(labels = {{labels}}) +
     theme(axis.text.x = ggtext::element_markdown())
@@ -1125,8 +1125,8 @@ plot_pred <- function(raw_data, predict_data,
     new_plot <- base_pred_plot +
       geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
       labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-           x = x_axis_lab) +
-      theme(legend.position = "null")
+           x = x_axis_lab) 
+     # theme(legend.position = "null")
   }
   
   print(new_plot)
