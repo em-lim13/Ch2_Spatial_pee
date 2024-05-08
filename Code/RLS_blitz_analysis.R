@@ -664,8 +664,7 @@ car::vif(lm(nh4_avg ~ abundance_scale + tide_scale + shannon_scale + depth_avg_s
 
 # first model the df without zeros
 # On surveys that we saw a family, does that family abundance ~ nh4 ???
-mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_avg_scale -
-                         abund_fam_scale:family:tide_scale +
+mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family +
                      (1|year) + (1|site_code), 
                    family = Gamma(link = 'log'),
                    data = family_df_no0)
@@ -682,6 +681,25 @@ ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.tr
   geom_point(size = 2.7) +
   geom_errorbar(width = 0, linewidth = 0.5) +
   geom_vline(xintercept=0, color="black", linetype="dashed")
+
+
+# random effect of family
+mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale +
+                         (1|year) + (1|site_code) + (1+abund_fam_scale|family), 
+                       family = Gamma(link = 'log'),
+                       data = family_df_no0)
+
+d <- ranef(mod_fam_no0)
+
+# OK
+# No random effect of family because the same nh4 value is replicated for each family, so I can't really have a random effect of family too
+
+# Stats beers said I can run a seperate model for each family!!!! WAHOOOOOO
+
+# multivariate space for the big fam model??? are communities dominated 
+# make matrix from communities and then see which direction the nh4 loads???
+# envfit
+# if there's a site with a lots of greenlings, do those sites have higher nh4
 
 # For fish: Hexagrammidae, Sebastidae, Cottidae, Gobiidae
 # For inverts: Asteriidae, Muricidae, Acmaeidae, Echinasteridae by size of slope
