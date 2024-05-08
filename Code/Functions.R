@@ -1284,6 +1284,7 @@ fam_fun <- function(df, family, diagnose = FALSE) {
   if(diagnose == TRUE){
     print(summary(mod_fam))
     print(plot(DHARMa::simulateResiduals(mod_fam)))
+    print(performance::r2({{mod_fam}}, tolerance = 0.0000000000001))
   }
 
   #slope_df <- emtrends(mod_fam, var = "total_fam")$emtrends %>%
