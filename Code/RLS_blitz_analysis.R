@@ -350,32 +350,7 @@ family_df_no0_a <- rls_final %>%
             by = "survey_id") %>%
   mutate(abund_fam_scale = c(scale(total_fam)),
          weight_fam_scale = c(scale(weight_fam_sum_g)))
-  
-# Make another dataframe where each family we saw on any M1 or M2 survey gets a row for each survey
-# If we didn't see a certain family on that survey, it DOES get a row
-# We will have zeros for abundance!
-m1 <- rls %>%
-  filter(method == 1) %>%
-  mutate(family = as.factor(family))%>%
-  group_by(survey_id, method, phylum, family, .drop = FALSE) %>%
-  summarise(total_fam = sum(total),
-            weight_fam_sum_g = 1000*sum(weight_size_class_sum))
 
-m2 <- rls %>%
-  filter(method == 2) %>%
-  mutate(family = as.factor(family))%>%
-  group_by(survey_id, method, phylum, family, .drop = FALSE) %>%
-  summarise(total_fam = sum(total),
-            weight_fam_sum_g = 1000*sum(weight_size_class_sum))
-
-m12 <- rbind(m1, m2)
-
-# put the df with zeros together
-family_df_0s_a <- rls_final %>%
-  select(site, site_code, survey_id, year, nh4_avg, depth_avg_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
-  left_join(m12, by = "survey_id") %>%
-  mutate(abund_fam_scale = c(scale(total_fam)),
-         weight_fam_scale = c(scale(weight_fam_sum_g)))
 
 # what are the top families?
 
@@ -453,19 +428,6 @@ family_df_no0 <- family_df_no0_a %>%
   rbind(family_df_no0_a %>%
           filter(!family %in% fam_list_cut$family) %>%
           mutate(family = "other"))
-  
-
-# make this final df again for the df WITH 0's
-family_df_0s <- family_df_0s_a %>%
-  filter(family %in% fam_list_cut$family) %>%
-  # now make all the other families "other"
-  rbind(family_df_0s_a %>%
-          filter(!family %in% fam_list_cut$family) %>%
-          mutate(family = "other")) %>%
-  mutate(abund_binary = ifelse(total_fam == 0, 0, 1))
-
-# IF i wanted to use the no zeros dataframe, I could do sort of a hurdle? If a species is present or not, does that impact ammonium???
-# And then if it is present, does it's abundance predict ammonium 
 
 # mess around with orders next time!!!!!! ------
 
@@ -704,20 +666,6 @@ d <- ranef(mod_fam_no0)
 # For fish: Hexagrammidae, Sebastidae, Cottidae, Gobiidae
 # For inverts: Asteriidae, Muricidae, Acmaeidae, Echinasteridae by size of slope
 
-
-# now model the df WITH zeros
-# Across all surveys, does family abundance ~ nh4 ???
-mod_fam_0s <- glmmTMB(nh4_avg ~ abund_fam_scale * family * tide_scale + depth_avg_scale -
-                         abund_fam_scale:family:tide_scale +
-                         (1|year) + (1|site_code), 
-                       family = Gamma(link = 'log'),
-                       data = family_df_0s)
-summary(mod_fam_0s)
-#performance::r2(mod_fam_0s)
-# depth_avg_scale
-plot(DHARMa::simulateResiduals(mod_fam_0s)) # EVEN MORE fucked
-
-# need to check random effects!!!! ------
 
 # plot each fish family model -----
 # since I'm working with each family seperately I want to change density back to abundance
