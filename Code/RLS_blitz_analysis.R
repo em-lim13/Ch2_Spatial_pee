@@ -638,7 +638,8 @@ car::vif(lm(nh4_avg ~ abundance_scale + tide_scale + shannon_scale + depth_avg_s
 fam_df_no0 <- family_df_no0 %>%
   mutate(total_fam = case_when(method == 1 ~ total_fam*500,
                                method == 2 ~ total_fam*100),
-         abund_fam_scale = c(scale(total_fam)))
+         abund_fam_scale = c(scale(total_fam))) %>%
+  as.data.frame()
 
 # one model for each family
 # Use function to determine max and min abundance of each family
