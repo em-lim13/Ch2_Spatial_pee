@@ -1276,27 +1276,21 @@ fam_fun <- function(df, family, diagnose = FALSE) {
   df_fam <- df %>% filter(family == {{family}})
 
   # model
-  mod_fam <- glmmTMB(nh4_avg ~ total_fam +
-                       (1|year) + (1|site_code), 
+  mod_fam <- glmmTMB(nh4_avg ~ total_fam + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = df_fam)
 
   if(diagnose == TRUE){
     print(summary(mod_fam))
     print(plot(DHARMa::simulateResiduals(mod_fam)))
-    print(performance::r2({{mod_fam}}, tolerance = 0.0000000000001))
+    print(performance::r2(mod_fam, tolerance = 0.0000000000001))
   }
-
-  #slope_df <- emtrends(mod_fam, var = "total_fam")$emtrends %>%
-  #  as.data.frame() %>%
-  #  mutate(slope = total_fam.trend) %>%
-  #  transmute(family = {{family}},
-  #            slope = slope)
   
   # ggpredict
   predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]")) %>%
     mutate(total_fam = x,
-           family = {{family}}) 
+           family = {{family}},
+           r2 = as.numeric(performance::r2(mod_fam, tolerance = 0.0000000000001)[1])) 
 
 }
 
