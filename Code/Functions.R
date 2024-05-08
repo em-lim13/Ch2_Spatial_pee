@@ -1297,16 +1297,6 @@ fam_fun <- function(df, family, diagnose = FALSE) {
   predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]")) %>%
     mutate(total_fam = x,
            family = {{family}}) 
-  #  left_join(slope_df, by = family)
-  
-#  predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]", "tide_scale [v2]")) %>%
-#    mutate(total_fam = x,
-#           tide_cat = factor(as.factor(case_when(
-#             group == as.numeric(tide_means[1,2]) ~ "Ebb",
-#             group == as.numeric(tide_means[2,2]) ~ "Slack",
-#             group == as.numeric(tide_means[3,2]) ~ "Flood")),
-#             levels = c("Ebb", "Slack", "Flood")),
-#           family = {{family}})
 
 }
 
