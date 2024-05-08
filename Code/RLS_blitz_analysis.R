@@ -15,6 +15,9 @@ library(TMB)
 library(glmmTMB) # better for random effects?
 library(patchwork)
 library(emmeans)
+# for R2 value
+library(insight)
+library(performance)
 #library(Matrix)
 
 # package version control
@@ -558,7 +561,7 @@ summary(mod_brain)
 plot(DHARMa::simulateResiduals(mod_brain))
 
 # just look at fish weights
-mod_fish <- glmmTMB(nh4_avg ~ fish_abund_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
+mod_fish <- glmmTMB(nh4_avg ~ fish_weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                     family = Gamma(link = 'log'),
                     data = rls_final)
 summary(mod_fish)
@@ -624,70 +627,41 @@ car::vif(lm(nh4_avg ~ abundance_scale + tide_scale + shannon_scale + depth_avg_s
 
 # Family level stats ----
 
-# first model the df without zeros
-# On surveys that we saw a family, does that family abundance ~ nh4 ???
-mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family +
-                     (1|year) + (1|site_code), 
-                   family = Gamma(link = 'log'),
-                   data = family_df_no0)
-# do I want the triple interaction or not
-summary(mod_fam_no0)
-plot(DHARMa::simulateResiduals(mod_fam_no0)) # less bad with the triple,
-
-# can I emtrends to get the slopes
-df <- emtrends(mod_fam_no0, pairwise ~ family, var = "abund_fam_scale")$emtrends %>%
-  as.data.frame()
-
-
-ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.trend), xmin = asymp.LCL, xmax = asymp.UCL)) +
-  geom_point(size = 2.7) +
-  geom_errorbar(width = 0, linewidth = 0.5) +
-  geom_vline(xintercept=0, color="black", linetype="dashed")
-
-
-# random effect of family
-mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale +
-                         (1|year) + (1|site_code) + (1+abund_fam_scale|family), 
-                       family = Gamma(link = 'log'),
-                       data = family_df_no0)
-
-d <- ranef(mod_fam_no0)
-
-# OK
-# No random effect of family because the same nh4 value is replicated for each family, so I can't really have a random effect of family too
-
-# Stats beers said I can run a seperate model for each family!!!! WAHOOOOOO
-
-# multivariate space for the big fam model??? are communities dominated 
-# make matrix from communities and then see which direction the nh4 loads???
-# envfit
-# if there's a site with a lots of greenlings, do those sites have higher nh4
+# Stats beers said I can run a separate model for each family!!!! WAHOOOOOO
 
 # For fish: Hexagrammidae, Sebastidae, Cottidae, Gobiidae
 # For inverts: Asteriidae, Muricidae, Acmaeidae, Echinasteridae by size of slope
 
 
-# plot each fish family model -----
-# since I'm working with each family seperately I want to change density back to abundance
+# Run each family model -----
+# since I'm working with each family separately I want to change density back to abundance
 fam_df_no0 <- family_df_no0 %>%
   mutate(total_fam = case_when(method == 1 ~ total_fam*500,
                                method == 2 ~ total_fam*100),
          abund_fam_scale = c(scale(total_fam)))
 
-# should I do a model for each species?
-v_fam <- v_fun(fam_df_no0, "Hexagrammidae")
-predict_green <- fam_fun(fam_df_no0, "Hexagrammidae", diagnose = TRUE)
-# total_fam  9.4316940  3.9924145   2.362  0.01816 * 
+# one model for each family
+# Use function to determine max and min abundance of each family
+# the function model is just nh4 ~ raw fam abundance with random effect of site and year
+  # for all 4 fish, the model with just abundance was better than abund*tide
 
+# Greenlings
+v_fam <- v_fun(fam_df_no0, "Hexagrammidae") 
+predict_green <- fam_fun(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
+
+# Rockfish
 v_fam <- v_fun(fam_df_no0, "Sebastidae")
 predict_rock <- fam_fun(fam_df_no0, "Sebastidae", diagnose = TRUE)
 
 v_fam <- v_fun(fam_df_no0, "Cottidae")
 predict_scul <- fam_fun(fam_df_no0, "Cottidae", diagnose = TRUE)
+# some quantile deviations in dharma
 
+# Gobies
 v_fam <- v_fun(fam_df_no0, "Gobiidae")
 predict_gob <- fam_fun(fam_df_no0, "Gobiidae", diagnose = TRUE)
 
+# put the fish predictions all together
 predict_fish <- rbind(predict_green, predict_rock, predict_scul, predict_gob)%>%
   mutate(family = factor(family, levels = 
                            c("Hexagrammidae", "Gobiidae", "Sebastidae", "Cottidae")))
@@ -705,7 +679,14 @@ fish_fam_data <- fam_df_no0 %>%
                            family == "Cottidae" ~ "slope = -0.0008, p = 0.95",
                            family == "Gobiidae" ~ "slope = 0.002, p = 0.19"))
 
-# plot these curves for the fish 
+# Graphing -----
+pal6 <- viridis::viridis(5)
+pal <- viridis::viridis(10)
+pal3 <- c(pal[10], pal[8], pal[5])
+pal1 <- pal[5]
+
+
+# plot each fish curve
 ggplot() + 
   geom_point(data = fish_fam_data, 
              aes(x = total_fam, y = nh4_avg), colour = pal1,
@@ -741,50 +722,86 @@ ggplot() +
 # ggsave("Output/Figures/fish_families.png", device = "png", height = 9, width = 12, dpi = 400)
  
 
-# invert models???
+# invert models??? -----
+
+# looks like just abundance is also best for the 
+
+# can I get R2
+df_fam <- fam_df_no0 %>% filter(family == "Asteriidae")
+
+# model
+mod_fam <- glmmTMB(nh4_avg ~ total_fam +
+                     (1|year) + (1|site_code), 
+                   family = Gamma(link = 'log'),
+                   data = df_fam)
+
+print(performance::r2(mod_fam, tolerance = 0.0000000000001))
+
+
+
 # Asteriidae, Muricidae, Acmaeidae, Echinasteridae are the four inverts with the biggest slope estimates
 v_fam <- v_fun(fam_df_no0, "Asteriidae")
 predict_star1 <- fam_fun(fam_df_no0, "Asteriidae", diagnose = TRUE)
 # total_fam    0.005981   0.005526   1.082   0.2791  
+# AIC 43.6
+# no errors
 
 v_fam <- v_fun(fam_df_no0, "Muricidae")
 predict_muri <- fam_fun(fam_df_no0, "Muricidae", diagnose = TRUE)
 # total_fam    0.005143   0.003292   1.562   0.1182  
+# AIC  39.6
+# no errors
 
 v_fam <- v_fun(fam_df_no0, "Acmaeidae")
 predict_limp <- fam_fun(fam_df_no0, "Acmaeidae", diagnose = TRUE)
 # total_fam    0.009755   0.004300   2.269  0.02328 * 
+# AIC 39.6
+# no errors
 
+# Echinasteridae has the next highest slope but the p-value isn't great.. 
 v_fam <- v_fun(fam_df_no0, "Echinasteridae")
 predict_star2 <- fam_fun(fam_df_no0, "Echinasteridae", diagnose = TRUE)
 #total_fam    0.00201    0.01598   0.126   0.8999  
+# AIC 40.0
+# no errors
 
 
 # check other inverts to make sure
 v_fam <- v_fun(fam_df_no0, "Strongylocentrotidae")
 predict_urchin <- fam_fun(fam_df_no0, "Strongylocentrotidae", diagnose = TRUE)
+# total_fam   -1.915e-05  3.227e-04  -0.059    0.953
+# AIC 43.7
 # throws error
 
 v_fam <- v_fun(fam_df_no0, "Stichopodidae")
 predict_cuke <- fam_fun(fam_df_no0, "Stichopodidae", diagnose = TRUE)
 # total_fam   -0.002382   0.002496  -0.955    0.340
+# AIC 42.7
+# no errors but slight wonk in resids
 
 v_fam <- v_fun(fam_df_no0, "Turbinidae")
 predict_turb <- fam_fun(fam_df_no0, "Turbinidae", diagnose = TRUE)
+# total_fam   -9.705e-05  3.212e-04  -0.302   0.7625  
+# AIC 42.5
 # throws error
 
 v_fam <- v_fun(fam_df_no0, "Haliotidae")
 predict_aba <- fam_fun(fam_df_no0, "Haliotidae", diagnose = TRUE)
 # total_fam   -0.002996   0.002880  -1.040   0.2983  
+# AIC 41.4
+# no errors
 
 v_fam <- v_fun(fam_df_no0, "Asteropseidae")
 predict_ast <- fam_fun(fam_df_no0, "Asteropseidae", diagnose = TRUE)
 # total_fam   -0.013190   0.008198  -1.609    0.108
+# 41.4
+# no errors
 
 v_fam <- v_fun(fam_df_no0, "Pectinidae")
 predict_pect <- fam_fun(fam_df_no0, "Pectinidae", diagnose = TRUE)
 # total_fam   -0.007614   0.005788  -1.315   0.1883  
-
+# 43.5
+# no errors
 
 # put inverts together
 predict_invert <- rbind(predict_star1, predict_muri, predict_limp, predict_star2)%>%
@@ -981,15 +998,18 @@ ggplot() +
         strip.background = element_rect(fill = "grey", color = "grey") )
 
 
+# Family community analysis -----
+# multivariate space for the big fam model??? are communities dominated by certain fams when there's a lot of nh4 in the water?
+# make matrix from communities and then see which direction the nh4 loads???
+# envfit
+# if there's a site with a lots of greenlings, do those sites have higher nh4
+
+
+
 # Graphing ----
 
 # ALRIGHT I'M GOING WITH MOD_BRAIN
 # Just using AIC blindly isn't good! I had reasons for all these predictors and I'm gonna keep them!!!
-
-pal6 <- viridis::viridis(5)
-pal <- viridis::viridis(10)
-pal3 <- c(pal[10], pal[8], pal[5])
-pal1 <- pal[5]
 
 #pie(rep(1, 10), col = pal)
 
@@ -1331,4 +1351,51 @@ rls_auto <- rls_final %>%
 
 testSpatialAutocorrelation(new_resids, x = rls_auto$longitude, y = rls_auto$latitude)
 
+
+
 # Graveyard -----
+# wendy code for R2 values 
+performance::r2(beta_reg_model, tolerance = 0.0000000000001)
+performance::r2_nakagawa(beta_reg_model)
+tidy(beta_reg_model)
+summary(beta_reg_model)
+performance::r2(beta_reg_model, tolerance = 0.0000000000001)
+
+# Calculate the marginal R2
+marginal_R2 <- 1 - (mod_brain$deviance / mod_brain$null_deviance)
+# Calculate the conditional R2
+conditional_R2 <- 1 - (mod_brain$deviance / mod_brain$null_deviance)
+marginal_R2
+conditional_R2
+
+# The big family model
+
+# On surveys that we saw a family, does that family abundance ~ nh4 ???
+mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family +
+                         (1|year) + (1|site_code), 
+                       family = Gamma(link = 'log'),
+                       data = family_df_no0)
+summary(mod_fam_no0)
+plot(DHARMa::simulateResiduals(mod_fam_no0)) # less bad with the triple,
+
+# can I emtrends to get the slopes
+df <- emtrends(mod_fam_no0, pairwise ~ family, var = "abund_fam_scale")$emtrends %>%
+  as.data.frame()
+
+
+ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.trend), xmin = asymp.LCL, xmax = asymp.UCL)) +
+  geom_point(size = 2.7) +
+  geom_errorbar(width = 0, linewidth = 0.5) +
+  geom_vline(xintercept=0, color="black", linetype="dashed")
+
+
+# random effect of family
+mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale +
+                         (1|year) + (1|site_code) + (1+abund_fam_scale|family), 
+                       family = Gamma(link = 'log'),
+                       data = family_df_no0)
+
+d <- ranef(mod_fam_no0)
+
+# OK
+# No random effect of family because the same nh4 value is replicated for each family, so I can't really have a random effect of family too
