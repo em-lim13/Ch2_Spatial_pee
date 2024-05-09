@@ -888,16 +888,15 @@ rls_pred_plot <-
           theme = "white") +
   place_label("(b)")
 
-# White background for Fig 2
-rls_coeff_plot + rls_pred_plot +
-  plot_annotation(tag_levels = 'a') &
+# Fig 3 -----
+rls_coeff_plot + rls_pred_plot  &
   theme(plot.tag.position = c(0, 1),
         plot.tag = element_text(hjust = -1, vjust = 0))
 
-# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+ ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
-# Fig 4: Family plots -----
+# Fig 3c: Family plots -----
 
 # put the fish predictions all together
 predict_fish <- rbind(predict_green, predict_rock, predict_scul, predict_gob)%>%
@@ -937,18 +936,22 @@ invert_fam_data <- fam_df_no0 %>%
            family == "Acmaeidae" ~ "slope = 0.01, p = 0.023",
            family == "Haliotidae" ~ "slope = -0.002, p = 0.30"))
 
-rls_fam <- rbind(fish_fam_data, invert_fam_data)
+rls_fam <- rbind(fish_fam_data, invert_fam_data) %>%
+  filter(family != "Cottidae") %>%
+  filter(family != "Haliotidae")
 
-rls_fam_predict <- rbind(predict_fish, predict_invert)
+rls_fam_predict <- rbind(predict_fish, predict_invert)%>%
+  filter(family != "Cottidae") %>%
+  filter(family != "Haliotidae")
 
 # plot all 
-ggplot() + 
-  geom_point(data = rls_fam, 
+fam_plot <- ggplot() + 
+  geom_point(data = rls_fam %>% filter, 
              aes(x = total_fam, y = nh4_avg), colour = pal1,
              alpha = 0.8) +
   labs(y = expression(paste("Ammonium ", (mu*M))), 
        x = expression(paste("Abundance"))) +
-  facet_wrap(~family, scales = 'free_x', ncol = 2) +
+  facet_wrap(~family, scales = 'free_x', ncol = 3) +
   geom_line(data = rls_fam_predict,
             aes(x = total_fam, y = predicted), colour = pal1,
             linewidth = 1) +
@@ -965,7 +968,18 @@ ggplot() +
     vjust   = 1.5,
     size = 9)
 
-ggsave("Output/Pub_figs/Fig3c.png", device = "png", height = 18, width = 12, dpi = 400)
+#ggsave("Output/Pub_figs/Fig3d.png", device = "png", height = 18, width = 12, dpi = 400)
+
+#ggsave("Output/Pub_figs/Fig3d.png", device = "png", height = 9, width = 16, dpi = 400)
+
+# Alt Fig 3 tri-panel -----
+squish <- theme(axis.title.y = element_text(margin = margin(r = -120, unit = "pt")))
+
+(rls_coeff_plot + rls_pred_plot)/(fam_plot + squish) &
+  theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(hjust = -1, vjust = 0))
+
+ggsave("Output/Pub_figs/Fig3panel.png", device = "png", height = 18, width = 16, dpi = 400)
 
 
 # Figs for presentations -----
