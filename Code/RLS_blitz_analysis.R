@@ -680,67 +680,14 @@ fish_fam_data <- fam_df_no0 %>%
                            family == "Cottidae" ~ "slope = -0.0008, p = 0.95",
                            family == "Gobiidae" ~ "slope = 0.002, p = 0.19"))
 
-# Graphing -----
-pal6 <- viridis::viridis(5)
-pal <- viridis::viridis(10)
-pal3 <- c(pal[10], pal[8], pal[5])
-pal1 <- pal[5]
-
-
-# plot each fish curve
-ggplot() + 
-  geom_point(data = fish_fam_data, 
-             aes(x = total_fam, y = nh4_avg), colour = pal1,
-             alpha = 0.8) +
-  labs(y = expression(paste("Ammonium ", (mu*M))), 
-       x = expression(paste("Abundance"))) +
-  facet_wrap(~family, scales = 'free_x') +
-  geom_line(data = predict_fish,
-            aes(x = total_fam, y = predicted), colour = pal1,
-            linewidth = 1) +
-  geom_ribbon(data = predict_fish,
-              aes(x = total_fam, y = predicted, 
-                  ymin = conf.low, ymax = conf.high), fill = pal1,
-              alpha = 0.15) +
-#  theme_classic() +
-#  theme(strip.text.x = element_text(size = 10, color = "black", 
-#                                    margin = ggplot2::margin(0, 0, 0, 0, "cm")),
-#        axis.text.x = element_text(size = 10, color = "black", lineheight = 0.5),
-#        axis.text.y = element_text(size = 10, color = "black", lineheight = 0.5),
-#        axis.title.x = element_text(size = 9),
-#        axis.title.y = element_text(size = 9),
-#        strip.background = element_rect(fill = "grey", color = "grey"),
-#        legend.position = c(0.88, 0.89)) +
-  theme_white() +
-  theme(strip.background = element_rect(fill = "grey", color = "grey")) +
-  geom_text(
-    data = fish_fam_data %>% select(family, slope) %>% unique(),
-    mapping = aes(x = Inf, y = Inf, label = slope),
-    hjust   = 1.1,
-    vjust   = 1.5,
-    size = 9)
-
-# ggsave("Output/Figures/fish_families.png", device = "png", height = 9, width = 12, dpi = 400)
- 
-
 # invert models??? -----
 
-# looks like just abundance is also best for the 
-
-# can I get R2
-df_fam <- fam_df_no0 %>% filter(family == "Asteriidae")
-
-# model
-mod_fam <- glmmTMB(nh4_avg ~ total_fam +
-                     (1|year) + (1|site_code), 
-                   family = Gamma(link = 'log'),
-                   data = df_fam)
-
-print(performance::r2(mod_fam, tolerance = 0.0000000000001))
-
-
+# looks like just abundance is also best for the inverts
 
 # Asteriidae, Muricidae, Acmaeidae, Echinasteridae are the four inverts with the biggest slope estimates
+
+# Muricidae, Asteriidae, Acmaeidae, Haliotidae have the highest R2 values
+
 v_fam <- v_fun(fam_df_no0, "Asteriidae")
 predict_star1 <- fam_fun(fam_df_no0, "Asteriidae", diagnose = TRUE)
 # total_fam    0.005981   0.005526   1.082   0.2791  
@@ -805,22 +752,57 @@ predict_pect <- fam_fun(fam_df_no0, "Pectinidae", diagnose = TRUE)
 # no errors
 
 # put inverts together
-predict_invert <- rbind(predict_star1, predict_muri, predict_limp, predict_star2)%>%
+predict_invert <- rbind(predict_star1, predict_muri, predict_limp, predict_aba) %>%
   mutate(family = factor(family, levels = 
-                           c("Asteriidae", "Muricidae", "Acmaeidae", "Echinasteridae")))
+                           c("Asteriidae", "Muricidae", "Acmaeidae", "Echinasteridae", "Haliotidae")))
 
 # make a df of just those species
 invert_fam_data <- fam_df_no0 %>%
   filter(family == "Asteriidae" |
            family == "Muricidae" |
            family == "Acmaeidae" |
-           family == "Echinasteridae") %>%
+           family == "Haliotidae") %>%
   mutate(family = factor(family, levels = 
-                           c("Acmaeidae", "Muricidae", "Asteriidae", "Echinasteridae")),
+                           c("Acmaeidae", "Muricidae", "Asteriidae", "Haliotidae")),
          slope = case_when(family == "Asteriidae" ~ "slope = 0.006, p = 0.28",
                            family == "Muricidae" ~ "slope = 0.005, p = 0.12",
                            family == "Acmaeidae" ~ "slope = 0.01, p = 0.023",
-                           family == "Echinasteridae" ~ "slope = 0.002, p = 0.90"))
+                           family == "Haliotidae" ~ "slope = -0.002, p = 0.30"))
+
+
+# Graphing -----
+pal6 <- viridis::viridis(5)
+pal <- viridis::viridis(10)
+pal3 <- c(pal[10], pal[8], pal[5])
+pal1 <- pal[5]
+
+
+# plot each fish curve
+ggplot() + 
+  geom_point(data = fish_fam_data, 
+             aes(x = total_fam, y = nh4_avg), colour = pal1,
+             alpha = 0.8) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Abundance"))) +
+  facet_wrap(~family, scales = 'free_x') +
+  geom_line(data = predict_fish,
+            aes(x = total_fam, y = predicted), colour = pal1,
+            linewidth = 1) +
+  geom_ribbon(data = predict_fish,
+              aes(x = total_fam, y = predicted, 
+                  ymin = conf.low, ymax = conf.high), fill = pal1,
+              alpha = 0.15) +
+  theme_white() +
+  theme(strip.background = element_rect(fill = "grey", color = "grey")) +
+  geom_text(
+    data = fish_fam_data %>% select(family, slope) %>% unique(),
+    mapping = aes(x = Inf, y = Inf, label = slope),
+    hjust   = 1.1,
+    vjust   = 1.5,
+    size = 9)
+
+# ggsave("Output/Figures/fish_families.png", device = "png", height = 9, width = 12, dpi = 400)
+
 
 # plot these curves for the inverts 
 ggplot() + 
@@ -849,7 +831,6 @@ ggplot() +
  #ggsave("Output/Figures/invert_families.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # plot invert + fish fams???? -----
-
 rls_fam <- rbind(fish_fam_data, invert_fam_data)
 
 rls_fam_predict <- rbind(predict_fish, predict_invert)
