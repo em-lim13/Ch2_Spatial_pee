@@ -404,6 +404,7 @@ pal2 <- c(pal_k[8], pal_k[5])
 pal <- viridis::viridis(10)
 pal3 <- c(pal[10], pal[8], pal[5])
 
+# Fig 4a: model coefficients ----
 # Save model coefficients 
 # use the no intercept model for plotting
 df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
@@ -420,12 +421,6 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
          se = (upper_CI - estimate)/1.96
   )
 
-# Use function to plot coefficients
-kelp_coeff_plot <- coeff_plot(coeff_df = df,
-                              pal = pal12) +
-  place_label("(a)")
-
-#ggsave("Output/Pres_figs/Fig4a.png", device = "png", height = 8, width = 12, dpi = 400)
 
 # plot just cont vars
 kelp_coeff_plot <- coeff_plot(coeff_df = (df %>% tail(-3) %>% droplevels()),
@@ -433,7 +428,7 @@ kelp_coeff_plot <- coeff_plot(coeff_df = (df %>% tail(-3) %>% droplevels()),
   place_label("(a)")
 
 
-# Plot kelp species predictions ----
+# Fig 4b: Kelp species predictions ----
 # make predictions for each kelp sp at the group mean kelp bio for that species
 d <- data %>%
   mutate(kelp = ifelse(kelp_sp == "none", "none", "kelp")) %>%
@@ -450,11 +445,6 @@ predict_sp <- ggpredict(mod_in_out2, terms = c("kelp_bio_scale[v]", "kelp_sp")) 
   mutate(kelp = ifelse(kelp_sp == "none", "none", "kelp")) %>%
   left_join(d, by = "kelp") %>%
   filter(mean ==  kelp_bio_scale)
-
-# old way, model estimates at mean levels of all other variables
-#predict_sp2 <- ggpredict(mod_in_out2, terms = "kelp_sp") %>% 
-#  dplyr::rename(kelp_sp = x,
-#                in_minus_out = predicted) 
 
 sp_labs <- c(macro = "Macro", nereo = "Nereo", none = "None")
 
@@ -473,63 +463,8 @@ kelp_sp_plot <-
     place_label("(b)") +
   ylim(c(-0.79, 1.05))
 
-set.seed(234444)
-kelp_sp_plot <- 
-alt_dot_whisker(data, x_var = kelp_sp,
-                y_var = in_minus_out,
-                group = kelp_sp,
-                labels = sp_labs,
-                pal = c(pal12[3], pal12[2],pal12[1]))+
-  labs(y = expression(paste(Delta, " Ammonium ", (mu*M))),
-       x = "Kelp species") +
-  geom_hline(yintercept = 0, lty = "dashed") +
-  place_label("(b)")
 
-  
-# Plot kelp_biomass predictions ----
-predict_kelp_bio <- ggpredict(mod_in_out2, terms = "kelp_bio_scale") %>% 
-  dplyr::rename(kelp_bio_scale = x)
-
-kelp_pred_plot <- plot_pred(raw_data = data,
-                            predict_data = predict_kelp_bio, 
-                            plot_type = "new_kelp",
-                            x_var = kelp_bio_scale, y_var = in_minus_out, 
-                            pch_var = kelp_sp,
-                            x_axis_lab = expression(paste("Kelp biomass (kg/m"^2,")")),
-                            pal = pal12[4],
-                            lty_var = pal12[4]) +
-  place_label("(c)")
-
-
-# Plot animal abundance predictions ----
-predict_abund <- ggpredict(mod_in_out2, terms = "weight_sum_scale") %>% 
-  dplyr::rename(weight_sum_scale = x)
-
-abund_pred_plot <- plot_pred(raw_data = data,
-                             predict_data = predict_abund, 
-                             plot_type = "new_kelp",
-                             x_var = weight_sum_scale, y_var = in_minus_out,
-                             pch_var = kelp_sp,
-                             x_axis_lab = "Animal Biomass (kg)",
-                             pal = pal12[5],
-                             lty_var = pal12[5]) +  
-  place_label("(d)")
-
-# Plot depth predictions ---- 
-predict_depth <- ggpredict(mod_in_out2, terms = "depth_scale") %>% 
-  dplyr::rename(depth_scale = x)
-
-depth_pred_plot <- plot_pred(raw_data = data,
-                             predict_data = predict_depth, 
-                             plot_type = "new_kelp",
-                             x_var = depth_scale, y_var = in_minus_out, 
-                             pch_var = kelp_sp,
-                             x_axis_lab = "Depth",
-                             pal = pal12[6],
-                             lty_var = pal12[6]) +  
-  place_label("(e)")
-
-# Plot kelp biomass vs tide interaction ------
+# Fig 4c: Kelp biomass x tide interaction ------
 visreg(mod_in_out, "kelp_bio_scale", by = "tide_scale", overlay=TRUE,
        xlab = "Kelp biomass (kg/m2)")
 
@@ -566,7 +501,7 @@ kelp_tide_int_plot <-
   place_label("(c)")
 
 
-# Plot kelp biomass vs abundance interaction -----
+# Fig 4d: Kelp biomass x abundance interaction -----
 visreg(mod_in_out2, "weight_sum_scale", by = "kelp_bio_scale", 
        overlay=TRUE,
        xlab = "Animal biomass (kg/m2)") # looks better
@@ -582,11 +517,11 @@ d <- data %>%
 
 v6 <- c(d$mean[1], d$mean[2], d$mean[3])
 
-v3 <- c(-1.176, -0.47, 1.897)
-
-v4 <- c(-0.822849, 0, 1.813896)
-v4 <- c(-0.822849, 0, 1.5)
-v5 <- c(-1, 0, 1.75) # based on eyeballed means of the three bins looking at the hist
+# old vectors
+#v3 <- c(-1.176, -0.47, 1.897)
+#v4 <- c(-0.822849, 0, 1.813896)
+#v4 <- c(-0.822849, 0, 1.5)
+#v5 <- c(-1, 0, 1.75) # based on eyeballed means of the three bins looking at the hist
 
 
 # now make predictions
@@ -620,7 +555,7 @@ abund_kelp_int_plot <-
   ylim(c(-0.79, 1.05))
 
 
-# Plot abundance vs tide interaction ------
+# Fig 43: Abundance x tide interaction ------
 visreg(mod_in_out, "weight_sum_scale", by = "tide_scale", overlay=TRUE,
        xlab = "Animal biomass (kg/m2)")
 visreg(mod_in_out, "tide_scale", by = "weight_sum_scale", overlay=TRUE)
@@ -650,8 +585,8 @@ predict_abund_tide <- ggpredict(mod_in_out2, terms = c("weight_sum_scale", "tide
 
 # now plot these predictions
 abund_tide_int_plot <- 
-  plot_pred(raw_data = (data %>% mutate(
-                            tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
+  plot_pred(raw_data = (data %>% 
+               mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
             predict_data = predict_abund_tide, 
             plot_type = "new_kelp",
             x_var = weight_sum_scale, y_var = in_minus_out, 
@@ -663,14 +598,7 @@ abund_tide_int_plot <-
   place_label("(e)") +
   guides(size = "none")
 
-# Put them allll together???? ----
-
-# plot indiv relationships
-plots <- kelp_sp_plot + kelp_pred_plot + abund_pred_plot + depth_pred_plot
-
-kelp_coeff_plot + plots
-
-
+# Fig 4 panels ----
 # plot coeffs + interactions
 squish <- theme(axis.title.y = element_text(margin = margin(r = -200, unit = "pt")))
 
@@ -680,7 +608,6 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
   abund_tide_int_plot )
 
 
-
 # ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 16, width = 14, dpi = 400)
   
 # comparing the coeff plots, making depth a random effect doesn't really change anything REAL. It just makes the no kelp coeff LOOK like its not signif diff from 0, but when you estimate the delta at the mean no kelp biomass (0) it's basically the same estimate as the model with depth
@@ -688,92 +615,6 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
 # makes me wonder if we just forgo the coeff plot and just show the four prediction plots: kelp sp, kelp bio, animals, depth??
 
 
-# Figure 4 for pub with white -----
-kelp_coeff_plot + kelp_pred_plot
-
-#ggsave("Output/Pub_figs/Fig4b.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-
-
-# IDK if this is useful anymore Plot kelp species vs kelp biomass vs nh4 ------
-data_kelp <- data %>%
-  filter(kelp_sp != "none") %>%
-  mutate(var = case_when(kelp_sp == "macro" & tide_cat == "Slack" ~ "macro_slack",
-                         kelp_sp == "macro" & tide_cat == "Flood" ~ "macro_flood",
-                         kelp_sp == "nereo" & tide_cat == "Slack" ~ "nereo_slack",
-                         kelp_sp == "nereo" & tide_cat == "Flood" ~ "nereo_flood"))
-
-mod_sp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + abundance_scale + 
-                    shannon_scale + depth_scale +
-                    (1|site_code),
-                  family = 'gaussian',
-                  data = data_kelp)
-
-plot(simulateResiduals(mod_sp)) # looks fine
-summary(mod_sp)
-
-
-visreg(mod_sp, "kelp_bio_scale", by = "abundance_scale", overlay = TRUE)
-
-# max min
-max_min_sp <- data %>%
-  group_by(kelp_sp) %>%
-  summarise(min = min(kelp_bio_scale) - 0.1,
-            max = max(kelp_bio_scale) + 0.1)
-
-# now make predictions
-predict_kelp_sp <- ggpredict(mod_in_out2, terms = c("kelp_bio_scale", "kelp_sp")) %>% 
-  mutate(kelp_bio_scale = x,
-         kelp_sp = as.factor(group)) %>%
-  left_join(max_min_sp, by = "kelp_sp") %>%
-  rowwise() %>%
-  filter(between(kelp_bio_scale, min, max)) 
- #filter(tide_cat != "Flood" | kelp_bio_scale < 0.21) %>%
- #filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
-
-# plot predictions
-ggplot() + 
-  geom_point(data = data, 
-             aes(x = kelp_bio_scale, y = in_minus_out, 
-                 colour = kelp_sp, fill = kelp_sp,
-                 pch = kelp_sp), 
-             alpha = 0.8) +
-  geom_line(data = predict_kelp_sp,
-            aes(x = kelp_bio_scale, y = predicted, 
-                colour = kelp_sp, lty = kelp_sp),
-            linewidth = 2) +
-  geom_ribbon(data = predict_kelp_sp,
-              aes(x = kelp_bio_scale, y = predicted, fill = kelp_sp,
-                  ymin = conf.low, ymax = conf.high), 
-              alpha = 0.15) +
-  stat_summary(data = (data %>% filter(kelp_sp == "none")), 
-               aes(x = kelp_bio_scale, y = in_minus_out, group = kelp_sp), 
-               fun = "mean",
-               fun.data = "mean_cl_boot") +
-  labs(colour = "Kelp species", fill = "Kelp species", lty = "Kelp species", pch = "Kelp species") +
-  theme_white() +
-  scale_colour_manual(values = (pal3)) +
-  scale_fill_manual(values = (pal3)) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "black", linewidth = 0.5)+
-  guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
-         size = guide_legend(override.aes = list(colour = "black")),
-         colour = guide_legend(override.aes = list(size = 2)))  +
-    labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-         x = expression(paste("Kelp biomass (kg/m"^2,")"))) +
-  theme(legend.position = c(0.75,0.25))
-
-# now plot these predictions
-plot_pred(raw_data = data_kelp,
-          predict_data = predict_kelp_sp, 
-          plot_type = "kelp",
-          x_var = kelp_bio_scale, y_var = in_minus_out, 
-          lty_var = kelp_sp,
-          size_var = weight_sum, 
-          pal = pal2)
-
-
-# so basically for Macrocystis, there's a positive interaction between kelp biomass and tide exchange. But that's only driven by two high in - out sites and one low in - out site at flood tide.... so is that interaction real
 
 
 # Family level ------
@@ -1172,7 +1013,122 @@ kcca_table <- pee %>%
 
 # Graveyard ------
 
+# IDK if this is useful anymore Plot kelp species vs kelp biomass vs nh4 ------
+data_kelp <- data %>%
+  filter(kelp_sp != "none") %>%
+  mutate(var = case_when(kelp_sp == "macro" & tide_cat == "Slack" ~ "macro_slack",
+                         kelp_sp == "macro" & tide_cat == "Flood" ~ "macro_flood",
+                         kelp_sp == "nereo" & tide_cat == "Slack" ~ "nereo_slack",
+                         kelp_sp == "nereo" & tide_cat == "Flood" ~ "nereo_flood"))
+
+mod_sp <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + abundance_scale + 
+                    shannon_scale + depth_scale +
+                    (1|site_code),
+                  family = 'gaussian',
+                  data = data_kelp)
+
+plot(simulateResiduals(mod_sp)) # looks fine
+summary(mod_sp)
 
 
-data2 <- data %>%
-  select(site, kelp_sp, Composition)
+visreg(mod_sp, "kelp_bio_scale", by = "abundance_scale", overlay = TRUE)
+
+# max min
+max_min_sp <- data %>%
+  group_by(kelp_sp) %>%
+  summarise(min = min(kelp_bio_scale) - 0.1,
+            max = max(kelp_bio_scale) + 0.1)
+
+# now make predictions
+predict_kelp_sp <- ggpredict(mod_in_out2, terms = c("kelp_bio_scale", "kelp_sp")) %>% 
+  mutate(kelp_bio_scale = x,
+         kelp_sp = as.factor(group)) %>%
+  left_join(max_min_sp, by = "kelp_sp") %>%
+  rowwise() %>%
+  filter(between(kelp_bio_scale, min, max)) 
+#filter(tide_cat != "Flood" | kelp_bio_scale < 0.21) %>%
+#filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
+
+# plot predictions
+ggplot() + 
+  geom_point(data = data, 
+             aes(x = kelp_bio_scale, y = in_minus_out, 
+                 colour = kelp_sp, fill = kelp_sp,
+                 pch = kelp_sp), 
+             alpha = 0.8) +
+  geom_line(data = predict_kelp_sp,
+            aes(x = kelp_bio_scale, y = predicted, 
+                colour = kelp_sp, lty = kelp_sp),
+            linewidth = 2) +
+  geom_ribbon(data = predict_kelp_sp,
+              aes(x = kelp_bio_scale, y = predicted, fill = kelp_sp,
+                  ymin = conf.low, ymax = conf.high), 
+              alpha = 0.15) +
+  stat_summary(data = (data %>% filter(kelp_sp == "none")), 
+               aes(x = kelp_bio_scale, y = in_minus_out, group = kelp_sp), 
+               fun = "mean",
+               fun.data = "mean_cl_boot") +
+  labs(colour = "Kelp species", fill = "Kelp species", lty = "Kelp species", pch = "Kelp species") +
+  theme_white() +
+  scale_colour_manual(values = (pal3)) +
+  scale_fill_manual(values = (pal3)) +
+  geom_hline(yintercept= 0, linetype = "dashed", color = "black", linewidth = 0.5)+
+  guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
+         size = guide_legend(override.aes = list(colour = "black")),
+         colour = guide_legend(override.aes = list(size = 2)))  +
+  labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
+       x = expression(paste("Kelp biomass (kg/m"^2,")"))) +
+  theme(legend.position = c(0.75,0.25))
+
+# now plot these predictions
+plot_pred(raw_data = data_kelp,
+          predict_data = predict_kelp_sp, 
+          plot_type = "kelp",
+          x_var = kelp_bio_scale, y_var = in_minus_out, 
+          lty_var = kelp_sp,
+          size_var = weight_sum, 
+          pal = pal3)
+
+
+# Plot kelp_biomass predictions ----
+predict_kelp_bio <- ggpredict(mod_in_out2, terms = "kelp_bio_scale") %>% 
+  dplyr::rename(kelp_bio_scale = x)
+
+kelp_pred_plot <- plot_pred(raw_data = data,
+                            predict_data = predict_kelp_bio, 
+                            plot_type = "new_kelp",
+                            x_var = kelp_bio_scale, y_var = in_minus_out, 
+                            pch_var = kelp_sp,
+                            x_axis_lab = expression(paste("Kelp biomass (kg/m"^2,")")),
+                            pal = pal12[4],
+                            lty_var = pal12[4]) +
+  place_label("(c)")
+
+
+# Plot animal abundance predictions ----
+predict_abund <- ggpredict(mod_in_out2, terms = "weight_sum_scale") %>% 
+  dplyr::rename(weight_sum_scale = x)
+
+abund_pred_plot <- plot_pred(raw_data = data,
+                             predict_data = predict_abund, 
+                             plot_type = "new_kelp",
+                             x_var = weight_sum_scale, y_var = in_minus_out,
+                             pch_var = kelp_sp,
+                             x_axis_lab = "Animal Biomass (kg)",
+                             pal = pal12[5],
+                             lty_var = pal12[5]) +  
+  place_label("(d)")
+
+# Plot depth predictions ---- 
+predict_depth <- ggpredict(mod_in_out2, terms = "depth_scale") %>% 
+  dplyr::rename(depth_scale = x)
+
+depth_pred_plot <- plot_pred(raw_data = data,
+                             predict_data = predict_depth, 
+                             plot_type = "new_kelp",
+                             x_var = depth_scale, y_var = in_minus_out, 
+                             pch_var = kelp_sp,
+                             x_axis_lab = "Depth",
+                             pal = pal12[6],
+                             lty_var = pal12[6]) +  
+  place_label("(e)")
