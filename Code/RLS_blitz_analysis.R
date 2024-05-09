@@ -337,117 +337,6 @@ rls_final <-
 # slack = -0.1958187 - 0.1958187
 # ebb = > 0.1958187
 
-
-# Dataframe with one row for each family ------
-
-# Make a dataframe where each family we saw on a survey gets a row
-# If we didn't see a certain family on that survey, it doesn't get a row
-# No zeros for abundance!
-family_df_no0_a <- rls_final %>%
-  select(site, site_code, survey_id, year, nh4_avg, depth_avg_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
-  left_join((rls %>%
-               mutate(family = as.factor(family))%>%
-              group_by(survey_id, method, phylum, family) %>% # if i want methods split up, add it back here
-              summarise(total_fam = sum(total),
-                        weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
-            by = "survey_id") %>%
-  mutate(abund_fam_scale = c(scale(total_fam)),
-         weight_fam_scale = c(scale(weight_fam_sum_g)))
-
-
-# what are the top families?
-
-# df for just the surveys I'm looking at
-rls_sm <- rls_final %>%
-  select(survey_id) %>%
-  unique() %>%
-  left_join(rls, by = "survey_id")
-
-# CHOOSE THE FAMILIES TO INCLUDE
-# rank of families by total abundance (density)
-fam_list_total <- rls_sm %>%
-  group_by(family) %>%
-  summarise(sum = sum(total)) %>%
-  drop_na(family) %>%
-  arrange(desc(sum)) %>%
-  transmute(family = family, 
-            sum_total = sum,
-            rank_total = 1:58)
-
-# but which families show up on the most transects?
-fam_list_count <- rls_sm %>%
-  select(survey_id, family) %>%
-  unique() %>%
-  count(family) %>%
-  drop_na(family) %>%
-  arrange(desc(n)) %>%
-  transmute(family = family, 
-            sum_count = n,
-            rank_count = 1:58)
-
-# rank of families by biomass
-fam_list_bio <- rls_sm %>%
-  group_by(family) %>%
-  summarise(sum = sum(weight_size_class_sum)) %>%
-  drop_na(family) %>%
-  arrange(desc(sum)) %>%
-  transmute(family = family, 
-            sum_bio = sum,
-            rank_bio = 1:58)
-
-# join all that fam stuff together
-fam_big_list <- fam_list_total %>%
-  left_join(fam_list_count, by = "family") %>%
-  left_join(fam_list_bio, by = "family") %>%
-  mutate(rank_all = (rank_total + rank_count + rank_bio)/3)
-
-# OK so how do I make sense of this
-# plot all rankings together
-ggplot(fam_big_list) +
-  geom_point(aes(y = reorder(family, -rank_all), 
-                 x = rank_total, colour = "density"), alpha = 0.5) +
-  geom_point(aes(y = reorder(family, -rank_all), 
-                 x = rank_count, colour = "count"), alpha = 0.5) +
-  geom_point(aes(y = reorder(family, -rank_all), 
-                 x = rank_bio, colour = "biomass"), alpha = 0.5) +
-  geom_point(aes(y = reorder(family, -rank_all), 
-                 x = rank_all, colour = "all"), alpha = 0.5) +
-  geom_vline(xintercept = 15, lty = "dashed") +
-  geom_hline(yintercept = "Sebastidae", lty = "dashed") +
-  labs(y = "Family", x = "Rank", colour = "Rank Type")
-
-# just the families I want to keep
-fam_list_cut <- fam_big_list %>%
-  arrange(rank_all) %>%
-  head(15) %>%
-  select(family) 
-
-# OK and now I want to make a final df where the top 15 families are named, and everything else is "other"
-
-# make this final df for the df without 0's
-family_df_no0 <- family_df_no0_a %>%
-  filter(family %in% fam_list_cut$family) %>%
-  # now make all the other families "other"
-  rbind(family_df_no0_a %>%
-          filter(!family %in% fam_list_cut$family) %>%
-          mutate(family = "other"))
-
-# mess around with orders next time!!!!!! ------
-
-# rank of orders by abundance
-order_list_total <- rls_sm %>%
-  group_by(order) %>%
-  summarise(sum = sum(total)) %>%
-  drop_na(order) %>%
-  arrange(desc(sum))
-
-# rank orders by biomass
-order_list_bio <- rls_sm %>%
-  group_by(order) %>%
-  summarise(sum = sum(weight_size_class_sum)) %>%
-  drop_na(order) %>%
-  arrange(desc(sum))
-
 # Stats -------
 
 # Step 0: Ask my question
@@ -625,26 +514,135 @@ car::vif(lm(nh4_avg ~ abundance_scale + tide_scale + shannon_scale + depth_avg_s
 # All good, shannon is a little high
 
 
-# Family level stats ----
+# Family data manipulation ------
+
+# Make a dataframe where each family we saw on a survey gets a row
+# If we didn't see a certain family on that survey, it doesn't get a row
+# No zeros for abundance!
+family_df_no0_a <- rls_final %>%
+  select(site, site_code, survey_id, year, nh4_avg, depth_avg_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
+  left_join((rls %>%
+               mutate(family = as.factor(family))%>%
+               group_by(survey_id, method, phylum, family) %>% # if i want methods split up, add it back here
+               summarise(total_fam = sum(total),
+                         weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
+            by = "survey_id") %>%
+  mutate(abund_fam_scale = c(scale(total_fam)),
+         weight_fam_scale = c(scale(weight_fam_sum_g)))
+
+
+# what are the top families?
+
+# df for just the surveys I'm looking at
+rls_sm <- rls_final %>%
+  select(survey_id) %>%
+  unique() %>%
+  left_join(rls, by = "survey_id")
+
+# CHOOSE THE FAMILIES TO INCLUDE
+# rank of families by total abundance (density)
+fam_list_total <- rls_sm %>%
+  group_by(family) %>%
+  summarise(sum = sum(total)) %>%
+  drop_na(family) %>%
+  arrange(desc(sum)) %>%
+  transmute(family = family, 
+            sum_total = sum,
+            rank_total = 1:58)
+
+# but which families show up on the most transects?
+fam_list_count <- rls_sm %>%
+  select(survey_id, family) %>%
+  unique() %>%
+  count(family) %>%
+  drop_na(family) %>%
+  arrange(desc(n)) %>%
+  transmute(family = family, 
+            sum_count = n,
+            rank_count = 1:58)
+
+# rank of families by biomass
+fam_list_bio <- rls_sm %>%
+  group_by(family) %>%
+  summarise(sum = sum(weight_size_class_sum)) %>%
+  drop_na(family) %>%
+  arrange(desc(sum)) %>%
+  transmute(family = family, 
+            sum_bio = sum,
+            rank_bio = 1:58)
+
+# join all that fam stuff together
+fam_big_list <- fam_list_total %>%
+  left_join(fam_list_count, by = "family") %>%
+  left_join(fam_list_bio, by = "family") %>%
+  mutate(rank_all = (rank_total + rank_count + rank_bio)/3)
+
+# OK so how do I make sense of this
+# plot all rankings together
+ggplot(fam_big_list) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_total, colour = "density"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_count, colour = "count"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_bio, colour = "biomass"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_all, colour = "all"), alpha = 0.5) +
+  geom_vline(xintercept = 15, lty = "dashed") +
+  geom_hline(yintercept = "Sebastidae", lty = "dashed") +
+  labs(y = "Family", x = "Rank", colour = "Rank Type")
+
+# just the families I want to keep
+fam_list_cut <- fam_big_list %>%
+  arrange(rank_all) %>%
+  head(15) %>%
+  select(family) 
+
+# OK and now I want to make a final df where the top 15 families are named, and everything else is "other"
+
+# make this final df for the df without 0's
+family_df_no0 <- family_df_no0_a %>%
+  filter(family %in% fam_list_cut$family) %>%
+  # now make all the other families "other"
+  rbind(family_df_no0_a %>%
+          filter(!family %in% fam_list_cut$family) %>%
+          mutate(family = "other"))
+
+# since I'm working with each family separately I want to change density back to abundance
+fam_df_no0 <- family_df_no0 %>%
+  mutate(total_fam = case_when(method == 1 ~ total_fam*500,
+                               method == 2 ~ total_fam*100),
+         abund_fam_scale = c(scale(total_fam))) %>%
+  as.data.frame() %>%
+  droplevels()
+
+# mess around with orders next time!!!!!! 
+
+# rank of orders by abundance
+order_list_total <- rls_sm %>%
+  group_by(order) %>%
+  summarise(sum = sum(total)) %>%
+  drop_na(order) %>%
+  arrange(desc(sum))
+
+# rank orders by biomass
+order_list_bio <- rls_sm %>%
+  group_by(order) %>%
+  summarise(sum = sum(weight_size_class_sum)) %>%
+  drop_na(order) %>%
+  arrange(desc(sum))
+
+# Family stats ----
 
 # Stats beers said I can run a separate model for each family!!!! WAHOOOOOO
 
 # For fish: Hexagrammidae, Sebastidae, Cottidae, Gobiidae
 # For inverts: Asteriidae, Muricidae, Acmaeidae, Echinasteridae by size of slope
 
-
-# Run each family model -----
-# since I'm working with each family separately I want to change density back to abundance
-fam_df_no0 <- family_df_no0 %>%
-  mutate(total_fam = case_when(method == 1 ~ total_fam*500,
-                               method == 2 ~ total_fam*100),
-         abund_fam_scale = c(scale(total_fam))) %>%
-  as.data.frame()
-
 # one model for each family
 # Use function to determine max and min abundance of each family
 # the function model is just nh4 ~ raw fam abundance with random effect of site and year
-  # for all 4 fish, the model with just abundance was better than abund*tide
+# for all 4 fish, the model with just abundance was better than abund*tide
 
 # Greenlings
 v_fam <- v_fun(fam_df_no0, "Hexagrammidae") 
@@ -662,25 +660,6 @@ predict_scul <- fam_fun(fam_df_no0, "Cottidae", diagnose = TRUE)
 v_fam <- v_fun(fam_df_no0, "Gobiidae")
 predict_gob <- fam_fun(fam_df_no0, "Gobiidae", diagnose = TRUE)
 
-# put the fish predictions all together
-predict_fish <- rbind(predict_green, predict_rock, predict_scul, predict_gob)%>%
-  mutate(family = factor(family, levels = 
-                           c("Hexagrammidae", "Gobiidae", "Sebastidae", "Cottidae")))
-
-# make a df of just those species
-fish_fam_data <- fam_df_no0 %>%
-  filter(family == "Hexagrammidae" |
-           family == "Sebastidae" |
-           family == "Cottidae" |
-           family == "Gobiidae") %>%
-  mutate(family = factor(family, levels = 
-                           c("Hexagrammidae", "Gobiidae", "Sebastidae", "Cottidae")),
-         slope = case_when(family == "Hexagrammidae" ~ "slope = 0.02, p = 0.025",
-                           family == "Sebastidae" ~ "slope = 0.002, p = 0.64",
-                           family == "Cottidae" ~ "slope = -0.0008, p = 0.95",
-                           family == "Gobiidae" ~ "slope = 0.002, p = 0.19"))
-
-# invert models??? -----
 
 # looks like just abundance is also best for the inverts
 
@@ -712,7 +691,6 @@ predict_star2 <- fam_fun(fam_df_no0, "Echinasteridae", diagnose = TRUE)
 #total_fam    0.00201    0.01598   0.126   0.8999  
 # AIC 40.0
 # no errors
-
 
 # check other inverts to make sure
 v_fam <- v_fun(fam_df_no0, "Strongylocentrotidae")
@@ -750,116 +728,6 @@ predict_pect <- fam_fun(fam_df_no0, "Pectinidae", diagnose = TRUE)
 # total_fam   -0.007614   0.005788  -1.315   0.1883  
 # 43.5
 # no errors
-
-# put inverts together
-predict_invert <- rbind(predict_star1, predict_muri, predict_limp, predict_aba) %>%
-  mutate(family = factor(family, levels = 
-                           c("Asteriidae", "Muricidae", "Acmaeidae", "Echinasteridae", "Haliotidae")))
-
-# make a df of just those species
-invert_fam_data <- fam_df_no0 %>%
-  filter(family == "Asteriidae" |
-           family == "Muricidae" |
-           family == "Acmaeidae" |
-           family == "Haliotidae") %>%
-  mutate(family = factor(family, levels = 
-                           c("Acmaeidae", "Muricidae", "Asteriidae", "Haliotidae")),
-         slope = case_when(family == "Asteriidae" ~ "slope = 0.006, p = 0.28",
-                           family == "Muricidae" ~ "slope = 0.005, p = 0.12",
-                           family == "Acmaeidae" ~ "slope = 0.01, p = 0.023",
-                           family == "Haliotidae" ~ "slope = -0.002, p = 0.30"))
-
-
-# Graphing -----
-pal6 <- viridis::viridis(5)
-pal <- viridis::viridis(10)
-pal3 <- c(pal[10], pal[8], pal[5])
-pal1 <- pal[5]
-
-
-# plot each fish curve
-ggplot() + 
-  geom_point(data = fish_fam_data, 
-             aes(x = total_fam, y = nh4_avg), colour = pal1,
-             alpha = 0.8) +
-  labs(y = expression(paste("Ammonium ", (mu*M))), 
-       x = expression(paste("Abundance"))) +
-  facet_wrap(~family, scales = 'free_x') +
-  geom_line(data = predict_fish,
-            aes(x = total_fam, y = predicted), colour = pal1,
-            linewidth = 1) +
-  geom_ribbon(data = predict_fish,
-              aes(x = total_fam, y = predicted, 
-                  ymin = conf.low, ymax = conf.high), fill = pal1,
-              alpha = 0.15) +
-  theme_white() +
-  theme(strip.background = element_rect(fill = "grey", color = "grey")) +
-  geom_text(
-    data = fish_fam_data %>% select(family, slope) %>% unique(),
-    mapping = aes(x = Inf, y = Inf, label = slope),
-    hjust   = 1.1,
-    vjust   = 1.5,
-    size = 9)
-
-# ggsave("Output/Figures/fish_families.png", device = "png", height = 9, width = 12, dpi = 400)
-
-
-# plot these curves for the inverts 
-ggplot() + 
-  geom_point(data = invert_fam_data, 
-             aes(x = total_fam, y = nh4_avg), colour = pal1,
-             alpha = 0.8) +
-  labs(y = expression(paste("Ammonium ", (mu*M))), 
-       x = expression(paste("Abundance"))) +
-  facet_wrap(~family, scales = 'free_x') +
-  geom_line(data = predict_invert,
-            aes(x = total_fam, y = predicted), colour = pal1,
-            linewidth = 1) +
-  geom_ribbon(data = predict_invert,
-              aes(x = total_fam, y = predicted, 
-                  ymin = conf.low, ymax = conf.high), fill = pal1,
-              alpha = 0.15) +
-  theme_white() +
-  theme(strip.background = element_rect(fill = "grey", color = "grey"))+
-  geom_text(
-    data = invert_fam_data %>% select(family, slope) %>% unique(),
-    mapping = aes(x = Inf, y = Inf, label = slope),
-    hjust   = 1.1,
-    vjust   = 1.5,
-    size = 9)
-
- #ggsave("Output/Figures/invert_families.png", device = "png", height = 9, width = 12, dpi = 400)
-
-# plot invert + fish fams???? -----
-rls_fam <- rbind(fish_fam_data, invert_fam_data)
-
-rls_fam_predict <- rbind(predict_fish, predict_invert)
-
-# plot all 
-ggplot() + 
-  geom_point(data = rls_fam, 
-             aes(x = total_fam, y = nh4_avg), colour = pal1,
-             alpha = 0.8) +
-  labs(y = expression(paste("Ammonium ", (mu*M))), 
-       x = expression(paste("Abundance"))) +
-  facet_wrap(~family, scales = 'free_x', ncol = 2) +
-  geom_line(data = rls_fam_predict,
-            aes(x = total_fam, y = predicted), colour = pal1,
-            linewidth = 1) +
-  geom_ribbon(data = rls_fam_predict,
-              aes(x = total_fam, y = predicted, 
-                  ymin = conf.low, ymax = conf.high), fill = pal1,
-              alpha = 0.15) +
-  theme_white() +
-  theme(strip.background = element_rect(fill = "grey", color = "grey"))+
-  geom_text(
-    data = rls_fam %>% select(family, slope) %>% unique(),
-    mapping = aes(x = Inf, y = Inf, label = slope),
-    hjust   = 1.1,
-    vjust   = 1.5,
-    size = 9)
-
-ggsave("Output/Figures/rls_families.png", device = "png", height = 18, width = 12, dpi = 400)
 
 
 # Family community analysis -----
@@ -916,7 +784,7 @@ mod <- adonis(dissim_mat ~ nh4_avg, data = rls_final, permutations = 9999)
 # this looks at species distribution as function of environmental data
 summary(mod)
 
-# Ordination: nMDS -----
+# Ordination: nMDS
 myNMDS <- metaMDS(fam_wider, k = 2)
 myNMDS #most important: is the stress low? Here it is 0.22 which is a bit on the high side
 stressplot(myNMDS) #low stress means that the observed dissimilarity between site pairs matches that on the 2-D plot fairly well (points hug the line)
@@ -947,14 +815,17 @@ orditorp(myNMDS, display = "sites", cex = 0.75, air = 0.01)
 
 
 # Graphing ----
+pal6 <- viridis::viridis(5)
+pal <- viridis::viridis(10)
+pal3 <- c(pal[10], pal[8], pal[5])
+pal1 <- pal[5]
 
 # ALRIGHT I'M GOING WITH MOD_BRAIN
 # Just using AIC blindly isn't good! I had reasons for all these predictors and I'm gonna keep them!!!
 
 #pie(rep(1, 10), col = pal)
 
-
-# Coefficient plot of the model ----
+# Fig 3a: Coefficient plot ----
 
 # generate coefficients
 # try using emtrends to generate standard error/ confidence intervals around slope estimates
@@ -986,7 +857,7 @@ rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs,
 # ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
-# Plot abundance vs nh4 -----
+# Fig 3b: Abundance vs nh4 -----
 mod_pred_plot <- glmmTMB(nh4_avg ~ abundance*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = rls_final)
@@ -1026,6 +897,77 @@ rls_coeff_plot + rls_pred_plot +
 # ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
+# Fig 4: Family plots -----
+
+# put the fish predictions all together
+predict_fish <- rbind(predict_green, predict_rock, predict_scul, predict_gob)%>%
+  mutate(family = factor(family, levels = 
+                           c("Hexagrammidae", "Gobiidae", "Sebastidae", "Cottidae")))
+
+# make a df of just those species
+fish_fam_data <- fam_df_no0 %>%
+  filter(family == "Hexagrammidae" |
+           family == "Sebastidae" |
+           family == "Cottidae" |
+           family == "Gobiidae") %>%
+  mutate(family = factor(family, levels = 
+                c("Hexagrammidae", "Gobiidae", "Sebastidae", "Cottidae")),
+         slope = case_when(
+           family == "Hexagrammidae" ~ "slope = 0.02, p = 0.025",
+           family == "Sebastidae" ~ "slope = 0.002, p = 0.64",
+           family == "Cottidae" ~ "slope = -0.0008, p = 0.95",
+           family == "Gobiidae" ~ "slope = 0.002, p = 0.19"))
+
+# put inverts together
+predict_invert <- rbind(predict_star1, predict_muri, predict_limp, predict_aba) %>%
+  mutate(family = factor(family, levels = 
+                c("Asteriidae", "Muricidae", "Acmaeidae", "Haliotidae")))
+
+# make a df of just those species
+invert_fam_data <- fam_df_no0 %>%
+  filter(family == "Asteriidae" |
+           family == "Muricidae" |
+           family == "Acmaeidae" |
+           family == "Haliotidae") %>%
+  mutate(family = factor(family, levels = 
+                c("Acmaeidae", "Muricidae", "Asteriidae", "Haliotidae")),
+         slope = case_when(
+           family == "Asteriidae" ~ "slope = 0.006, p = 0.28",
+           family == "Muricidae" ~ "slope = 0.005, p = 0.12",
+           family == "Acmaeidae" ~ "slope = 0.01, p = 0.023",
+           family == "Haliotidae" ~ "slope = -0.002, p = 0.30"))
+
+rls_fam <- rbind(fish_fam_data, invert_fam_data)
+
+rls_fam_predict <- rbind(predict_fish, predict_invert)
+
+# plot all 
+ggplot() + 
+  geom_point(data = rls_fam, 
+             aes(x = total_fam, y = nh4_avg), colour = pal1,
+             alpha = 0.8) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Abundance"))) +
+  facet_wrap(~family, scales = 'free_x', ncol = 2) +
+  geom_line(data = rls_fam_predict,
+            aes(x = total_fam, y = predicted), colour = pal1,
+            linewidth = 1) +
+  geom_ribbon(data = rls_fam_predict,
+              aes(x = total_fam, y = predicted, 
+                  ymin = conf.low, ymax = conf.high), fill = pal1,
+              alpha = 0.15) +
+  theme_white() +
+  theme(strip.background = element_rect(fill = "grey", color = "grey"))+
+  geom_text(
+    data = rls_fam %>% select(family, slope) %>% unique(),
+    mapping = aes(x = Inf, y = Inf, label = slope),
+    hjust   = 1.1,
+    vjust   = 1.5,
+    size = 9)
+
+ggsave("Output/Pub_figs/Fig3c.png", device = "png", height = 18, width = 12, dpi = 400)
+
+
 # Figs for presentations -----
 # just plot each line one by one for the model prediction vs raw data plot
 # just ebb
@@ -1063,12 +1005,6 @@ plot_pred(raw_data = rls_final,
 
 
 # Data exploration ------
-
-# kill me, try to use rfishbase
-new <- length_weight(species_list = all_rls$species_name,
-                     server = getOption("FISHBASE_API", "fishbase"))
-
-new <- length_weight("Sebastes caurinus")
 
 # abundant across all surveys
 all_rls <- (rls %>% select(phylum, class, order, family, species_name, total, weight_per_indiv_g)) %>%
