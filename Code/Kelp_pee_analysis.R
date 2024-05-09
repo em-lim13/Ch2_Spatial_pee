@@ -344,7 +344,7 @@ mod_in_out <- glmmTMB(in_minus_out ~ kelp_sp +
                       data = data) 
 # when I remove no kelp sites the coeffs hardly change
 
-plot(simulateResiduals(mod_in_out)) # looks ok! no red with simpson!
+plot(simulateResiduals(mod_in_out)) # looks ok!
 summary(mod_in_out)
 
 # Let's look at those interactions some more:
@@ -999,7 +999,7 @@ AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
          AICw = round((likelihood/sum), digits = 2),
          AIC = round(AIC, digits = 2)) %>%
   select(rowname, df, AIC, delta, AICw) 
-# ooof the model with the three t-way interactions are super preferred 
+
 
 # Stats: site to site variation ----
 
