@@ -711,6 +711,12 @@ data_fam_no0 <- data_fam_no0_a %>%
           filter(!family %in% kelp_fam_list_cut$family) %>%
           mutate(family = "other"))
 
+# since I'm working with each family seperately I want to change density back to abundance
+data_fam_no0s <- data_fam_no0 %>%
+  mutate(total_fam = case_when(method == 1 ~ total_fam*500,
+                               method == 2 ~ total_fam*100),
+         abund_fam_scale = c(scale(total_fam)))
+
 # Family stats ----
 mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + kelp_bio_scale + tide_scale + 
                         family*abund_fam_scale + depth_scale ,
@@ -732,11 +738,6 @@ ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.tr
 # For inverts: Echinasteridae, Asteropseidae, Muricidae, Asteriidae,  Stichopodidae by size of slope
 
 # plot each fish family model -----
-# since I'm working with each family seperately I want to change density back to abundance
-data_fam_no0s <- data_fam_no0 %>%
-  mutate(total_fam = case_when(method == 1 ~ total_fam*500,
-                               method == 2 ~ total_fam*100),
-         abund_fam_scale = c(scale(total_fam)))
 
 # should I do a model for each species?
 v_fam <- v_fun(data_fam_no0s, "Hexagrammidae")
