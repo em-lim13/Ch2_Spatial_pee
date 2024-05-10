@@ -645,18 +645,6 @@ order_list_bio <- rls_sm %>%
 # for all 4 fish, the model with just abundance had a lower AIC than abund*tide
 # looks like just abundance is also best for the inverts
 
-
-# try messing around
-green_fam <- fam_df_no0 %>% filter(family == "Hexagrammidae")
-
-# model
-mod_green <- glmmTMB(nh4_avg ~ total_fam*tide_scale + depth_avg_scale  + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = green_fam)
-
-summary(mod_green)
-visreg(mod_green, "total_fam", by = "tide_scale", overlay=TRUE)
-
 # indiv fam models
 
 # Greenlings
