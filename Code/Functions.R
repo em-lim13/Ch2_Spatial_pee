@@ -1294,7 +1294,32 @@ fam_fun <- function(df, family, diagnose = FALSE) {
 
 }
 
+# funtion for full model
+# Now function to get predictions
+fam_fun_tide <- function(df, family, diagnose = FALSE) {
+  
+  df_fam <- df %>% filter(family == {{family}})
+  
+  # model
+  mod_fam <- glmmTMB(nh4_avg ~ total_fam*tide_scale + shannon_scale + depth_avg_scale  + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = df_fam)
+  
+  if(diagnose == TRUE){
+    print(summary(mod_fam))
+    print(plot(DHARMa::simulateResiduals(mod_fam)))
+    print(performance::r2(mod_fam, tolerance = 0.0000000000001))
+  }
+  
+  # ggpredict
+  predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]")) %>%
+    mutate(total_fam = x,
+           family = {{family}},
+           r2 = as.numeric(performance::r2(mod_fam, tolerance = 0.0000000000001)[1])) 
+  
+}
 
+# function for kelp pee mod
 fam_fun2 <- function(df, family, diagnose = FALSE) {
   
   df_fam <- df %>% filter(family == {{family}})

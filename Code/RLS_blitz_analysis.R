@@ -642,47 +642,68 @@ order_list_bio <- rls_sm %>%
 # one model for each family
 # Use function to determine max and min abundance of each family
 # the function model is just nh4 ~ raw fam abundance with random effect of site and year
-# for all 4 fish, the model with just abundance was better than abund*tide
+# for all 4 fish, the model with just abundance had a lower AIC than abund*tide
+# looks like just abundance is also best for the inverts
+
+
+# try messing around
+green_fam <- fam_df_no0 %>% filter(family == "Hexagrammidae")
+
+# model
+mod_green <- glmmTMB(nh4_avg ~ total_fam*tide_scale + depth_avg_scale  + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = green_fam)
+
+summary(mod_green)
+visreg(mod_green, "total_fam", by = "tide_scale", overlay=TRUE)
+
+# indiv fam models
 
 # Greenlings
 v_fam <- v_fun(fam_df_no0, "Hexagrammidae") 
-predict_green <- fam_fun(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
+predict_green <- fam_fun_tide(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
 
 # Rockfish
 v_fam <- v_fun(fam_df_no0, "Sebastidae")
-predict_rock <- fam_fun(fam_df_no0, "Sebastidae", diagnose = TRUE)
-
-v_fam <- v_fun(fam_df_no0, "Cottidae")
-predict_scul <- fam_fun(fam_df_no0, "Cottidae", diagnose = TRUE)
-# some quantile deviations in dharma
+predict_rock <- fam_fun_tide(fam_df_no0, "Sebastidae", diagnose = TRUE)
 
 # Gobies
 v_fam <- v_fun(fam_df_no0, "Gobiidae")
-predict_gob <- fam_fun(fam_df_no0, "Gobiidae", diagnose = TRUE)
+predict_gob <- fam_fun_tide(fam_df_no0, "Gobiidae", diagnose = TRUE)
+# some quantile deviations in dharma
 
-
-# looks like just abundance is also best for the inverts
 
 # Asteriidae, Muricidae, Acmaeidae, Echinasteridae are the four inverts with the biggest slope estimates
-
 # Muricidae, Asteriidae, Acmaeidae, Haliotidae have the highest R2 values
 
 v_fam <- v_fun(fam_df_no0, "Asteriidae")
-predict_star1 <- fam_fun(fam_df_no0, "Asteriidae", diagnose = TRUE)
+predict_star1 <- fam_fun_tide(fam_df_no0, "Asteriidae", diagnose = TRUE)
 # total_fam    0.005981   0.005526   1.082   0.2791  
 # AIC 43.6
 # no errors
 
 v_fam <- v_fun(fam_df_no0, "Muricidae")
-predict_muri <- fam_fun(fam_df_no0, "Muricidae", diagnose = TRUE)
+predict_muri <- fam_fun_tide(fam_df_no0, "Muricidae", diagnose = TRUE)
 # total_fam    0.005143   0.003292   1.562   0.1182  
 # AIC  39.6
 # no errors
 
 v_fam <- v_fun(fam_df_no0, "Acmaeidae")
-predict_limp <- fam_fun(fam_df_no0, "Acmaeidae", diagnose = TRUE)
+predict_limp <- fam_fun_tide(fam_df_no0, "Acmaeidae", diagnose = TRUE)
 # total_fam    0.009755   0.004300   2.269  0.02328 * 
 # AIC 39.6
+# no errors
+
+
+# Extra fish
+v_fam <- v_fun(fam_df_no0, "Cottidae")
+predict_scul <- fam_fun_tide(fam_df_no0, "Cottidae", diagnose = TRUE)
+
+# Extra inverts
+v_fam <- v_fun(fam_df_no0, "Haliotidae")
+predict_aba <- fam_fun_tide(fam_df_no0, "Haliotidae", diagnose = TRUE)
+# total_fam   -0.002996   0.002880  -1.040   0.2983  
+# AIC 41.4
 # no errors
 
 # Echinasteridae has the next highest slope but the p-value isn't great.. 
@@ -692,7 +713,7 @@ predict_star2 <- fam_fun(fam_df_no0, "Echinasteridae", diagnose = TRUE)
 # AIC 40.0
 # no errors
 
-# check other inverts to make sure
+# urchins
 v_fam <- v_fun(fam_df_no0, "Strongylocentrotidae")
 predict_urchin <- fam_fun(fam_df_no0, "Strongylocentrotidae", diagnose = TRUE)
 # total_fam   -1.915e-05  3.227e-04  -0.059    0.953
@@ -710,12 +731,6 @@ predict_turb <- fam_fun(fam_df_no0, "Turbinidae", diagnose = TRUE)
 # total_fam   -9.705e-05  3.212e-04  -0.302   0.7625  
 # AIC 42.5
 # throws error
-
-v_fam <- v_fun(fam_df_no0, "Haliotidae")
-predict_aba <- fam_fun(fam_df_no0, "Haliotidae", diagnose = TRUE)
-# total_fam   -0.002996   0.002880  -1.040   0.2983  
-# AIC 41.4
-# no errors
 
 v_fam <- v_fun(fam_df_no0, "Asteropseidae")
 predict_ast <- fam_fun(fam_df_no0, "Asteropseidae", diagnose = TRUE)
@@ -818,12 +833,12 @@ orditorp(myNMDS, display = "sites", cex = 0.75, air = 0.01)
 pal6 <- viridis::viridis(5)
 pal <- viridis::viridis(10)
 pal3 <- c(pal[10], pal[8], pal[5])
-pal1 <- pal[5]
+pal1 <- pal[7]
 
 # ALRIGHT I'M GOING WITH MOD_BRAIN
 # Just using AIC blindly isn't good! I had reasons for all these predictors and I'm gonna keep them!!!
 
-#pie(rep(1, 10), col = pal)
+pie(rep(1, 10), col = pal)
 
 # Fig 3a: Coefficient plot ----
 
@@ -888,61 +903,46 @@ rls_pred_plot <-
           theme = "white") +
   place_label("(b)")
 
-# Fig 3 -----
-rls_coeff_plot + rls_pred_plot  &
-  theme(plot.tag.position = c(0, 1),
-        plot.tag = element_text(hjust = -1, vjust = 0))
-
- ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
-
 
 # Fig 3c: Family plots -----
 
 # put the fish predictions all together
-predict_fish <- rbind(predict_green, predict_rock, predict_scul, predict_gob)%>%
+predict_fish <- rbind(predict_green, predict_rock, predict_gob)%>%
   mutate(family = factor(family, levels = 
-                           c("Hexagrammidae", "Gobiidae", "Sebastidae", "Cottidae")))
+                           c("Hexagrammidae", "Gobiidae", "Sebastidae")))
 
 # make a df of just those species
 fish_fam_data <- fam_df_no0 %>%
   filter(family == "Hexagrammidae" |
            family == "Sebastidae" |
-           family == "Cottidae" |
            family == "Gobiidae") %>%
   mutate(family = factor(family, levels = 
-                c("Hexagrammidae", "Gobiidae", "Sebastidae", "Cottidae")),
+                c("Hexagrammidae", "Gobiidae", "Sebastidae")),
          slope = case_when(
            family == "Hexagrammidae" ~ "slope = 0.02, p = 0.025",
            family == "Sebastidae" ~ "slope = 0.002, p = 0.64",
-           family == "Cottidae" ~ "slope = -0.0008, p = 0.95",
            family == "Gobiidae" ~ "slope = 0.002, p = 0.19"))
 
 # put inverts together
-predict_invert <- rbind(predict_star1, predict_muri, predict_limp, predict_aba) %>%
+predict_invert <- rbind(predict_star1, predict_muri, predict_limp) %>%
   mutate(family = factor(family, levels = 
-                c("Asteriidae", "Muricidae", "Acmaeidae", "Haliotidae")))
+                c("Asteriidae", "Muricidae", "Acmaeidae")))
 
 # make a df of just those species
 invert_fam_data <- fam_df_no0 %>%
   filter(family == "Asteriidae" |
            family == "Muricidae" |
-           family == "Acmaeidae" |
-           family == "Haliotidae") %>%
+           family == "Acmaeidae") %>%
   mutate(family = factor(family, levels = 
-                c("Acmaeidae", "Muricidae", "Asteriidae", "Haliotidae")),
+                c("Acmaeidae", "Muricidae", "Asteriidae")),
          slope = case_when(
            family == "Asteriidae" ~ "slope = 0.006, p = 0.28",
            family == "Muricidae" ~ "slope = 0.005, p = 0.12",
-           family == "Acmaeidae" ~ "slope = 0.01, p = 0.023",
-           family == "Haliotidae" ~ "slope = -0.002, p = 0.30"))
+           family == "Acmaeidae" ~ "slope = 0.01, p = 0.023"))
 
-rls_fam <- rbind(fish_fam_data, invert_fam_data) %>%
-  filter(family != "Cottidae") %>%
-  filter(family != "Haliotidae")
+rls_fam <- rbind(fish_fam_data, invert_fam_data) 
 
-rls_fam_predict <- rbind(predict_fish, predict_invert)%>%
-  filter(family != "Cottidae") %>%
-  filter(family != "Haliotidae")
+rls_fam_predict <- rbind(predict_fish, predict_invert)
 
 # plot all 
 fam_plot <- ggplot() + 
@@ -960,17 +960,25 @@ fam_plot <- ggplot() +
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
   theme_white() +
-  theme(strip.background = element_rect(fill = "grey", color = "grey"))+
-  geom_text(
-    data = rls_fam %>% select(family, slope) %>% unique(),
-    mapping = aes(x = Inf, y = Inf, label = slope),
-    hjust   = 1.1,
-    vjust   = 1.5,
-    size = 9)
+  theme(strip.background = element_rect(fill = "grey", color = "grey"))
+#  geom_text(
+#    data = rls_fam %>% select(family, slope) %>% unique(),
+#    mapping = aes(x = Inf, y = Inf, label = slope),
+#    hjust   = 1.1,
+#    vjust   = 1.5,
+#    size = 9)
 
 #ggsave("Output/Pub_figs/Fig3d.png", device = "png", height = 18, width = 12, dpi = 400)
 
 #ggsave("Output/Pub_figs/Fig3d.png", device = "png", height = 9, width = 16, dpi = 400)
+
+# Fig 3 -----
+rls_coeff_plot + rls_pred_plot  &
+  theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(hjust = -1, vjust = 0))
+
+# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+
 
 # Alt Fig 3 tri-panel -----
 squish <- theme(axis.title.y = element_text(margin = margin(r = -120, unit = "pt")))
@@ -979,7 +987,7 @@ squish <- theme(axis.title.y = element_text(margin = margin(r = -120, unit = "pt
   theme(plot.tag.position = c(0, 1),
         plot.tag = element_text(hjust = -1, vjust = 0))
 
-ggsave("Output/Pub_figs/Fig3panel.png", device = "png", height = 18, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig3panel.png", device = "png", height = 18, width = 16, dpi = 400)
 
 
 # Figs for presentations -----
