@@ -416,8 +416,8 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
          estimate = Estimate) %>%
   head(- 1)  %>%
   mutate(variable = factor(as.factor(variable), 
-                           levels = c("kelp_spmacro", "kelp_spnereo", "kelp_spnone", "kelp_bio_scale", "weight_sum_scale", "depth_scale", "tide_scale", "shannon_scale", "kelp_bio_scale:tide_scale", "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
-                           labels = c("Macro", "Nereo", "None", "Kelp biomass", "Animal biomass", "Depth", "Tide", "Biodiversity", "Kelp:tide", "Kelp:animals", "Tide:animals")),
+                           levels = c("kelp_spmacro", "kelp_spnereo", "kelp_spnone", "kelp_bio_scale", "kelp_bio_scale:tide_scale", "tide_scale", "depth_scale","weight_sum_scale", "shannon_scale",  "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
+                           labels = c("Macro", "Nereo", "None", "Kelp biomass", "Kelp:tide", "Tide", "Depth",  "Animal biomass", "Biodiversity", "Kelp:animals", "Tide:animals")),
          se = (upper_CI - estimate)/1.96
   )
 
@@ -440,18 +440,21 @@ v <- c(d$mean[1], d$mean[2])
 predict_sp <- ggpredict(mod_in_out2, terms = c("kelp_bio_scale[v]", "kelp_sp")) %>% 
   dplyr::rename(kelp_bio_scale = x,
                 in_minus_out = predicted,
-                kelp_sp = group
-         ) %>%
-  mutate(kelp = ifelse(kelp_sp == "none", "none", "kelp")) %>%
+                kelp_sp = group) %>%
+  mutate(kelp = ifelse(kelp_sp == "none", "none", "kelp"),
+         kelp_sp = factor(kelp_sp, levels = c("nereo", "macro", "none"))) %>%
   left_join(d, by = "kelp") %>%
   filter(mean ==  kelp_bio_scale)
 
+data2 <- data %>%
+  mutate(kelp_sp = factor(kelp_sp, levels = c("nereo", "macro", "none")))
+         
 sp_labs <- c(macro = "Macro", nereo = "Nereo", none = "None")
 
 set.seed(234444)
 kelp_sp_plot <- 
   dot_whisker(sum_data = predict_sp, 
-              all_data = data,
+              all_data = data2,
               x_var = kelp_sp,
               y_var = in_minus_out,
               pch_var = kelp_sp,
@@ -550,7 +553,7 @@ abund_kelp_int_plot <-
   theme(#legend.position = c(0.58, 0.95), legend.direction="horizontal",
         axis.text.y = element_blank(),
         axis.title.y = element_blank()) +
-  labs(colour = "Kelp", fill = "Kelp", lty = "Kelp") +
+  labs(colour = "Kelp biomass", fill = "Kelp biomass", lty = "Kelp biomass") +
   place_label("(d)") +
   ylim(c(-0.79, 1.05))
 
@@ -605,7 +608,7 @@ squish <- theme(axis.title.y = element_text(margin = margin(r = -200, unit = "pt
 kelp_coeff_plot/ ((kelp_sp_plot + squish) +
   abund_kelp_int_plot + 
   (kelp_tide_int_plot + squish) +
-  abund_tide_int_plot )
+  abund_tide_int_plot ) & theme(legend.justification = "left")
 
 
 # ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 16, width = 14, dpi = 400)
@@ -617,9 +620,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
 
 
 
-# Family level ------
-
-# No zeros for abundance!
+# Family manipulations ------
 
 data_fam_no0_a <- data %>%
   select(site, site_code, in_out_avg, kelp_bio_scale, kelp_sp, depth_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
@@ -717,6 +718,8 @@ data_fam_no0s <- data_fam_no0 %>%
                                method == 2 ~ total_fam*100),
          abund_fam_scale = c(scale(total_fam)))
 
+weight_sum_scale
+
 # Family stats ----
 mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + kelp_bio_scale + tide_scale + 
                         family*abund_fam_scale + depth_scale ,
@@ -741,17 +744,17 @@ ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.tr
 
 # should I do a model for each species?
 v_fam <- v_fun(data_fam_no0s, "Hexagrammidae")
-predict_green <- fam_fun2(data_fam_no0s, "Hexagrammidae", diagnose = FALSE)
+predict_green <- fam_fun_kelp(data_fam_no0s, "Hexagrammidae", diagnose = FALSE)
 # total_fam  9.4316940  3.9924145   2.362  0.01816 * 
 
 v_fam <- v_fun(data_fam_no0s, "Sebastidae")
-predict_rock <- fam_fun2(data_fam_no0s, "Sebastidae", diagnose = FALSE)
+predict_rock <- fam_fun_kelp(data_fam_no0s, "Sebastidae", diagnose = FALSE)
 
 v_fam <- v_fun(data_fam_no0s, "Embiotocidae")
-predict_per <- fam_fun2(data_fam_no0s, "Embiotocidae", diagnose = FALSE)
+predict_per <- fam_fun_kelp(data_fam_no0s, "Embiotocidae", diagnose = FALSE)
 
 v_fam <- v_fun(data_fam_no0s, "Cottidae")
-predict_scul <- fam_fun2(data_fam_no0s, "Cottidae", diagnose = FALSE)
+predict_scul <- fam_fun_kelp(data_fam_no0s, "Cottidae", diagnose = FALSE)
 
 predict_fish <- rbind(predict_green, predict_rock, predict_per, predict_scul)%>%
   mutate(family = factor(family, levels = 

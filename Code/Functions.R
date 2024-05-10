@@ -1320,13 +1320,16 @@ fam_fun_tide <- function(df, family, diagnose = FALSE) {
 }
 
 # function for kelp pee mod
-fam_fun2 <- function(df, family, diagnose = FALSE) {
+fam_fun_kelp <- function(df, family, diagnose = FALSE) {
   
   df_fam <- df %>% filter(family == {{family}})
   
   # model
-  mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + kelp_bio_scale + tide_scale + 
-                       total_fam + depth_scale, 
+  mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + 
+                       kelp_bio_scale*tide_scale +
+                       kelp_bio_scale*weight_fam_scale +
+                       weight_fam_scale*tide_scale +
+                       shannon_scale + depth_scale, 
                      family = 'gaussian',
                      data = df_fam)
   
@@ -1336,7 +1339,7 @@ fam_fun2 <- function(df, family, diagnose = FALSE) {
   }
   
   # ggpredict
-  predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]")) %>%
+  predict_fam <- ggpredict(mod_fam, terms = c("weight_fam_scale[v_fam]")) %>%
     mutate(total_fam = x,
            family = {{family}}) 
   
