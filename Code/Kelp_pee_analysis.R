@@ -621,7 +621,6 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
 
 
 # Family manipulations ------
-
 data_fam_no0_a <- data %>%
   select(site, site_code, in_out_avg, kelp_bio_scale, kelp_sp, depth_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
   unique() %>%
@@ -629,10 +628,10 @@ data_fam_no0_a <- data %>%
                mutate(family = as.factor(family))%>%
                group_by(site_code, method, phylum, family) %>% # if i want methods split up, add it back here
                summarise(total_fam = sum(total),
-                         weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
+                         weight_fam_sum = 1000*sum(weight_size_class_sum))),
             by = "site_code") %>%
   mutate(abund_fam_scale = c(scale(total_fam)),
-         weight_fam_scale = c(scale(weight_fam_sum_g)))
+         weight_fam_scale = c(scale(weight_fam_sum)))
 
 
 # what are the top families?
@@ -716,9 +715,9 @@ data_fam_no0 <- data_fam_no0_a %>%
 data_fam_no0s <- data_fam_no0 %>%
   mutate(total_fam = case_when(method == 1 ~ total_fam*500,
                                method == 2 ~ total_fam*100),
-         abund_fam_scale = c(scale(total_fam)))
+         abund_fam_scale = c(scale(total_fam))) %>%
+  as.data.frame()
 
-weight_sum_scale
 
 # Family stats ----
 mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + kelp_bio_scale + tide_scale + 
@@ -743,17 +742,17 @@ ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.tr
 # plot each fish family model -----
 
 # should I do a model for each species?
-v_fam <- v_fun(data_fam_no0s, "Hexagrammidae")
+v_fam <- v_fun_kelp(data_fam_no0s, "Hexagrammidae")
 predict_green <- fam_fun_kelp(data_fam_no0s, "Hexagrammidae", diagnose = FALSE)
 # total_fam  9.4316940  3.9924145   2.362  0.01816 * 
 
-v_fam <- v_fun(data_fam_no0s, "Sebastidae")
+v_fam <- v_fun_kelp(data_fam_no0s, "Sebastidae")
 predict_rock <- fam_fun_kelp(data_fam_no0s, "Sebastidae", diagnose = FALSE)
 
-v_fam <- v_fun(data_fam_no0s, "Embiotocidae")
+v_fam <- v_fun_kelp(data_fam_no0s, "Embiotocidae")
 predict_per <- fam_fun_kelp(data_fam_no0s, "Embiotocidae", diagnose = FALSE)
 
-v_fam <- v_fun(data_fam_no0s, "Cottidae")
+v_fam <- v_fun_kelp(data_fam_no0s, "Cottidae")
 predict_scul <- fam_fun_kelp(data_fam_no0s, "Cottidae", diagnose = FALSE)
 
 predict_fish <- rbind(predict_green, predict_rock, predict_per, predict_scul)%>%
@@ -779,16 +778,16 @@ pal1 <- pal[5]
 
 ggplot() + 
   geom_point(data = fish_fam_data, 
-             aes(x = total_fam, y = in_out_avg), colour = pal1,
+             aes(x = weight_fam_sum, y = in_out_avg), colour = pal1,
              alpha = 0.8) +
   labs(y = expression(paste("Delta ammonium ", (mu*M))), 
        x = expression(paste("Abundance"))) +
   facet_wrap(~family, scales = 'free_x') +
   geom_line(data = predict_fish,
-            aes(x = total_fam, y = predicted), colour = pal1,
+            aes(x = weight_fam_sum, y = predicted), colour = pal1,
             linewidth = 1) +
   geom_ribbon(data = predict_fish,
-              aes(x = total_fam, y = predicted, 
+              aes(x = weight_fam_sum, y = predicted, 
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
   theme_white() +
@@ -800,10 +799,63 @@ ggplot() +
     vjust   = 1.5,
     size = 9)
 
- ggsave("Output/Figures/fish_families_kelp.png", device = "png", height = 9, width = 12, dpi = 400)
+# ggsave("Output/Figures/fish_families_kelp.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # Next do inverts! -----
+
+
+
+# Community stuff -----
+# make wide for families
+fam_kelp_wide <- data_fam_no0s %>% 
+  dplyr::select(site_code, family, weight_fam_sum) %>% 
+  group_by(site_code, family) %>%
+  summarise(total = sum(weight_fam_sum)) %>%
+  ungroup() %>%
+  spread(key = family, value = total) %>%
+  replace(is.na(.), 0) %>%
+  select(-17) # cut the last column, it's NA
+
+# first use the rls final to filter for included surveys and make sure the order of rows is the same  
+kelp_com <- data %>%
+  select(site_code) %>%
+  unique() %>%
+  left_join(fam_kelp_wide, by = "site_code") %>%
+  select(-1)
+
+# make env data
+kelp_env <- data %>%
+  select(in_out_avg, kelp_bio_scale, kelp_sp, depth_scale, tide_scale) %>%
+  unique() 
+
+#convert com to a matrix
+kelp_m_com = as.matrix(kelp_com)
+
+# Perform the NMDS ordination
+set.seed(123)
+kelp_nmds = metaMDS(kelp_m_com, distance = "bray")
+kelp_nmds # stress is fine
+
+# Now we run the envfit function with our environmental data frame, env
+kelp_en = envfit(kelp_nmds, kelp_env, permutations = 999, na.rm = TRUE)
+# The first parameter is the metaMDS object from the NMDS ordination we just performed. Next is env, our environmental data frame. Then we state we want 999 permutations, and to remove any rows with missing data.
+kelp_en
+
+plot(kelp_nmds)
+plot(kelp_en)
+
+plot(kelp_nmds, type = "t")
+plot(kelp_en)
+
+
+# try plotting in ggplot?
+#save NMDS results into dataframe
+site_scrs <- as.data.frame(scores(kelp_nmds, display = "sites")) 
+
+spp_scrs <- as.data.frame(scores(spp_fit, display = "vectors")) #save species intrinsic values into dataframe
+spp_scrs <- cbind(spp_scrs, Species = rownames(spp_scrs))
+
 
 # Model selection checks------
 # biomass and abundance, shannon vs simpson checks

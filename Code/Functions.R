@@ -1267,9 +1267,8 @@ v_fun <- function(df, family){
   max_fam <- max(df_fam$total_fam)
   spread_fam <- (max_fam - min_fam)/100
   v_fam <- seq(min_fam, max_fam, spread_fam)
-
 }
-  
+
 # Now function to get predictions
 fam_fun <- function(df, family, diagnose = FALSE) {
   
@@ -1319,6 +1318,20 @@ fam_fun_tide <- function(df, family, diagnose = FALSE) {
   
 }
 
+
+# kelp v function
+v_fun_kelp <- function(df, family){
+  
+  df_fam <- df %>% filter(family == {{family}})
+  
+  # predict greenling model?
+  min_fam <- min(df_fam$weight_fam_sum)
+  max_fam <- max(df_fam$weight_fam_sum)
+  spread_fam <- (max_fam - min_fam)/100
+  v_fam <- seq(min_fam, max_fam, spread_fam)
+}
+
+
 # function for kelp pee mod
 fam_fun_kelp <- function(df, family, diagnose = FALSE) {
   
@@ -1327,8 +1340,8 @@ fam_fun_kelp <- function(df, family, diagnose = FALSE) {
   # model
   mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + 
                        kelp_bio_scale*tide_scale +
-                       kelp_bio_scale*weight_fam_scale +
-                       weight_fam_scale*tide_scale +
+                       kelp_bio_scale*weight_fam_sum +
+                       weight_fam_sum*tide_scale +
                        shannon_scale + depth_scale, 
                      family = 'gaussian',
                      data = df_fam)
@@ -1339,8 +1352,8 @@ fam_fun_kelp <- function(df, family, diagnose = FALSE) {
   }
   
   # ggpredict
-  predict_fam <- ggpredict(mod_fam, terms = c("weight_fam_scale[v_fam]")) %>%
-    mutate(total_fam = x,
+  predict_fam <- ggpredict(mod_fam, terms = c("weight_fam_sum[v_fam]")) %>%
+    mutate(weight_fam_sum = x,
            family = {{family}}) 
   
 }
