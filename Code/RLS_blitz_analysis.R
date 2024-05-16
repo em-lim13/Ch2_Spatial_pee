@@ -934,7 +934,7 @@ rls_fam_predict <- rbind(predict_fish, predict_invert)
 
 # plot all 
 fam_plot <- ggplot() + 
-  geom_point(data = rls_fam %>% filter, 
+  geom_point(data = rls_fam, 
              aes(x = total_fam, y = nh4_avg), colour = pal1,
              alpha = 0.8) +
   labs(y = expression(paste("Ammonium ", (mu*M))), 
