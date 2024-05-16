@@ -20,6 +20,16 @@ library(patchwork)
 theme_set(theme_bw())
 source("Code/Functions.R")
 
+# NH4+ data -----
+# kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
+pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
+
+# just save the sites we surveyed
+kcca_surveys <- pee %>%
+  transmute(Date = date,
+            site_code = site_code) %>%
+  unique() 
+
 # Kelp data ----
 
 # load site names
@@ -48,7 +58,9 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   ungroup() %>%
   rename(kelp_den = Kelp,
          site_name = SiteName) %>%
-filter(Transect != "15")
+filter(Transect != "15") %>%
+  # only keep sites I measured pee 
+  filter(site_code %in% kcca_surveys$site_code)
   
     #select(site_code, SiteName, HeightT, BiomassTkg, Biomassm2kg, sample) 
 
@@ -64,11 +76,6 @@ filter(Transect != "15")
 # Site level variables
 # BiomassM is the average biomass/m2 at each site across all 4 transects
 # DensityM is the average density at each site across all 4 transects
-
-
-# NH4+ data -----
-# kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
-pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
 
 
 # RLS data ----
@@ -91,7 +98,9 @@ kelp_rls <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
          common_name = str_to_sentence(common_name),
          Date = dmy(Date),
          date_time_survey = ymd_hms(paste(Date, Time))) %>%
-  # use function to fix species naming errors
+  # only keep sites I measured pee 
+  filter(site_code %in% kcca_surveys$site_code) %>% 
+  # use function to fix species naming errors 
   clean_sp_names() %>%
   # join phylo names from the rls blitz data
   left_join(read_csv("Output/Output_data/rls_phylo.csv"), by = "species_name") %>%
@@ -127,14 +136,11 @@ kelp_rls <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
 
 # extract just one row per survey to join with the pee data and tide data
 # Only keep the surveys I have pee samples for!
-kcca_survey_info <- pee %>%
-  transmute(Date = date,
-            site_code = site_code) %>%
-  unique() %>%
+kcca_survey_info <- kcca_surveys %>%
   left_join(kelp_rls %>%
               select(site_code, site_name, Date, date_time_survey) %>%
               unique() %>%
-              mutate(survey_id = 101:127), by = c("Date", "site_code")) %>%
+              mutate(survey_id = 101:119), by = c("Date", "site_code")) %>%
   left_join((kelp %>%
               select(c(site_code, Time_start)) %>%
               unique()), by = "site_code") %>%
@@ -374,6 +380,28 @@ mod_in_out2 <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
                        family = 'gaussian',
                        data = data)
 summary(mod_in_out2)
+
+# centered variables for interpretation in text
+mod_c <- glmmTMB(in_minus_out ~ -1 + kelp_sp + 
+                   kelp_bio_center*tide_center +
+                   kelp_bio_center*weight_sum_center +
+                   weight_sum_center*tide_center +
+                   shannon_center + depth_center +
+                   (1|site_code),
+                 family = 'gaussian',
+                 data = data) 
+summary(mod_c)
+
+mod_c <- glmmTMB(in_minus_out ~ 
+                   Macro*Nereo +tide_center +
+                   Macro*Nereo + weight_sum_center +
+                   weight_sum_center*tide_center +
+                   shannon_center + depth_center +
+                   (1|site_code),
+                 family = 'gaussian',
+                 data = data) 
+summary(mod_c)
+visreg(mod_c)
 
 # what if I add kelp sp interaction
 # I can't do a triple kelp_sp*kelp_bio_scale*tide_scale interaction bc no nereo flood
@@ -1048,17 +1076,39 @@ ggplot(data = data_s,
   scale_colour_manual(values = pal5) +
   scale_fill_manual(values = pal5)
 
-# fucking around -----
+# messig around -----
+# when i remove weight shannon becomes + and NOT signif
+# when I remove kelp biomass it becomes + and not signif
 
+d <- data %>% filter(kelp_cat != "Mid") %>% as.data.frame()
+mod <- glmmTMB(in_minus_out ~ kelp_sp + 
+                         kelp_bio_scale*tide_scale +
+                         kelp_bio_scale*weight_sum_scale +
+                         weight_sum_scale*tide_scale +
+                         shannon_scale + depth_scale + 
+                         (1|site_code),
+                       family = 'gaussian',
+                       data = data) 
+
+summary(mod)
+
+# what's happening with diversity
+ggplot(data = data,
+       aes(x = species_richness, y = in_minus_out), colour = "red") +
+  geom_point() +
+  geom_smooth(method = 'lm')
+
+
+visreg(mod)
+  
+  
+# old
 ggplot(data) +
   geom_point(aes(BiomassM, nh4_inside, shape = kelp_sp, colour = "inside")) +
   geom_point(aes(BiomassM, nh4_outside, shape = kelp_sp, colour = "outside")) +
   geom_point(aes(BiomassM, in_minus_out, shape = kelp_sp, colour = "delta"), size = 3) +
   geom_hline(yintercept= 0, linetype = "dashed", linewidth = 0.5) 
   
-  
-  
-
 
 kcca_table <- pee %>%
   select(site_code, date) %>%
