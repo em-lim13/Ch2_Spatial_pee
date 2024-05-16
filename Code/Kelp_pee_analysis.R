@@ -22,7 +22,9 @@ source("Code/Functions.R")
 
 # NH4+ data -----
 # kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
-pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv")
+pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv") %>%
+  as.data.frame() %>%
+  filter(site_code != "KCCA13") # remove second beach south
 
 # just save the sites we surveyed
 kcca_surveys <- pee %>%
@@ -32,35 +34,33 @@ kcca_surveys <- pee %>%
 
 # Kelp data ----
 
-# load site names
-names <- read_csv("Data/Team_kelp/Output_data/site_names.csv")
-
 # transect level kelp biomass + density data from Claire
 kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
-  as.data.frame() %>% 
+  as.data.frame() %>%
+  # Add the averaged site level variables from Claire!
+  left_join(read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv"), by = "SiteName") %>% 
+  # add the side codes to this data via site names
+  left_join((read_csv("Data/Team_kelp/Output_data/site_names.csv")), by = "SiteName") %>%
+  # rename vars now that all the data is linked up
+  rename(kelp_den = Kelp,
+         site_name = SiteName) %>%
+  # only keep sites I measured pee 
+  filter(site_code %in% kcca_surveys$site_code) %>%
   mutate(sample = case_when(Transect == 0 ~ 1, 
                             Transect == 5 ~ 2,
                             Transect == 10 ~ 3),
          kelp_sp = as.factor(case_when(
-           Kelp == 0 ~ "none", # no kelp = none
-           SiteName == "Wizard Islet North" ~ "none", # no kelp site that had 2 nereo
+           kelp_den == 0 ~ "none", # no kelp = none
            Macro_5m2 == 0 ~ "nereo", # no macro = nereo
-           Nereo_5m2 == 0 ~ "macro",
-           TRUE ~ as.character("macro"))) # everything else = macro
-         ) %>% 
-  left_join(names, by = "SiteName") %>% 
-  replace(is.na(.), 0) %>%
-  # Add the averaged site level variables from Claire!
-  left_join(read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv"), by = "SiteName") %>%
-  group_by(SiteName) %>%
+           Nereo_5m2 == 0 ~ "macro", # no nereo = macro
+           site_name == "Wizard Islet North" ~ "none", # no kelp site that had 2 nereo
+           TRUE ~ as.character("macro")))) %>% # everything else = macro
+  replace(is.na(.), 0)  %>%
+  group_by(site_code) %>%
   mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(Biomassm2kg)),
          Area_m2 = ifelse(kelp_sp == "none", 0, Area_m2)) %>%
-  ungroup() %>%
-  rename(kelp_den = Kelp,
-         site_name = SiteName) %>%
-filter(Transect != "15") %>%
-  # only keep sites I measured pee 
-  filter(site_code %in% kcca_surveys$site_code)
+  ungroup()  %>%
+  filter(Transect != "15") # this means the fourth transect contributes to the kelp density metrics but is cut bc there's no pee sample on that tran
   
     #select(site_code, SiteName, HeightT, BiomassTkg, Biomassm2kg, sample) 
 
@@ -81,7 +81,6 @@ filter(Transect != "15") %>%
 # RLS data ----
 kelp_rls <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
   # processing required to get this df into the RLS data format
-  as.data.frame() %>%
   filter(Method != 0) %>% # get rid of all method 0's
   slice(2:n()) %>% # cuts the first blank row
   # rename columns
@@ -121,8 +120,8 @@ kelp_rls <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
          total = case_when(method == 1 ~ total/500,
                            method == 2 ~ total/100)) %>%
   length_to_weight() %>% # fish length to weight function
-  home_range()  # calculate each fish's home range function
-
+  home_range() %>% # calculate each fish's home range function
+  as.data.frame() 
 
 # save csv for mapping 
 #  kelp_rls_csv <- kelp_rls %>%
@@ -140,7 +139,7 @@ kcca_survey_info <- kcca_surveys %>%
   left_join(kelp_rls %>%
               select(site_code, site_name, Date, date_time_survey) %>%
               unique() %>%
-              mutate(survey_id = 101:119), by = c("Date", "site_code")) %>%
+              mutate(survey_id = 101:117), by = c("Date", "site_code")) %>%
   left_join((kelp %>%
               select(c(site_code, Time_start)) %>%
               unique()), by = "site_code") %>%
@@ -202,7 +201,7 @@ for (x in 1:nrow(kcca_survey_info)) {
 
 
 # Put them all together! ----
-data_all <- pee %>%
+data <- pee %>%
   # so some site level averaging
   group_by(site_code) %>%
   mutate(nh4_avg = mean(c(nh4_outside, nh4_inside)),
@@ -224,16 +223,12 @@ data_all <- pee %>%
               summarize(weight_sum = sum(weight_size_class_sum),
                         all_weight_weighted = sum(weight_weighted),
                         species_richness = n_distinct(species_name),
-                        abundance = sum(total))) %>%
+                        abundance = sum(total)) %>%
+              ungroup()) %>%
   # diversity indexes
   left_join(kelp_rls_wide, by = "survey_id") %>%
   # join tide exchange data
-  left_join(tide_exchange_kcca, by = "survey_id")
-
-
-# Remove Second Beach South for in vs out
-data <- data_all %>%
-  filter(site_name != "Second Beach South") %>%
+  left_join(tide_exchange_kcca, by = "survey_id") %>%
   # scale factors using function
   scale_vars() %>%
   mutate(exp_kelp = exp(BiomassM),
@@ -243,7 +238,8 @@ data <- data_all %>%
              kelp_bio_scale < -0.5 ~ "Low",
              kelp_bio_scale < 1 ~ "Mid",
              kelp_bio_scale > 1 ~ "High")),
-           levels = c("Low", "Mid", "High")))
+           levels = c("Low", "Mid", "High"))) %>%
+  as.data.frame()
 
 # reduced data to export a file for mapping
 data_map <- data %>%
@@ -664,15 +660,9 @@ data_fam_no0_a <- data %>%
 
 # what are the top families?
 
-# df for just the surveys I'm looking at
-kelp_sm <- data %>%
-  select(site_code) %>%
-  unique() %>%
-  left_join(kelp_rls, by = "site_code")
-
 # CHOOSE THE FAMILIES TO INCLUDE
 # rank of families by total abundance (density)
-kelp_fam_list_total <- kelp_sm %>%
+kelp_fam_list_total <- kelp_rls %>%
   group_by(family) %>%
   summarise(sum = sum(total)) %>%
   drop_na(family) %>%
@@ -682,7 +672,7 @@ kelp_fam_list_total <- kelp_sm %>%
             rank_total = 1:43)
 
 # but which families show up on the most transects?
-kelp_fam_list_count <- kelp_sm %>%
+kelp_fam_list_count <- kelp_rls %>%
   select(site_code, family) %>%
   unique() %>%
   count(family) %>%
@@ -693,7 +683,7 @@ kelp_fam_list_count <- kelp_sm %>%
             rank_count = 1:43)
 
 # rank of families by biomass
-kelp_fam_list_bio <- kelp_sm %>%
+kelp_fam_list_bio <- kelp_rls %>%
   group_by(family) %>%
   summarise(sum = sum(weight_size_class_sum)) %>%
   drop_na(family) %>%
@@ -755,7 +745,7 @@ mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + kelp_bio_scale + tide_scale +
 summary(mod_fam)
 plot(DHARMa::simulateResiduals(mod_fam)) 
 
-df <- emtrends(mod_fam, pairwise ~ family, var = "abund_fam_scale")$emtrends %>%
+df <- emmeans::emtrends(mod_fam, pairwise ~ family, var = "abund_fam_scale")$emtrends %>%
   as.data.frame()
 
 # look at those slopes
@@ -765,73 +755,112 @@ ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.tr
   geom_vline(xintercept=0, color="black", linetype="dashed")
 
 # For fish: Hexagrammidae, Sebastidae, Embiotocidae, Cottidae
-# For inverts: Echinasteridae, Asteropseidae, Muricidae, Asteriidae,  Stichopodidae by size of slope
+# For inverts: Echinasteridae, Asteropseidae, Muricidae, Asteriidae by size of slope
 
-# plot each fish family model -----
+# fish family models -----
 
-# should I do a model for each species?
+# One model for each species
 v_fam <- v_fun_kelp(data_fam_no0s, "Hexagrammidae")
-predict_green <- fam_fun_kelp(data_fam_no0s, "Hexagrammidae", diagnose = FALSE)
+predict_green <- fam_fun_kelp(data_fam_no0s, "Hexagrammidae", diagnose = TRUE)
 # total_fam  9.4316940  3.9924145   2.362  0.01816 * 
 
 v_fam <- v_fun_kelp(data_fam_no0s, "Sebastidae")
-predict_rock <- fam_fun_kelp(data_fam_no0s, "Sebastidae", diagnose = FALSE)
+predict_rock <- fam_fun_kelp(data_fam_no0s, "Sebastidae", diagnose = TRUE)
 
 v_fam <- v_fun_kelp(data_fam_no0s, "Embiotocidae")
-predict_per <- fam_fun_kelp(data_fam_no0s, "Embiotocidae", diagnose = FALSE)
+predict_per <- fam_fun_kelp(data_fam_no0s, "Embiotocidae", diagnose = TRUE)
 
 v_fam <- v_fun_kelp(data_fam_no0s, "Cottidae")
-predict_scul <- fam_fun_kelp(data_fam_no0s, "Cottidae", diagnose = FALSE)
+predict_scul <- fam_fun_kelp(data_fam_no0s, "Cottidae", diagnose = TRUE)
 
-predict_fish <- rbind(predict_green, predict_rock, predict_per, predict_scul)%>%
-  mutate(family = factor(family, levels = 
-                           c("Hexagrammidae", "Sebastidae", "Embiotocidae", "Cottidae")))
+# extra fish
+v_fam <- v_fun_kelp(data_fam_no0s, "Gobiidae")
+predict_gob <- fam_fun_kelp(data_fam_no0s, "Gobiidae", diagnose = TRUE)
 
-# make a df of just those species
-fish_fam_data <- data_fam_no0s %>%
-  filter(family == "Hexagrammidae" |
-           family == "Sebastidae" |
-           family == "Cottidae" |
-           family == "Embiotocidae") %>%
-  mutate(family = factor(family, levels = 
-                           c("Hexagrammidae", "Sebastidae", "Embiotocidae", "Cottidae")),
-         slope = case_when(family == "Hexagrammidae" ~ "slope = 0.009, p = 0.0002",
-                           family == "Sebastidae" ~ "slope = 0.0009, p = 0.10",
-                           family == "Cottidae" ~ "slope = 0.003, p = 0.01",
-                           family == "Embiotocidae" ~ "slope = 0.0007, p = 0.0001"))
 
-# plot these curves for the fish 
-pal <- viridis::viridis(10)
-pal1 <- pal[5]
 
-ggplot() + 
-  geom_point(data = fish_fam_data, 
+# Next do inverts! -----
+# Echinasteridae, Asteropseidae, Muricidae, Asteriidae
+v_fam <- v_fun_kelp(data_fam_no0s, "Echinasteridae")
+predict_blood <- fam_fun_kelp(data_fam_no0s, "Echinasteridae", diagnose = TRUE)
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Asteropseidae")
+predict_leather <- fam_fun_kelp(data_fam_no0s, "Asteropseidae", diagnose = TRUE)
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Muricidae")
+predict_whelk <- fam_fun_kelp(data_fam_no0s, "Muricidae", diagnose = TRUE)
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Asteriidae")
+predict_stars <- fam_fun_kelp(data_fam_no0s, "Asteriidae", diagnose = TRUE)
+
+
+# extra inverts
+v_fam <- v_fun_kelp(data_fam_no0s, "Turbinidae")
+predict_snail <- fam_fun_kelp(data_fam_no0s, "Turbinidae", diagnose = TRUE)
+# red dharma line
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Strongylocentrotidae")
+predict_urch <- fam_fun_kelp(data_fam_no0s, "Strongylocentrotidae", diagnose = TRUE)
+# dharma isn't happy, had to increase `err` for some of the quantiles.
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Asterinidae")
+predict_ast <- fam_fun_kelp(data_fam_no0s, "Asterinidae", diagnose = TRUE)
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Stichopodidae")
+predict_stic <- fam_fun_kelp(data_fam_no0s, "Stichopodidae", diagnose = FALSE)
+# error i think
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Haliotidae")
+predict_aba <- fam_fun_kelp(data_fam_no0s, "Haliotidae", diagnose = TRUE)
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Acmaeidae")
+predict_lim <- fam_fun_kelp(data_fam_no0s, "Acmaeidae", diagnose = TRUE)
+# red lines, increased err for quantiles
+
+
+# Put everything together, I'm sorry i haven't found a better method for this yet
+predict_all_fam <- rbind(predict_green, predict_rock, predict_per, predict_scul, predict_blood, predict_leather, predict_whelk, predict_stars, predict_snail, predict_urch, predict_ast, predict_stic, predict_aba, predict_lim) 
+
+# just list the top 8 R2 values
+fam_keep <- predict_all_fam %>%
+  select(family, r2) %>%
+  unique() %>%
+  arrange(desc(r2)) %>%
+  head(8) 
+# top r2 = Echinasteridae, Embiotocidae, Sebastidae, Turbinidae, Asteriidae, Cottidae, Hexagrammidae, Asteropseidae
+
+# just keep those top 8 families!
+kelp_fam_predict <- predict_all_fam %>%
+  filter(family %in% fam_keep$family)  %>%
+  arrange(desc(r2)) %>%
+  mutate(family = factor(family, unique(family)))
+  
+# now filter data
+kelp_fam <- fam_keep %>%
+  left_join(data_fam_no0s, by = "family") %>%
+  arrange(desc(r2)) %>%
+  mutate(family = factor(family, unique(family)))
+
+
+# Plot families ----
+fam_plot <- ggplot() + 
+  geom_point(data = kelp_fam, 
              aes(x = weight_fam_sum, y = in_out_avg), colour = pal1,
              alpha = 0.8) +
-  labs(y = expression(paste("Delta ammonium ", (mu*M))), 
-       x = expression(paste("Abundance"))) +
-  facet_wrap(~family, scales = 'free_x') +
-  geom_line(data = predict_fish,
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Weight (kg/m2)"))) +
+  facet_wrap(~family, scales = 'free_x', ncol = 2) +
+  geom_line(data = kelp_fam_predict,
             aes(x = weight_fam_sum, y = predicted), colour = pal1,
             linewidth = 1) +
-  geom_ribbon(data = predict_fish,
+  geom_ribbon(data = kelp_fam_predict,
               aes(x = weight_fam_sum, y = predicted, 
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
   theme_white() +
-  theme(strip.background = element_rect(fill = "grey", color = "grey")) +
-  geom_text(
-    data = fish_fam_data %>% select(family, slope) %>% unique(),
-    mapping = aes(x = Inf, y = Inf, label = slope),
-    hjust   = 1.1,
-    vjust   = 1.5,
-    size = 9)
+  theme(strip.background = element_rect(fill = "grey", color = "grey"))
 
-# ggsave("Output/Figures/fish_families_kelp.png", device = "png", height = 9, width = 12, dpi = 400)
-
-
-# Next do inverts! -----
-
+fam_plot
 
 
 # Community stuff -----
