@@ -125,8 +125,8 @@ cuke_plot <- dot_whisker(sum_data = sum_cukes,
                          x_var = cukes, 
                          y_var = nh4_avg, 
                          labels = cuke_labels,
-                         pal = pal_c2,
-                         theme = "black") +
+                         pal = pal_c,
+                         theme = "white") +
   ylim(c(0, 3.8)) +
   place_label("(a)")
 
@@ -136,21 +136,21 @@ crab_plot <- dot_whisker(sum_data = sum_crabs,
                          x_var = treatment,
                          y_var = nh4_avg,
                          labels = crab_labels,
-                         pal = pal_c2,
-                         theme = "black") +
+                         pal = pal_c,
+                         theme = "white") +
   ylim(c(0, 3.8)) +
   place_label("(b)")
 
 # plot together
 cuke_plot + crab_plot & 
   plot_annotation(theme = theme(plot.background = 
-      element_rect(color = "black", fill = "black")))
+      element_rect(color = "white", fill = "white")))
 
-ggsave("Output/Pres_figs/Fig5.png", device = "png", height = 6, width = 12, dpi = 400)
+# ggsave("Output/Pres_figs/Fig5.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
 
 # Fig 4 white background for pub ----
-#ggsave("Output/Pub_figs/Fig5.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig6.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 
