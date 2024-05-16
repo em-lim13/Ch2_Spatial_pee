@@ -1349,12 +1349,14 @@ fam_fun_kelp <- function(df, family, diagnose = FALSE) {
   if(diagnose == TRUE){
     print(summary(mod_fam))
     print(plot(DHARMa::simulateResiduals(mod_fam)))
+    print(performance::r2(mod_fam, tolerance = 0.0000000000001))
   }
   
   # ggpredict
   predict_fam <- ggpredict(mod_fam, terms = c("weight_fam_sum[v_fam]")) %>%
     mutate(weight_fam_sum = x,
-           family = {{family}}) 
+           family = {{family}},
+           r2 = as.numeric(performance::r2(mod_fam, tolerance = 0.0000000000001)[1])) 
   
 }
 
