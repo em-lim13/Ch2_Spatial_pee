@@ -847,9 +847,9 @@ fam_plot <- ggplot() +
   geom_point(data = kelp_fam, 
              aes(x = weight_fam_sum, y = in_out_avg), colour = pal1,
              alpha = 0.8) +
-  labs(y = expression(paste("Ammonium ", (mu*M))), 
+  labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
        x = expression(paste("Weight (kg/m2)"))) +
-  facet_wrap(~family, scales = 'free_x', ncol = 2) +
+  facet_wrap(~family, scales = 'free_x', ncol = 4) +
   geom_line(data = kelp_fam_predict,
             aes(x = weight_fam_sum, y = predicted), colour = pal1,
             linewidth = 1) +
@@ -861,6 +861,9 @@ fam_plot <- ggplot() +
   theme(strip.background = element_rect(fill = "grey", color = "grey"))
 
 fam_plot
+
+# ggsave("Output/Pub_figs/Fig5.png", device = "png", height = 9, width = 16, dpi = 400)
+
 
 
 # Community stuff -----
