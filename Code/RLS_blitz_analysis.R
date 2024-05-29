@@ -71,8 +71,8 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
          year = as.factor(year(survey_date)),
          site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code),
          # correct for rectangle area
-         total = case_when(method == 1 ~ total/500,
-                           method == 2 ~ total/100)) %>%
+         total = case_when(method == 1 ~ total/250,
+                           method == 2 ~ total/50)) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
 
@@ -1237,6 +1237,12 @@ rls_auto <- rls_final %>%
 
 testSpatialAutocorrelation(new_resids, x = rls_auto$longitude, y = rls_auto$latitude)
 
+# Fuck around ----
+
+abalone <- rls %>%
+  filter(species_name == "Haliotis kamtschatkana") %>%
+  group_by(survey_id) %>%
+  summarize(density = sum(total)*100) 
 
 
 # Graveyard -----
