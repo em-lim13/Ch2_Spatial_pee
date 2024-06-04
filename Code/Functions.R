@@ -9,7 +9,6 @@
 library(tidyverse)
 library(patchwork)
 library(renv)
-library(rfishbase)
 
 # First let's get our packages sorted out using renv
 
