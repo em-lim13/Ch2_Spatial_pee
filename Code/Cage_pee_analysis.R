@@ -13,6 +13,7 @@ library(DHARMa)
 library(png)
 library(ggtext)
 
+renv::restore()
 # Load functions
 source("Code/Functions.R")
 
