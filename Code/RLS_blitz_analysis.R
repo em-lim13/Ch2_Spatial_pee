@@ -11,7 +11,6 @@ library(ggeffects)
 library(lubridate)
 library(vegan) # for diversity indexes
 library(MuMIn) # for dredge?
-library(TMB)
 library(glmmTMB) # better for random effects?
 library(patchwork)
 library(emmeans)
