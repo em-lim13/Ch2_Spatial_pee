@@ -15,6 +15,10 @@ library(broom.mixed)
 library(dotwhisker)
 library(ggeffects)
 library(patchwork)
+library(vegan)
+library(viridis)
+library(emmeans)
+library(ggtext)
 
 # set theme and load functions
 theme_set(theme_bw())
@@ -79,7 +83,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
 
 
 # RLS data ----
-kelp_rls <- read_csv("Data/Team_Kelp/RLS_KCCA_2022.csv") %>%
+kelp_rls <- read_csv("Data/Team_kelp/RLS_KCCA_2022.csv")%>%
   # processing required to get this df into the RLS data format
   filter(Method != 0) %>% # get rid of all method 0's
   slice(2:n()) %>% # cuts the first blank row
@@ -823,6 +827,7 @@ predict_all_fam <- rbind(predict_green, predict_rock, predict_per, predict_scul,
 
 # just list the top 8 R2 values
 fam_keep <- predict_all_fam %>%
+  as.data.frame() %>%
   select(family, r2) %>%
   unique() %>%
   arrange(desc(r2)) %>%
