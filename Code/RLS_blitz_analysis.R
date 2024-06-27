@@ -1063,7 +1063,7 @@ new <- rls_new %>%
 #write_csv(new, "Output/Output_data/new_species.csv")
 
 # missing size data
-no_sizes <- fishes %>%
+no_sizes <- rls %>%
   filter(size_class == "0") %>%
   filter(species_name != "Bolinopsis infundibulum") %>%
   filter(species_name != "Pleuronichthys coenosus") %>%
@@ -1072,7 +1072,7 @@ no_sizes <- fishes %>%
   select(-year)
 
 # just look at goby sizes
-goby <- fishes %>%
+goby <- rls %>%
   filter(species_name == "Oxylebius pictus") %>%
   summarize(mean = mean(size_class))
 
