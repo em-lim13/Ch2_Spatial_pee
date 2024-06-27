@@ -49,10 +49,10 @@ fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
     species_name == "Oxylebius pictus" & size_class == 0 ~ 12.5,
     TRUE ~ as.numeric(size_class)),
     # correct for rectangle area
-    total = case_when(method == 1 ~ total/500,
-                      method == 2 ~ total/100)) %>%
+    survey_den = case_when(method == 1 ~ total/500,
+                           method == 2 ~ total/100)) %>%
   filter(species_name != "Myoxocephalus aenaeus") %>% # Remove east coast fish
-filter(species_name != "Phoca vitulina") %>% # Remove seal, lets just focus on inverts and fish
+  filter(species_name != "Phoca vitulina") %>% # Remove seal, lets just focus on inverts and fish
   filter(!(family == "Gobiidae" & method == 1)) %>% 
   filter(!(family == "Cottidae" & method == 1)) %>% 
   filter(!(family == "Hexagrammidae" & method == 2)) 
@@ -70,8 +70,8 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
          year = as.factor(year(survey_date)),
          site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code),
          # correct for rectangle area
-         total = case_when(method == 1 ~ total/250,
-                           method == 2 ~ total/50)) %>%
+         survey_den = case_when(method == 1 ~ total/500,
+                                method == 2 ~ total/100)) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
 
@@ -94,7 +94,7 @@ fishes <- fish %>%
   length_to_weight() %>% # Use nice length to weight function!
           # careful, the function shrinks the big wolf eel
   home_range() %>% # calculate each fish's home range function
-  mutate(biomass_per_indiv = biomass/total) # see how the RLS biomass calc estimated each fish size
+  mutate(biomass_per_indiv = biomass/survey_den) # see how the RLS biomass calc estimated each fish size
 #  mutate(size_class_sum_g = weight_size_class_sum*1000)
 
 #d <- fishes %>% select(species_name, total, biomass, size_class_sum_g) %>%
@@ -119,7 +119,7 @@ fishes <- fish %>%
 # now calc invert weights
 inverts <- invert %>%
   length_to_weight() %>% # use function
-  mutate(biomass_per_indiv = biomass/total) %>%
+  mutate(biomass_per_indiv = biomass/survey_den) %>%
   home_range() # home range + weight function, shouldn't change anything
 
 # Join all rls data together
@@ -145,11 +145,11 @@ rls_survey_info <- rls %>%
 # currently the df I want to tack the metrics onto is sorted by date, oldest at top
 # Spreading long data for taxa abundance to columns for each species
 rls_wider <- rls %>% 
-  dplyr::select(survey_id, species_name, total) %>% 
+  dplyr::select(survey_id, species_name, survey_den) %>% 
   group_by(survey_id, species_name) %>%
-  summarise(total = sum(total)) %>%
+  summarise(survey_den = sum(survey_den)) %>%
   ungroup() %>%
-  spread(key = species_name, value = total) %>%
+  spread(key = species_name, value = survey_den) %>%
   replace(is.na(.), 0)
 
 # write_csv(rls_wider, "Output/Output_data/rls_wider.csv")
@@ -266,21 +266,21 @@ rls_final <-
               group_by(survey_id) %>%
               summarize(fish_weight_sum = sum(weight_size_class_sum),
                         fish_weight_weighted = sum(weight_weighted),
-                        fish_abund = sum(total))) %>%
+                        fish_abund = sum(survey_den))) %>%
   # invert biomass
   left_join(inverts %>%
               filter(phylum != "Chordata") %>%
               group_by(survey_id) %>%
               summarize(invert_weight_sum = sum(weight_size_class_sum),
                         invert_weight_weighted = sum(weight_weighted),
-                        invert_abund = sum(total))) %>%
+                        invert_abund = sum(survey_den))) %>%
   # rls survey richness and abundance and total biomass
   left_join(rls %>%
               group_by(survey_id) %>%
               summarize(weight_sum = sum(weight_size_class_sum),
                         all_weight_weighted = sum(weight_weighted),
                         species_richness = n_distinct(species_name),
-                        abundance = sum(total))
+                        abundance = sum(survey_den))
             ) %>%
   # diversity indexes
   left_join(rls_wide, by = "survey_id") %>%
