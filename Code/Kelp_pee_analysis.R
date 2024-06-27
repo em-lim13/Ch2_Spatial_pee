@@ -54,10 +54,10 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
                             Transect == 5 ~ 2,
                             Transect == 10 ~ 3),
          kelp_sp = as.factor(case_when(
+           site_code == "KCCA19" ~ "none", # no kelp site that had 2 nereo
            kelp_den == 0 ~ "none", # no kelp = none
            Macro_5m2 == 0 ~ "nereo", # no macro = nereo
            Nereo_5m2 == 0 ~ "macro", # no nereo = macro
-           site_name == "Wizard Islet North" ~ "none", # no kelp site that had 2 nereo
            TRUE ~ as.character("macro")))) %>% # everything else = macro
   replace(is.na(.), 0)  %>%
   group_by(site_code) %>%
@@ -65,8 +65,8 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
          Area_m2 = ifelse(kelp_sp == "none", 0, Area_m2)) %>%
   ungroup()  %>%
   filter(Transect != "15") # this means the fourth transect contributes to the kelp density metrics but is cut bc there's no pee sample on that tran
-  
-    #select(site_code, SiteName, HeightT, BiomassTkg, Biomassm2kg, sample) 
+
+#select(site_code, SiteName, HeightT, BiomassTkg, Biomassm2kg, sample) 
 
 # Less dangerous bay was the "real" no kelp control!!!!
 # Sand town was a super weird outlier, I think that was the site we messed up the samples from, that's AOKAY!!! phew
@@ -74,8 +74,8 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
 
 
 # Transect level variables:
-  # BiomassTkg is kelp density x average biomass for each transect
-  # Biomassm2kg is just that number / 5 bc the transect was 5 m2
+# BiomassTkg is kelp density x average biomass for each transect
+# Biomassm2kg is just that number / 5 bc the transect was 5 m2
 
 # Site level variables
 # BiomassM is the average biomass/m2 at each site across all 4 transects
@@ -105,6 +105,14 @@ kelp_rls <- read_csv("Data/Team_kelp/RLS_KCCA_2022.csv")%>%
   filter(site_code %in% kcca_surveys$site_code) %>% 
   # use function to fix species naming errors 
   clean_sp_names() %>%
+  # Pivot longer for biomass
+  pivot_longer( cols = `0`:`400`, names_to = "size_class", values_to = "total") %>%
+  drop_na(total) %>%
+  filter(total > 0) %>%
+  select(-Total) %>%
+  group_by(site_code, site_name, Date, date_time_survey, Depth, method, species_name, common_name, size_class) %>%
+  summarise(survey_total = sum(total)) %>% # sum blocks 1 and 2
+  ungroup() %>%
   # join phylo names from the rls blitz data
   left_join(read_csv("Output/Output_data/rls_phylo.csv"), by = "species_name") %>%
   clean_phylo_names() %>% # function to fix naming errors
@@ -114,18 +122,14 @@ kelp_rls <- read_csv("Data/Team_kelp/RLS_KCCA_2022.csv")%>%
   filter(!(family == "Gobiidae" & method == 1)) %>% 
   filter(!(family == "Cottidae" & method == 1)) %>% 
   filter(!(family == "Hexagrammidae" & method == 2)) %>%
-  # Pivot longer for biomass
-  pivot_longer( cols = `0`:`400`, names_to = "size_class", values_to = "total") %>%
-  drop_na(total) %>%
-  filter(total > 0) %>%
-  select(-Total) %>%
   mutate(size_class = as.numeric(size_class),
          # correct for rectangle area
-         total = case_when(method == 1 ~ total/500,
-                           method == 2 ~ total/100)) %>%
+         survey_den = case_when(method == 1 ~ survey_total/500,
+                                method == 2 ~ survey_total/100)) %>%
   length_to_weight() %>% # fish length to weight function
   home_range() %>% # calculate each fish's home range function
   as.data.frame() 
+
 
 # save csv for mapping 
 #  kelp_rls_csv <- kelp_rls %>%
@@ -145,18 +149,18 @@ kcca_survey_info <- kcca_surveys %>%
               unique() %>%
               mutate(survey_id = 101:117), by = c("Date", "site_code")) %>%
   left_join((kelp %>%
-              select(c(site_code, Time_start)) %>%
-              unique()), by = "site_code") %>%
+               select(c(site_code, Time_start)) %>%
+               unique()), by = "site_code") %>%
   mutate(date_time_kelp = ymd_hms(paste(Date, Time_start)))
 
 # pivot back to wide for biodiversity
 kelp_rls_wider <- kelp_rls %>% 
   left_join(kcca_survey_info, by = c("site_code", "date_time_survey")) %>%
-  dplyr::select(survey_id, species_name, total) %>% 
+  dplyr::select(survey_id, species_name, survey_den) %>% 
   group_by(survey_id, species_name) %>%
-  summarise(total = sum(total)) %>%
+  summarise(survey_den = sum(survey_den)) %>%
   ungroup() %>%
-  spread(key = species_name, value = total) %>%
+  spread(key = species_name, value = survey_den) %>%
   replace(is.na(.), 0)
 
 # then calculate biodiversity metrics
@@ -185,7 +189,7 @@ tide_exchange_kcca <- data.frame()
 for (x in 1:nrow(kcca_survey_info)) {
   
   survey_start <- ymd_hms(kcca_survey_info$date_time_kelp[x:x]) 
-    # tie the times to the time the nh4 samples were collected, during kelp surveys
+  # tie the times to the time the nh4 samples were collected, during kelp surveys
   survey_end <- survey_start + hours(1)
   
   output = tide_kcca %>%
@@ -220,14 +224,14 @@ data <- pee %>%
   # join site survey info for the survey ID
   left_join(kcca_survey_info %>%
               select(-c(Date, site_name)), by = "site_code"
-            ) %>%
+  ) %>%
   # Join biomass, richness and abundance
   left_join(kelp_rls %>%
               group_by(site_code) %>%
               summarize(weight_sum = sum(weight_size_class_sum),
                         all_weight_weighted = sum(weight_weighted),
                         species_richness = n_distinct(species_name),
-                        abundance = sum(total)) %>%
+                        abundance = sum(survey_den)) %>%
               ungroup()) %>%
   # diversity indexes
   left_join(kelp_rls_wide, by = "survey_id") %>%
