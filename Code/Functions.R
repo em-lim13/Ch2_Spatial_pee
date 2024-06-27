@@ -546,7 +546,7 @@ length_to_weight <- function(datafile) {
       # otherwise the calc thinks it's MASSSSSIVE
       weight_per_indiv_g = if_else(size_class == 187.5, 18400, weight_per_indiv_g),
       weight_per_indiv_kg = weight_per_indiv_g/1000,
-      weight_size_class_sum = (weight_per_indiv_kg*total)) 
+      weight_size_class_sum = (weight_per_indiv_kg*survey_den)) 
   }
 
 
