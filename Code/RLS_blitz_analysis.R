@@ -32,27 +32,30 @@ theme_set(theme_bw())
 # RLS data from the website!
 
 # Just the pelagic and cryptic fish
-fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
-                 show_col_types = FALSE) %>%
+fish_invert <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
+                        show_col_types = FALSE) %>%
   rbind(read_csv("Data/RLS/RLS_data/cryptobenthic_fish_abundance_sizes_added.csv",
+                 show_col_types = FALSE)) %>%
+  rbind(read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
                  show_col_types = FALSE)) %>%
   as.data.frame() %>%
   clean_phylo_names() %>% # function to fix naming errors
   mutate(survey_date = ymd(survey_date),
          year = as.factor(year(survey_date)),
-         site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code)) %>%
+         site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code),
+         # correct for rectangle area
+         survey_den = case_when(method == 1 ~ total/500,
+                                method == 2 ~ total/100)) %>%
   filter(month(survey_date) == 4 | month(survey_date) == 5) %>% # Just the RLS blitz data for now
   mutate(size_class = case_when(
     species_name == "Rhinogobiops nicholsii" & size_class == 0 ~ 7.5,
     species_name == "Artedius harringtoni" & size_class == 0 ~ 5,
     species_name == "Jordania zonope" & size_class == 0 ~ 5,
     species_name == "Oxylebius pictus" & size_class == 0 ~ 12.5,
-    TRUE ~ as.numeric(size_class)),
-    # correct for rectangle area
-    survey_den = case_when(method == 1 ~ total/500,
-                           method == 2 ~ total/100)) %>%
+    TRUE ~ as.numeric(size_class))) %>%
   filter(species_name != "Myoxocephalus aenaeus") %>% # Remove east coast fish
   filter(species_name != "Phoca vitulina") %>% # Remove seal, lets just focus on inverts and fish
+  # remove fish seen on wrong method
   filter(!(family == "Gobiidae" & method == 1)) %>% 
   filter(!(family == "Cottidae" & method == 1)) %>% 
   filter(!(family == "Hexagrammidae" & method == 2)) 
@@ -60,19 +63,6 @@ fish <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
 # Rhinogobiops nicholsii 7.5 avg
 # Artedius harringtoni avg 5
 # Jordania zonope avg 5
-
-# Just the mobile inverts
-invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
-                   show_col_types = FALSE) %>%
-  clean_phylo_names() %>% # function to fix naming errors
-  as.data.frame() %>%
-  mutate(survey_date = ymd(survey_date),
-         year = as.factor(year(survey_date)),
-         site_code = ifelse(site_name == "Swiss Boy", "BMSC24", site_code),
-         # correct for rectangle area
-         survey_den = case_when(method == 1 ~ total/500,
-                                method == 2 ~ total/100)) %>%
-  filter(month(survey_date) == 4 | month(survey_date) == 5) # Just the RLS blitz data for now
 
 
 # RLS Biomass calculations -------
@@ -90,20 +80,13 @@ invert <- read_csv("Data/RLS/RLS_data/mobile_macroinvertebrate_abundance.csv",
 # Black rockfish in a paper ranged from 35.4 to 92.5 mm standard length (SL) and 1.10 to 17.78 g wet weight
 
 # Use WL relationships from fishbase to estimate weight of fish in RLS surveys
-fishes <- fish %>%
+rls <- fish_invert %>%
   length_to_weight() %>% # Use nice length to weight function!
-          # careful, the function shrinks the big wolf eel
+  # careful, the function shrinks the big wolf eel
   home_range() %>% # calculate each fish's home range function
   mutate(biomass_per_indiv = biomass/survey_den) # see how the RLS biomass calc estimated each fish size
 #  mutate(size_class_sum_g = weight_size_class_sum*1000)
 
-#d <- fishes %>% select(species_name, total, biomass, size_class_sum_g) %>%
-#  mutate(biomass_per = biomass/total,
-#         weight_per = size_class_sum_g/total,
-#    diff = biomass_per - weight_per) %>%
-#  filter(species_name != "Anarrhichthys ocellatus" )
-
-#ggplot(d, aes(diff, species_name)) + geom_jitter()
 
 # That one huge wolf eel can't be right
 # Fishbase: max size = 240 cm, max weight = 18.4 kg
@@ -115,15 +98,6 @@ fishes <- fish %>%
 # Figure out what to do here
 
 # Megathura crenulata probably isn't found here????
-
-# now calc invert weights
-inverts <- invert %>%
-  length_to_weight() %>% # use function
-  mutate(biomass_per_indiv = biomass/survey_den) %>%
-  home_range() # home range + weight function, shouldn't change anything
-
-# Join all rls data together
-rls <- rbind(fishes, inverts)
 
 #write_csv(rls, "Output/Output_data/rls_species.csv")
 
@@ -261,14 +235,14 @@ rls_final <-
   select(c(site, site_code, survey_id, date_time, year, nh4_avg, temp_avg, depth_avg)) %>%
   unique() %>%
   # rls fish biomass 
-  left_join(fishes %>%
+  left_join(rls %>%
               filter(phylum == "Chordata") %>%
               group_by(survey_id) %>%
               summarize(fish_weight_sum = sum(weight_size_class_sum),
                         fish_weight_weighted = sum(weight_weighted),
                         fish_abund = sum(survey_den))) %>%
   # invert biomass
-  left_join(inverts %>%
+  left_join(rls %>%
               filter(phylum != "Chordata") %>%
               group_by(survey_id) %>%
               summarize(invert_weight_sum = sum(weight_size_class_sum),
@@ -281,7 +255,7 @@ rls_final <-
                         all_weight_weighted = sum(weight_weighted),
                         species_richness = n_distinct(species_name),
                         abundance = sum(survey_den))
-            ) %>%
+  ) %>%
   # diversity indexes
   left_join(rls_wide, by = "survey_id") %>%
   # tide exchange 
@@ -306,8 +280,8 @@ rls_final <-
     depth_avg_scale = c(scale(depth_avg)),
     tide_scale = c(scale(avg_exchange_rate)),
     tide_cat = factor(as.factor(case_when(avg_exchange_rate < -0.1897325 ~ "Ebb",
-                         avg_exchange_rate < 0.1897325 ~ "Slack",
-                         avg_exchange_rate > 0.1897325 ~ "Flood")),
+                                          avg_exchange_rate < 0.1897325 ~ "Slack",
+                                          avg_exchange_rate > 0.1897325 ~ "Flood")),
                       levels = c("Ebb", "Slack", "Flood")),
     # center instead of scale
     abundance_center = c(scale(abundance, scale = FALSE)),
