@@ -153,8 +153,8 @@ rls_wide <- rls_wider %>%
 
 # combine these three years into one!
 rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
-                        read_csv("Output/Output_data/RLS_nh4_2022.csv"),
-                        read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
+                 read_csv("Output/Output_data/RLS_nh4_2022.csv"),
+                 read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
   mutate(year = as.factor(year)) %>%
   rename(site_code = site_ID) %>%
   filter(month == "May") %>%
@@ -190,7 +190,7 @@ for (x in 1:nrow(rls_survey_info)) {
     slice(-1) %>%
     summarise(avg_exchange_rate = mean(rate),
               max_exchange_rate = mean(max)
-              ) %>%
+    ) %>%
     mutate(survey_id = rls_survey_info$survey_id[x:x])
   
   tide_exchange = rbind(tide_exchange, output)
@@ -199,7 +199,7 @@ for (x in 1:nrow(rls_survey_info)) {
 # what's the overall rate of exchange for this period? How to define slack vs ebb vs flood
 tide_overall <- tide %>%
   mutate(rate = 100 * (tide_m - lag(tide_m))/lag(tide_m)
-         ) %>%
+  ) %>%
   group_by(date) %>%
   slice(-1) %>%
   ungroup()
@@ -219,9 +219,9 @@ tide_overall <- tide %>%
 
 # Site level averaging -----
 # One row per transect
-  # Per site, per depth, per year
-  # Same as grouping by survey_ID
-  # NH4+, fish biomass, richness, abundance, and tide exchange for each survey
+# Per site, per depth, per year
+# Same as grouping by survey_ID
+# NH4+, fish biomass, richness, abundance, and tide exchange for each survey
 
 rls_final <- 
   # average nh4 for each site
@@ -304,8 +304,8 @@ rls_final <-
 # ebb = -0.5874561 - 0.0160356
 
 # but we know slack is actually centered around 0 soooo
-  # what's the min value/3
-  # that divides the min - 0 into three parts, two parts = ebb, one part on either side of 0 = slack
+# what's the min value/3
+# that divides the min - 0 into three parts, two parts = ebb, one part on either side of 0 = slack
 # ebb = < -0.1958187 
 # slack = -0.1958187 - 0.1958187
 # ebb = > 0.1958187
@@ -313,10 +313,10 @@ rls_final <-
 # Stats -------
 
 # Step 0: Ask my question
-  # Is there a link between biodiversity or biomass and ammonium concentration?
+# Is there a link between biodiversity or biomass and ammonium concentration?
 
 # Response variable: nh4_avg
-  # this is the mean of 3 measurements, how do I incorporate that error in the models?
+# this is the mean of 3 measurements, how do I incorporate that error in the models?
 
 # Step 1: Choose a distribution
 ggplot(rls_final, aes(x = nh4_avg)) +
@@ -347,47 +347,47 @@ ggplot(rls_final, aes(x = nh4_avg)) +
 
 # Biological predictors:
 # 1) Biomass
-    # a) weight_sum = total wet weight of all the animals observed on RLS transects
-    # b) all_weight_weighted = weighted fish weight + invert weight
-        # Weight sum and weight weighted are barely different
-    # c) fish_weight_sum = total wet weight of just the fishes (kg)
-    # d) fish_weight_weighted = total weight of fishes weighted by home range size
-    # e) abundance
+# a) weight_sum = total wet weight of all the animals observed on RLS transects
+# b) all_weight_weighted = weighted fish weight + invert weight
+# Weight sum and weight weighted are barely different
+# c) fish_weight_sum = total wet weight of just the fishes (kg)
+# d) fish_weight_weighted = total weight of fishes weighted by home range size
+# e) abundance
 # Abundance is preferred by AIC!
 
 # 2) Biodiversity
-    # a) species_richness = total # species on each transect
-    # b) shannon = shannon diversity of each transect
-    # c) simpson = simpson diversity of each transect
+# a) species_richness = total # species on each transect
+# b) shannon = shannon diversity of each transect
+# c) simpson = simpson diversity of each transect
 # Richness is slightly preferred by AIC but I'm going with shannon
-    
+
 # These are the variables I really care about!!!! The abiotics are the things I might need to control for
 
 # Continuous abiotic predictors
-  # 1) depth_avg = average nh4 sample depths
-  # 2) avg_exchange_rate = average rate of change of the tide height over the 1 hour survey
+# 1) depth_avg = average nh4 sample depths
+# 2) avg_exchange_rate = average rate of change of the tide height over the 1 hour survey
 # Depth doesn't matter but avg_exchange_rate is important!
 
 # Categorical abiotic predictors
-  # 3) year = 2021, 2022, or 2023
-  # 4) site_code = each unique site
-    # should year and site be fixed or random effects?
-      # interested trends across a broad spatial scale (and not site-specific trends) so site should be random
-      # so year should also be random???
+# 3) year = 2021, 2022, or 2023
+# 4) site_code = each unique site
+# should year and site be fixed or random effects?
+# interested trends across a broad spatial scale (and not site-specific trends) so site should be random
+# so year should also be random???
 
-      # What if year is absent or fixed
-      # Year = fixed no change, years are diff from 2021
-      # Drop year = interaction still signif but species richness is now signif negative slope
-      # What if site is absent or fixed
-      # Site = fixed no change, some sites are diff from each other
-      # Drop site no change
-      # What if both are fixed or dropped?
-      # Both fixed = no change.
-      # Both dropped = interaction still there but species richness is now signif negative slope
+# What if year is absent or fixed
+# Year = fixed no change, years are diff from 2021
+# Drop year = interaction still signif but species richness is now signif negative slope
+# What if site is absent or fixed
+# Site = fixed no change, some sites are diff from each other
+# Drop site no change
+# What if both are fixed or dropped?
+# Both fixed = no change.
+# Both dropped = interaction still there but species richness is now signif negative slope
 
 # Interactions
-  # I think abundance:tide will have an interaction
-  # I double checked, there's no triple interaction or abundance:richness interaction! Phewwww
+# I think abundance:tide will have an interaction
+# I double checked, there's no triple interaction or abundance:richness interaction! Phewwww
 
 
 # I ran through dredging this model:
@@ -412,13 +412,13 @@ summary(mod_aic)
 plot(DHARMa::simulateResiduals(mod_aic))
 
 # I prefer biomass over abundance bc that's theoretically more linked to NH4
-  # But abundance is a straight up recorded measure, no biomass proxy BS
+# But abundance is a straight up recorded measure, no biomass proxy BS
 # And I prefer shannon diversity over richness bc it's a "better" biodiversity measure
 # And I want to drop depth bc it doesn't seem to matter...
 
 mod_brain <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
-                   family = Gamma(link = 'log'),
-                   data = rls_final)
+                     family = Gamma(link = 'log'),
+                     data = rls_final)
 summary(mod_brain)
 plot(DHARMa::simulateResiduals(mod_brain))
 
@@ -431,22 +431,22 @@ plot(DHARMa::simulateResiduals(mod_fish)) # ok so neither fish abundance or fish
 
 # just look at invert weights
 mod_invert <- glmmTMB(nh4_avg ~ invert_abund_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
-                    family = Gamma(link = 'log'),
-                    data = rls_final)
+                      family = Gamma(link = 'log'),
+                      data = rls_final)
 summary(mod_invert)
 plot(DHARMa::simulateResiduals(mod_invert)) # invert abundance has a negative abundance:tide interaction and the model output looks the same as the total abundance model
 
 
 # weight instead of abundance
 mod_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = rls_final)
+                      family = Gamma(link = 'log'),
+                      data = rls_final)
 summary(mod_weight)
 
 # simpson instead of shannon
 mod_simp <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + simpson_scale + depth_avg_scale + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = rls_final)
+                    family = Gamma(link = 'log'),
+                    data = rls_final)
 
 mod_richness <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + rich_scale + depth_avg_scale + (1|year) + (1|site_code), 
                         family = Gamma(link = 'log'),
@@ -455,8 +455,8 @@ mod_richness <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + rich_scale + dept
 summary(mod_richness)
 
 mod_simp_weight <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + simpson_scale + depth_avg_scale + (1|year) + (1|site_code), 
-                    family = Gamma(link = 'log'),
-                    data = rls_final)
+                           family = Gamma(link = 'log'),
+                           data = rls_final)
 
 
 # table for publication
@@ -474,8 +474,8 @@ AIC_tab_rls <- AIC(mod_brain, mod_weight, mod_simp, mod_simp_weight) %>%
 
 # centered variables instead of scaled for estimates
 mod_brain_c <- glmmTMB(nh4_avg ~ abundance_center*tide_center + shannon_center + depth_center + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = rls_final)
+                       family = Gamma(link = 'log'),
+                       data = rls_final)
 
 summary(mod_brain_c)
 
@@ -497,11 +497,9 @@ family_df_no0_a <- rls_final %>%
   left_join((rls %>%
                mutate(family = as.factor(family))%>%
                group_by(survey_id, method, phylum, family) %>% # if i want methods split up, add it back here
-               summarise(total_fam = sum(total),
+               summarise(fam_den = sum(survey_den),
                          weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
-            by = "survey_id") %>%
-  mutate(abund_fam_scale = c(scale(total_fam)),
-         weight_fam_scale = c(scale(weight_fam_sum_g)))
+            by = "survey_id") 
 
 
 # what are the top families?
@@ -516,7 +514,7 @@ rls_sm <- rls_final %>%
 # rank of families by total abundance (density)
 fam_list_total <- rls_sm %>%
   group_by(family) %>%
-  summarise(sum = sum(total)) %>%
+  summarise(sum = sum(survey_den)) %>%
   drop_na(family) %>%
   arrange(desc(sum)) %>%
   transmute(family = family, 
@@ -583,9 +581,14 @@ family_df_no0 <- family_df_no0_a %>%
 
 # since I'm working with each family separately I want to change density back to abundance
 fam_df_no0 <- family_df_no0 %>%
-  mutate(total_fam = case_when(method == 1 ~ total_fam*500,
-                               method == 2 ~ total_fam*100),
-         abund_fam_scale = c(scale(total_fam))) %>%
+  mutate(total_fam = case_when(method == 1 ~ fam_den*500,
+                               method == 2 ~ fam_den*100),
+         weight_abund_fam_sum_g = case_when(method == 1 ~ weight_fam_sum_g*500,
+                                            method == 2 ~ weight_fam_sum_g*100),
+         abund_fam_scale = c(scale(total_fam)),
+         weight_abund_fam_scale = c(scale(weight_abund_fam_sum_g)),
+         fam_den_scale = c(scale(fam_den)),
+         weight_den_fam_scale = c(scale(weight_fam_sum_g))) %>%
   as.data.frame() %>%
   droplevels()
 
@@ -622,88 +625,89 @@ order_list_bio <- rls_sm %>%
 
 # Greenlings
 v_fam <- v_fun(fam_df_no0, "Hexagrammidae") 
-predict_green <- fam_fun_tide(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
+fam_predict_Hexagrammidae <- fam_fun(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
 
 # Rockfish
 v_fam <- v_fun(fam_df_no0, "Sebastidae")
-predict_rock <- fam_fun_tide(fam_df_no0, "Sebastidae", diagnose = TRUE)
+fam_predict_Sebastidae <- fam_fun(fam_df_no0, "Sebastidae", diagnose = TRUE)
 
 # Gobies
 v_fam <- v_fun(fam_df_no0, "Gobiidae")
-predict_gob <- fam_fun_tide(fam_df_no0, "Gobiidae", diagnose = TRUE)
+fam_predict_Gobiidae <- fam_fun(fam_df_no0, "Gobiidae", diagnose = TRUE)
 # some quantile deviations in dharma
 
 
+# Muricidae, Asterinidae, Acmaeidae have the highest R2 values
 # Asteriidae, Muricidae, Acmaeidae, Echinasteridae are the four inverts with the biggest slope estimates
-# Muricidae, Asteriidae, Acmaeidae, Haliotidae have the highest R2 values
-
-v_fam <- v_fun(fam_df_no0, "Asteriidae")
-predict_star1 <- fam_fun_tide(fam_df_no0, "Asteriidae", diagnose = TRUE)
-# total_fam    0.005981   0.005526   1.082   0.2791  
-# AIC 43.6
-# no errors
 
 v_fam <- v_fun(fam_df_no0, "Muricidae")
-predict_muri <- fam_fun_tide(fam_df_no0, "Muricidae", diagnose = TRUE)
-# total_fam    0.005143   0.003292   1.562   0.1182  
-# AIC  39.6
+fam_predict_Muricidae <- fam_fun(fam_df_no0, "Muricidae", diagnose = TRUE)
 # no errors
 
+v_fam <- v_fun(fam_df_no0, "Asterinidae")
+fam_predict_Asterinidae <- fam_fun(fam_df_no0, "Asterinidae", diagnose = TRUE)
+
 v_fam <- v_fun(fam_df_no0, "Acmaeidae")
-predict_limp <- fam_fun_tide(fam_df_no0, "Acmaeidae", diagnose = TRUE)
-# total_fam    0.009755   0.004300   2.269  0.02328 * 
-# AIC 39.6
+fam_predict_Acmaeidae <- fam_fun(fam_df_no0, "Acmaeidae", diagnose = TRUE)
 # no errors
 
 
 # Extra fish
 v_fam <- v_fun(fam_df_no0, "Cottidae")
-predict_scul <- fam_fun_tide(fam_df_no0, "Cottidae", diagnose = TRUE)
+fam_predict_Cottidae <- fam_fun(fam_df_no0, "Cottidae")
 
 # Extra inverts
 v_fam <- v_fun(fam_df_no0, "Haliotidae")
-predict_aba <- fam_fun_tide(fam_df_no0, "Haliotidae", diagnose = TRUE)
-# total_fam   -0.002996   0.002880  -1.040   0.2983  
-# AIC 41.4
-# no errors
+fam_predict_Haliotidae <- fam_fun(fam_df_no0, "Haliotidae")
 
 # Echinasteridae has the next highest slope but the p-value isn't great.. 
 v_fam <- v_fun(fam_df_no0, "Echinasteridae")
-predict_star2 <- fam_fun(fam_df_no0, "Echinasteridae", diagnose = TRUE)
-#total_fam    0.00201    0.01598   0.126   0.8999  
-# AIC 40.0
-# no errors
+fam_predict_Echinasteridae <- fam_fun(fam_df_no0, "Echinasteridae")
 
 # urchins
 v_fam <- v_fun(fam_df_no0, "Strongylocentrotidae")
-predict_urchin <- fam_fun(fam_df_no0, "Strongylocentrotidae", diagnose = TRUE)
-# total_fam   -1.915e-05  3.227e-04  -0.059    0.953
-# AIC 43.7
-# throws error
+fam_predict_Strongylocentrotidae <- fam_fun(fam_df_no0, "Strongylocentrotidae")
 
 v_fam <- v_fun(fam_df_no0, "Stichopodidae")
-predict_cuke <- fam_fun(fam_df_no0, "Stichopodidae", diagnose = TRUE)
-# total_fam   -0.002382   0.002496  -0.955    0.340
-# AIC 42.7
-# no errors but slight wonk in resids
+fam_predict_Stichopodidae <- fam_fun(fam_df_no0, "Stichopodidae")
 
 v_fam <- v_fun(fam_df_no0, "Turbinidae")
-predict_turb <- fam_fun(fam_df_no0, "Turbinidae", diagnose = TRUE)
-# total_fam   -9.705e-05  3.212e-04  -0.302   0.7625  
-# AIC 42.5
-# throws error
+fam_predict_Turbinidae <- fam_fun(fam_df_no0, "Turbinidae")
 
 v_fam <- v_fun(fam_df_no0, "Asteropseidae")
-predict_ast <- fam_fun(fam_df_no0, "Asteropseidae", diagnose = TRUE)
-# total_fam   -0.013190   0.008198  -1.609    0.108
-# 41.4
-# no errors
+fam_predict_Asteropseidae <- fam_fun(fam_df_no0, "Asteropseidae")
 
 v_fam <- v_fun(fam_df_no0, "Pectinidae")
-predict_pect <- fam_fun(fam_df_no0, "Pectinidae", diagnose = TRUE)
-# total_fam   -0.007614   0.005788  -1.315   0.1883  
-# 43.5
+fam_predict_Pectinidae <- fam_fun(fam_df_no0, "Pectinidae")
+
+v_fam <- v_fun(fam_df_no0, "Asteriidae")
+fam_predict_Asteriidae <- fam_fun(fam_df_no0, "Asteriidae")
 # no errors
+
+# Put all of the predict dfs together and decide which are best
+predicts <- ls(pattern = "fam_predict_*")
+all_dfs <- ls()[sapply(ls(), function(x) any(class(get(x)) == 'data.frame'))]
+predict_list <-  mget(Reduce(intersect, list(predicts, all_dfs)))  
+
+# rbind the dfs together
+rls_fam_predicts <- do.call(rbind, predict_list) %>%
+  as.data.frame() %>%
+  remove_rownames() 
+
+# what are the top 6 inverts and fish?
+top_fam_r2 <- rls_fam_predicts %>%
+  select(c(family, r2)) %>%
+  unique() %>%
+  arrange(desc(r2)) %>%
+  head(7) %>% # only want top 3 inverts and 3 fish but urchins are above the 3rd fish fam
+  filter(family != "Strongylocentrotidae")
+
+# make df of just the tops
+rls_top_fam_predict <- rls_fam_predicts %>%
+  filter(family %in% top_fam_r2$family) %>%
+  # optional reorder of families
+  mutate(family = factor(family, levels = 
+                           c("Hexagrammidae", "Sebastidae", "Gobiidae", "Acmaeidae", "Muricidae", "Asterinidae")))
 
 
 # Family community analysis -----
@@ -716,9 +720,9 @@ predict_pect <- fam_fun(fam_df_no0, "Pectinidae", diagnose = TRUE)
 
 # make wide for families
 fam_wide <- family_df_no0 %>% 
-  dplyr::select(survey_id, family, total_fam) %>% 
+  dplyr::select(survey_id, family, fam_den) %>% 
   group_by(survey_id, family) %>%
-  summarise(total = sum(total_fam)) %>%
+  summarise(total = sum(fam_den)) %>%
   ungroup() %>%
   spread(key = family, value = total) %>%
   replace(is.na(.), 0) %>%
@@ -732,7 +736,7 @@ com <- rls_final %>%
 # make env data
 env <- rls_final %>%
   select(nh4_avg, depth_avg, avg_exchange_rate)
-  
+
 #convert com to a matrix
 m_com = as.matrix(com)
 
@@ -818,10 +822,10 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
          upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI)) %>%
   tail(-1) %>%
   mutate(
-         variable = factor(as.factor(variable), 
-                           levels = c("abundance_scale", "tide_scale", "abundance_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
-                           labels = c("Abundance", "Tide", "Abundance:tide", "Biodiversity", "Depth")))
-  
+    variable = factor(as.factor(variable), 
+                      levels = c("abundance_scale", "tide_scale", "abundance_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
+                      labels = c("Abundance", "Tide", "Abundance:tide", "Biodiversity", "Depth")))
+
 
 
 # Coefficient plot 
@@ -835,8 +839,8 @@ rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs,
 
 # Fig 3b: Abundance vs nh4 -----
 mod_pred_plot <- glmmTMB(nh4_avg ~ abundance*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = rls_final)
+                         family = Gamma(link = 'log'),
+                         data = rls_final)
 
 # get mean tide for each level
 tide_means <- rls_final %>%
@@ -849,75 +853,44 @@ v <- c(as.numeric(tide_means[1,2]), as.numeric(tide_means[2,2]), as.numeric(tide
 predict <- ggpredict(mod_pred_plot, terms = c("abundance", "tide_scale [v]")) %>% 
   mutate(abundance = x,
          tide_cat = factor(as.factor(case_when(group == as.numeric(tide_means[1,2]) ~ "Ebb",
-                              group == as.numeric(tide_means[2,2]) ~ "Slack",
-                              group == as.numeric(tide_means[3,2]) ~ "Flood")),
+                                               group == as.numeric(tide_means[2,2]) ~ "Slack",
+                                               group == as.numeric(tide_means[3,2]) ~ "Flood")),
                            levels = c("Ebb", "Slack", "Flood")))
 
 # now plot these predictions
 rls_pred_plot <- 
   plot_pred(raw_data = rls_final,
-          predict_data = predict, 
-          plot_type = "rls",
-          x_var = abundance, y_var = nh4_avg, 
-          lty_var = tide_cat,
-          pal = pal3,
-          theme = "white") +
+            predict_data = predict, 
+            plot_type = "rls",
+            x_var = abundance, y_var = nh4_avg, 
+            lty_var = tide_cat,
+            pal = pal3,
+            theme = "white") +
   place_label("(b)")
 
 
 # Fig 3c: Family plots -----
-
-# put the fish predictions all together
-predict_fish <- rbind(predict_green, predict_rock, predict_gob)%>%
+# filter data to only include those families too
+rls_top_fam <- fam_df_no0 %>%
+  filter(family %in% top_fam_r2$family)%>%
+  # optional reorder of families
   mutate(family = factor(family, levels = 
-                           c("Hexagrammidae", "Gobiidae", "Sebastidae")))
+                           c("Hexagrammidae", "Sebastidae", "Gobiidae", "Acmaeidae", "Muricidae", "Asterinidae")))
 
-# make a df of just those species
-fish_fam_data <- fam_df_no0 %>%
-  filter(family == "Hexagrammidae" |
-           family == "Sebastidae" |
-           family == "Gobiidae") %>%
-  mutate(family = factor(family, levels = 
-                c("Hexagrammidae", "Gobiidae", "Sebastidae")),
-         slope = case_when(
-           family == "Hexagrammidae" ~ "slope = 0.02, p = 0.025",
-           family == "Sebastidae" ~ "slope = 0.002, p = 0.64",
-           family == "Gobiidae" ~ "slope = 0.002, p = 0.19"))
-
-# put inverts together
-predict_invert <- rbind(predict_star1, predict_muri, predict_limp) %>%
-  mutate(family = factor(family, levels = 
-                c("Asteriidae", "Muricidae", "Acmaeidae")))
-
-# make a df of just those species
-invert_fam_data <- fam_df_no0 %>%
-  filter(family == "Asteriidae" |
-           family == "Muricidae" |
-           family == "Acmaeidae") %>%
-  mutate(family = factor(family, levels = 
-                c("Acmaeidae", "Muricidae", "Asteriidae")),
-         slope = case_when(
-           family == "Asteriidae" ~ "slope = 0.006, p = 0.28",
-           family == "Muricidae" ~ "slope = 0.005, p = 0.12",
-           family == "Acmaeidae" ~ "slope = 0.01, p = 0.023"))
-
-rls_fam <- rbind(fish_fam_data, invert_fam_data) 
-
-rls_fam_predict <- rbind(predict_fish, predict_invert)
 
 # plot all 
 fam_plot <- ggplot() + 
-  geom_point(data = rls_fam, 
-             aes(x = total_fam, y = nh4_avg), colour = pal1,
+  geom_point(data = rls_top_fam, 
+             aes(x = fam_den_scale, y = nh4_avg), colour = pal1,
              alpha = 0.8) +
   labs(y = expression(paste("Ammonium ", (mu*M))), 
        x = expression(paste("Abundance"))) +
   facet_wrap(~family, scales = 'free_x', ncol = 3) +
-  geom_line(data = rls_fam_predict,
-            aes(x = total_fam, y = predicted), colour = pal1,
+  geom_line(data = rls_top_fam_predict,
+            aes(x = fam_den_scale, y = predicted), colour = pal1,
             linewidth = 1) +
-  geom_ribbon(data = rls_fam_predict,
-              aes(x = total_fam, y = predicted, 
+  geom_ribbon(data = rls_top_fam_predict,
+              aes(x = fam_den_scale, y = predicted, 
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
   theme_white() +
@@ -997,7 +970,7 @@ d <- all_rls %>% count(phylum, class, order, family, species_name, weight_per_in
 #write_csv(d %>% filter(phylum != "Chordata"), "Output/Output_data/species_list.csv")
 
 e <- all_rls %>% filter(weight_per_indiv_g == 0.5) %>% count(species_name)
-  
+
 a <- all_rls %>% filter(species_name == "Cryptolithodes sitchensis")
 
 all_abund <- all_rls %>%
@@ -1011,7 +984,7 @@ all_abund <- all_rls %>%
   rbind(kelp_rls %>% select(Date, species_name, size_class, total) %>% rename(survey_date = Date) %>% filter(species_name == "Pycnopodia helianthoides"))  %>%
   uncount(total) %>%
   mutate(year = year(survey_date)) %>%
-ggplot(aes(year, size_class, colour = year)) +
+  ggplot(aes(year, size_class, colour = year)) +
   geom_jitter(width = 0.2) +
   stat_summary(fun = "mean", geom = "point", size = 5, mapping = aes(group = year)) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 1.5, mapping = aes(group = year)) +

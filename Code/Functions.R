@@ -168,13 +168,13 @@ pee_calc <- function(data_path) {
   
   #graph protocol 2 standard curve
   proto2plot<- (ggplot(standard_b, aes(true_nh4_conc, mean_FLU)) +
-          geom_point() +
-          geom_smooth(method = lm, se = FALSE))
+                  geom_point() +
+                  geom_smooth(method = lm, se = FALSE))
   # Inspect this curve to make sure nothing is wonky!
   
   # inspect standard curves
   print(proto1plot + proto2plot)
-
+  
   # pull coefficients from model
   int2 <- coef(mod2)[1]
   slope2 <- coef(mod2)[2]
@@ -366,13 +366,13 @@ clean_phylo_names <- function(datafile){
                          species_name == "Pandulus spp." ~ "Pandalidae",
                          species_name == "Cryptolithodes sitchensis" ~ "Lithodidae",
                          TRUE ~ as.character(family)) ) %>%
-        # Cut the non-animal species
-        filter(species_name != "Debris - Metal") %>%
-        filter(species_name != "Debris - Other") %>%
-        filter(species_name != "Debris - Wood") %>%
-        filter(species_name != "Debris - Glass") %>%
-        filter(species_name != "Debris - Fishing Gear") %>%
-        filter(species_name != "Debris - zero")  
+    # Cut the non-animal species
+    filter(species_name != "Debris - Metal") %>%
+    filter(species_name != "Debris - Other") %>%
+    filter(species_name != "Debris - Wood") %>%
+    filter(species_name != "Debris - Glass") %>%
+    filter(species_name != "Debris - Fishing Gear") %>%
+    filter(species_name != "Debris - zero")  
 }
 
 # Length to weight ----
@@ -384,170 +384,170 @@ length_to_weight <- function(datafile) {
     mutate(
       # then convert length to weight
       weight_per_indiv_g = case_when(
-      
-      # Blennies
-      family == "Clinidae" ~ 0.00513*size_class^3.06,
         
-      # Gobies
-      species_name == "Rhinogobiops nicholsii" ~ 0.01047*size_class^3.03,
-      family == "Gobiidae" ~ 0.01047*size_class^3.03,
-      
-      # Greenlings
-      species_name == "Hexagrammos decagrammus" ~ 0.00813*size_class^3.13,
-      species_name == "Hexagrammos stelleri" ~ 0.00692*size_class^3.16,
-      species_name == "Oxylebius pictus" ~ 0.01122*size_class^3.04,
-      species_name == "Ophiodon elongatus" ~ 0.00389*size_class^3.12,
-      species_name == "Hexagrammos spp." ~ 0.00813*size_class^3.13,
-      family == "Hexagrammidae" ~ 0.00813*size_class^3.13,
-             
-      # Rockfish
-      family == "Sebastidae" ~ 0.01000*size_class^3.09,
-
-      # Sculpins
-      species_name == "Jordania zonope" ~ 0.00389*size_class^3.12,
-      species_name == "Artedius harringtoni" ~ 0.00631*size_class^3.15,
-      species_name == "Artedius lateralis" ~ 0.00631*size_class^3.15,
-      species_name == "Artedius fenestralis" ~ 0.00631*size_class^3.15,
-      species_name == "Hemilepidotus hemilepidotus" ~ 0.00631*size_class^3.15,
-      species_name == "Cottidae spp." ~ 0.00631*size_class^3.15,
-      species_name == "Enophrys bison" ~ 0.00794*size_class^3.13,
-      species_name == "Rhamphocottus richardsonii" ~ 0.01995*size_class^3.01,
-      species_name == "Scorpaenichthys marmoratus" ~ 0.00389*size_class^3.12,
-      species_name == "Oligocottus maculosus" ~ 0.00631*size_class^3.15,
-      species_name == "Leptocottus armatus" ~ 0.01096*size_class^3.19,
-      species_name == "Blepsias cirrhosus" ~ 0.00631*size_class^3.14,
-      species_name == "Myoxocephalus polyacanthocephalus" ~ 0.00832*size_class^3.14,
-      species_name == "Myoxocephalus aenaeus" ~ 0.00832*size_class^3.14,
-      species_name == "Asemichthys taylori" ~ 0.00631*size_class^3.15,
-      species_name == "Ascelichthys rhodorus" ~ 0.00676*size_class^3.17,
-      species_name == "Orthonopias triacis" ~ 0.01000*size_class^3.04,
-             
-      #Perch
-      species_name == "Brachyistius frenatus" ~ 0.01318*size_class^3.05,
-      species_name == "Embiotoca lateralis" ~ 0.01950*size_class^2.97,
-      species_name == "Rhacochilus vacca" ~ 0.01950*size_class^2.97,
-      species_name == "Cymatogaster aggregata" ~ 0.01950*size_class^2.97,
-      species_name == "Embiotocidae spp." ~ 0.01950*size_class^2.97,
-      species_name == "Percidae spp." ~ 0.01950*size_class^2.97,
-      family == "Embiotocidae" ~ 0.01950*size_class^2.97,
-      
-      # Gunnels + gunnel-like fish
-      species_name == "Anarrhichthys ocellatus" ~ 0.00398*size_class^3.17,
-      species_name == "Apodichthys flavidus" ~ 0.00102*size_class^3.06,
-      species_name == "Pholis ornata" ~ 0.00162*size_class^3.19,
-      species_name == "Pholis laeta" ~ 0.00162*size_class^3.19,
-      species_name == "Pholis clemensi" ~ 0.00162*size_class^3.19,
-      species_name == "Pholis spp." ~ 0.00162*size_class^3.19,
-      species_name == "Lumpenus sagitta" ~ 0.00129*size_class^2.99,
-      species_name == "Chirolophis nugator" ~ 0.00372*size_class^3.16,
-             
-      #Misc
-      species_name == "Liparis florae" ~ 0.00525*size_class^3.15, #snailfish
-      species_name == "Gobiesox maeandricus" ~ 0.00617*size_class^3.15, #clingfish
-      species_name == "Aulorhynchus flavidus" ~ 0.00263*size_class^3.14, #tubesnout
-      species_name == "Syngnathus leptorhynchus" ~ 0.00028*size_class^3.18, #pipefish
-      species_name == "Clupea pallasii" ~ 0.00603*size_class^3.13, #herring
-      species_name == "Gasterosteus aculeatus" ~ 0.00977*size_class^3.09, #stickleback
-      species_name == "Porichthys notatus" ~ 0.00562*size_class^3.16, #plainfin
-      species_name == "Gibbonsia metzi" ~ 0.00513*size_class^3.06,
-      species_name == "Citharichthys stigmaeus" ~ 0.00759*size_class^3.15,
-      species_name == "Rimicola muscarum" ~ 0.00617*size_class^3.15, #kelp clingfish
-
-      # NOW DO THE INVERTS
-      
-      # ARTHROPODA
-      # Cancridae family
-      species_name == "Cancer productus" ~ 200, # mean wet tissue from my data
-      family == "Cancridae" ~ 3, # Hines 1982 small crabs avg
-      # Epialtidae family
-      species_name == "Pugettia producta" ~ 46, # Hines 1982
-      species_name == "Scyra acutifrons" ~ 2, # Hines 1982
-      family == "Epialtidae" ~ 1.235, # Hines, for Pugettia richii
-      # Lithodidae
-      species_name == "Cryptolithodes sitchensis" ~ 3, # Hines 1982 small crabs avg
-      species_name == "Cryptolithodes typicus" ~ 3, # Hines 1982 small crabs avg
-      family == "Lithodidae" ~ 65, # Stewart et al 2015 for Paralithodes rathbuni and Phyllolithodes papillosus
-      
-      # Oregoniidae family
-      family == "Oregoniidae" ~ 3, # Hines 1982 small crabs avg
-      # Panopeidae
-      family == "Panopeidae" ~ 3, # Hines 1982 small crabs avg
-      # Paguridae family
-      family == "Paguridae" ~ 0.43, # McKinney et al 2004
-      # Pandalidae 
-      family == "Pandalidae" ~ 0.11, # McKinney et al 2004 for Palaemonetes pugio 
-      species_name == "Heptacarpus stylus" ~ 0.11, # McKinney et al 2004 for Palaemonetes pugio 
-      species_name == "Unidentified shrimp" ~ 0.11, # McKinney et al 2004 for Palaemonetes pugio
-      # Porcellanidae family
-      family == "Porcellanidae" ~ 4.25, # Stillman and Somero 1996 for Petrolisthes
-      # Misc decapod
-      species_name == "Brachyura spp." ~ 3, # Hines 1982 small crabs avg
-      
-      # CNIDARIA
-      phylum == "Cnidaria" ~ 0.01, # Båmstedt 2015
-      
-      # CTENOPHORA
-      phylum == "Ctenophora" ~ 0.01, # Båmstedt 2015
-      
-      # ECHINODERMATA
-      # Asteroidea class
-      # Asteriidae 
-      species_name == "Evasterias troschelii" ~ 66.5, # lower end of O'Clair 1985 range
-      species_name == "Leptasterias hexactis" ~ 5.5, # Menge 1975
-      species_name == "Orthasterias koehleri" ~ 66.5, # lower end of O'Clair 1985 range
-      species_name == "Pisaster ochraceus" ~ 128, # Sanford 2002
-      species_name == "Pisaster brevispinus" ~ 146.18, # Peters et al 2019 for Pisaster giganteus
-      species_name == "Stylasterias forreri" ~ 66.5, # lower end of O'Clair 1985 range
-      species_name == "Pycnopodia helianthoides" ~ exp(-3.9989)*size_class^3.133, # Lee 2016
-      family == "Asteriidae" ~ 5.5, # Menge 1975
-      # Asterinidae
-      species_name == "Patiria miniata" ~ 26.97, # 6.83 g dry weight Peters et al 2019
-      family == "Asterinidae" ~ 26.97, # 6.83 g dry weight Peters
-      # Echinasteridae
-      family == "Echinasteridae" ~ 10, # Menge 1975
-      # Asteropseidae
-      family == "Asteropseidae" ~ 92, # Montgomery 2014
-      # Goniasteridae
-      family == "Goniasteridae" ~ 10, # Menge 1975 (Henricia)
-      # Solasteridae
-      family == "Solasteridae" ~ 486, # Montgomery 2014 for Solaster stimpsoni
-      # Pterasteridae
-      family == "Pterasteridae" ~ 10, # Menge 1975 (Henricia)
-      
-      # Echinoidea class
-      species_name == "Mesocentrotus franciscanus" ~ 29.51, # Schuster and Bates 2023, tissue  # 163.41 whole wet weight Peters et al 2019
-      family == "Strongylocentrotidae" ~  20, #Stewart et al 2015 tissue Strongylocentrotus polyacanthus
-      # 50 grams from Siikavuopio
-
-      # Holothuroidea
-      species_name == "Apostichopus californicus" ~ 319.31, # Peters et al 2019 for Apostichopus parvimensis
+        # Blennies
+        family == "Clinidae" ~ 0.00513*size_class^3.06,
+        
+        # Gobies
+        species_name == "Rhinogobiops nicholsii" ~ 0.01047*size_class^3.03,
+        family == "Gobiidae" ~ 0.01047*size_class^3.03,
+        
+        # Greenlings
+        species_name == "Hexagrammos decagrammus" ~ 0.00813*size_class^3.13,
+        species_name == "Hexagrammos stelleri" ~ 0.00692*size_class^3.16,
+        species_name == "Oxylebius pictus" ~ 0.01122*size_class^3.04,
+        species_name == "Ophiodon elongatus" ~ 0.00389*size_class^3.12,
+        species_name == "Hexagrammos spp." ~ 0.00813*size_class^3.13,
+        family == "Hexagrammidae" ~ 0.00813*size_class^3.13,
+        
+        # Rockfish
+        family == "Sebastidae" ~ 0.01000*size_class^3.09,
+        
+        # Sculpins
+        species_name == "Jordania zonope" ~ 0.00389*size_class^3.12,
+        species_name == "Artedius harringtoni" ~ 0.00631*size_class^3.15,
+        species_name == "Artedius lateralis" ~ 0.00631*size_class^3.15,
+        species_name == "Artedius fenestralis" ~ 0.00631*size_class^3.15,
+        species_name == "Hemilepidotus hemilepidotus" ~ 0.00631*size_class^3.15,
+        species_name == "Cottidae spp." ~ 0.00631*size_class^3.15,
+        species_name == "Enophrys bison" ~ 0.00794*size_class^3.13,
+        species_name == "Rhamphocottus richardsonii" ~ 0.01995*size_class^3.01,
+        species_name == "Scorpaenichthys marmoratus" ~ 0.00389*size_class^3.12,
+        species_name == "Oligocottus maculosus" ~ 0.00631*size_class^3.15,
+        species_name == "Leptocottus armatus" ~ 0.01096*size_class^3.19,
+        species_name == "Blepsias cirrhosus" ~ 0.00631*size_class^3.14,
+        species_name == "Myoxocephalus polyacanthocephalus" ~ 0.00832*size_class^3.14,
+        species_name == "Myoxocephalus aenaeus" ~ 0.00832*size_class^3.14,
+        species_name == "Asemichthys taylori" ~ 0.00631*size_class^3.15,
+        species_name == "Ascelichthys rhodorus" ~ 0.00676*size_class^3.17,
+        species_name == "Orthonopias triacis" ~ 0.01000*size_class^3.04,
+        
+        #Perch
+        species_name == "Brachyistius frenatus" ~ 0.01318*size_class^3.05,
+        species_name == "Embiotoca lateralis" ~ 0.01950*size_class^2.97,
+        species_name == "Rhacochilus vacca" ~ 0.01950*size_class^2.97,
+        species_name == "Cymatogaster aggregata" ~ 0.01950*size_class^2.97,
+        species_name == "Embiotocidae spp." ~ 0.01950*size_class^2.97,
+        species_name == "Percidae spp." ~ 0.01950*size_class^2.97,
+        family == "Embiotocidae" ~ 0.01950*size_class^2.97,
+        
+        # Gunnels + gunnel-like fish
+        species_name == "Anarrhichthys ocellatus" ~ 0.00398*size_class^3.17,
+        species_name == "Apodichthys flavidus" ~ 0.00102*size_class^3.06,
+        species_name == "Pholis ornata" ~ 0.00162*size_class^3.19,
+        species_name == "Pholis laeta" ~ 0.00162*size_class^3.19,
+        species_name == "Pholis clemensi" ~ 0.00162*size_class^3.19,
+        species_name == "Pholis spp." ~ 0.00162*size_class^3.19,
+        species_name == "Lumpenus sagitta" ~ 0.00129*size_class^2.99,
+        species_name == "Chirolophis nugator" ~ 0.00372*size_class^3.16,
+        
+        #Misc
+        species_name == "Liparis florae" ~ 0.00525*size_class^3.15, #snailfish
+        species_name == "Gobiesox maeandricus" ~ 0.00617*size_class^3.15, #clingfish
+        species_name == "Aulorhynchus flavidus" ~ 0.00263*size_class^3.14, #tubesnout
+        species_name == "Syngnathus leptorhynchus" ~ 0.00028*size_class^3.18, #pipefish
+        species_name == "Clupea pallasii" ~ 0.00603*size_class^3.13, #herring
+        species_name == "Gasterosteus aculeatus" ~ 0.00977*size_class^3.09, #stickleback
+        species_name == "Porichthys notatus" ~ 0.00562*size_class^3.16, #plainfin
+        species_name == "Gibbonsia metzi" ~ 0.00513*size_class^3.06,
+        species_name == "Citharichthys stigmaeus" ~ 0.00759*size_class^3.15,
+        species_name == "Rimicola muscarum" ~ 0.00617*size_class^3.15, #kelp clingfish
+        
+        # NOW DO THE INVERTS
+        
+        # ARTHROPODA
+        # Cancridae family
+        species_name == "Cancer productus" ~ 200, # mean wet tissue from my data
+        family == "Cancridae" ~ 3, # Hines 1982 small crabs avg
+        # Epialtidae family
+        species_name == "Pugettia producta" ~ 46, # Hines 1982
+        species_name == "Scyra acutifrons" ~ 2, # Hines 1982
+        family == "Epialtidae" ~ 1.235, # Hines, for Pugettia richii
+        # Lithodidae
+        species_name == "Cryptolithodes sitchensis" ~ 3, # Hines 1982 small crabs avg
+        species_name == "Cryptolithodes typicus" ~ 3, # Hines 1982 small crabs avg
+        family == "Lithodidae" ~ 65, # Stewart et al 2015 for Paralithodes rathbuni and Phyllolithodes papillosus
+        
+        # Oregoniidae family
+        family == "Oregoniidae" ~ 3, # Hines 1982 small crabs avg
+        # Panopeidae
+        family == "Panopeidae" ~ 3, # Hines 1982 small crabs avg
+        # Paguridae family
+        family == "Paguridae" ~ 0.43, # McKinney et al 2004
+        # Pandalidae 
+        family == "Pandalidae" ~ 0.11, # McKinney et al 2004 for Palaemonetes pugio 
+        species_name == "Heptacarpus stylus" ~ 0.11, # McKinney et al 2004 for Palaemonetes pugio 
+        species_name == "Unidentified shrimp" ~ 0.11, # McKinney et al 2004 for Palaemonetes pugio
+        # Porcellanidae family
+        family == "Porcellanidae" ~ 4.25, # Stillman and Somero 1996 for Petrolisthes
+        # Misc decapod
+        species_name == "Brachyura spp." ~ 3, # Hines 1982 small crabs avg
+        
+        # CNIDARIA
+        phylum == "Cnidaria" ~ 0.01, # Båmstedt 2015
+        
+        # CTENOPHORA
+        phylum == "Ctenophora" ~ 0.01, # Båmstedt 2015
+        
+        # ECHINODERMATA
+        # Asteroidea class
+        # Asteriidae 
+        species_name == "Evasterias troschelii" ~ 66.5, # lower end of O'Clair 1985 range
+        species_name == "Leptasterias hexactis" ~ 5.5, # Menge 1975
+        species_name == "Orthasterias koehleri" ~ 66.5, # lower end of O'Clair 1985 range
+        species_name == "Pisaster ochraceus" ~ 128, # Sanford 2002
+        species_name == "Pisaster brevispinus" ~ 146.18, # Peters et al 2019 for Pisaster giganteus
+        species_name == "Stylasterias forreri" ~ 66.5, # lower end of O'Clair 1985 range
+        species_name == "Pycnopodia helianthoides" ~ exp(-3.9989)*size_class^3.133, # Lee 2016
+        family == "Asteriidae" ~ 5.5, # Menge 1975
+        # Asterinidae
+        species_name == "Patiria miniata" ~ 26.97, # 6.83 g dry weight Peters et al 2019
+        family == "Asterinidae" ~ 26.97, # 6.83 g dry weight Peters
+        # Echinasteridae
+        family == "Echinasteridae" ~ 10, # Menge 1975
+        # Asteropseidae
+        family == "Asteropseidae" ~ 92, # Montgomery 2014
+        # Goniasteridae
+        family == "Goniasteridae" ~ 10, # Menge 1975 (Henricia)
+        # Solasteridae
+        family == "Solasteridae" ~ 486, # Montgomery 2014 for Solaster stimpsoni
+        # Pterasteridae
+        family == "Pterasteridae" ~ 10, # Menge 1975 (Henricia)
+        
+        # Echinoidea class
+        species_name == "Mesocentrotus franciscanus" ~ 29.51, # Schuster and Bates 2023, tissue  # 163.41 whole wet weight Peters et al 2019
+        family == "Strongylocentrotidae" ~  20, #Stewart et al 2015 tissue Strongylocentrotus polyacanthus
+        # 50 grams from Siikavuopio
+        
+        # Holothuroidea
+        species_name == "Apostichopus californicus" ~ 319.31, # Peters et al 2019 for Apostichopus parvimensis
         # 829 was the cuke avg from my measurements but I'm worried that's just a ton of water weight
-      
-      # MOLLUSCA
-      # Bivalves
-      species_name == "Crassadoma gigantea" ~ exp(-3.25924)*size_class^2.39442, #MacDonald 1991
-      family == "Pectinidae" ~ 2.5, #MacDonald 1991 rough Chlamys avg
-      # Cephalopoda
-      species_name == "Enteroctopus dofleini" ~ 137.5, # # Osborn 1995 thesis, upper limit for Octopus rubescens
-      species_name == "Octopus rubescens" ~ 80, # Osborn 1995 thesis
-      
-      # Gastropoda
-      species_name == "Pomaulax gibberosus" ~ 31, # Schuster and Bates 2023
-      species_name == "Haliotis kamtschatkana" ~ 0.0000578*(size_class*10)^3.2, # Zhang 2007
-      order == "Nudibranchia" ~  0.54, # McKinney et al 2004 gastropods
-      species_name == "Triopha spp." ~  0.54, # McKinney et al 2004 gastropods
-      class == "Gastropoda" ~ 0.91, # Palmer 1982 for Nucella sp
-      # Flatworm
-      species_name == "Eurylepta leoparda" ~ 0.54, # McKinney et al 2004 gastropods
-      
-      # Everything else
-      TRUE ~ as.numeric(0.5)),
+        
+        # MOLLUSCA
+        # Bivalves
+        species_name == "Crassadoma gigantea" ~ exp(-3.25924)*size_class^2.39442, #MacDonald 1991
+        family == "Pectinidae" ~ 2.5, #MacDonald 1991 rough Chlamys avg
+        # Cephalopoda
+        species_name == "Enteroctopus dofleini" ~ 137.5, # # Osborn 1995 thesis, upper limit for Octopus rubescens
+        species_name == "Octopus rubescens" ~ 80, # Osborn 1995 thesis
+        
+        # Gastropoda
+        species_name == "Pomaulax gibberosus" ~ 31, # Schuster and Bates 2023
+        species_name == "Haliotis kamtschatkana" ~ 0.0000578*(size_class*10)^3.2, # Zhang 2007
+        order == "Nudibranchia" ~  0.54, # McKinney et al 2004 gastropods
+        species_name == "Triopha spp." ~  0.54, # McKinney et al 2004 gastropods
+        class == "Gastropoda" ~ 0.91, # Palmer 1982 for Nucella sp
+        # Flatworm
+        species_name == "Eurylepta leoparda" ~ 0.54, # McKinney et al 2004 gastropods
+        
+        # Everything else
+        TRUE ~ as.numeric(0.5)),
       # set the really big wolf eel weight manually to largest record weight
       # otherwise the calc thinks it's MASSSSSIVE
       weight_per_indiv_g = if_else(size_class == 187.5, 18400, weight_per_indiv_g),
       weight_per_indiv_kg = weight_per_indiv_g/1000,
       weight_size_class_sum = (weight_per_indiv_kg*survey_den)) 
-  }
+}
 
 
 
@@ -749,7 +749,7 @@ home_range <- function(datafile){
       TRUE ~ as.numeric(0.01)), # to give all the inverts a range weight of 1
       range_weight = 1/(range*100), # scale smallest range to a weight of 1, everything else is fraction
       weight_weighted = weight_size_class_sum*range_weight # weight weights by range
-      )
+    )
   
 }
 
@@ -797,27 +797,27 @@ home_range <- function(datafile){
 depth_function <- function(datafile){
   new_data <- datafile %>%
     mutate(correct = case_when(
-    site_code== "BMSC6" &year =="2022" &depth == "8.5" &survey_depth== "6.5" ~ "no",
-    site_code== "BMSC6" &year =="2022" &depth == "5.5" &survey_depth== "9" ~ "no",
-    site_code== "BMSC6" &year =="2022" &depth == "6" &survey_depth== "9" ~ "no",
-    site_code== "BMSC1" &year == "2021" & survey_depth == "6.5" ~ "no",
-    site_code== "BMSC1" &year == "2022" & survey_depth == "4.7" ~ "no",
-    site_code== "BMSC5" &year == "2022" & survey_depth == "6.2" ~ "no",
-    site_code== "BMSC11" &year == "2022" & survey_depth == "8.5" ~ "no",
-    site_code== "BMSC12" &year == "2022" & survey_depth == "9" ~ "no",
-    site_code== "BMSC11" &year == "2023" & survey_depth == "5.5" ~ "no",
-    site_code== "BMSC12" &year == "2023" & survey_depth == "6.5" ~ "no",
-    site_code== "BMSC24" &year == "2023" & survey_depth == "7.5" ~ "no",
-    site_code== "BMSC25" &year == "2023" & survey_depth == "5.5" ~ "no",
-    site_code== "BMSC26" &year == "2023" & survey_depth == "9.5" ~ "no",
-    site_code== "BMSC27" &year == "2023" & survey_depth == "7" ~ "no",
-    site_code== "BMSC1" &year == "2023" & survey_depth == "8" ~ "no",
-    site_code== "BMSC5" &year == "2023" & survey_depth == "8" ~ "no",
-    site_code== "BMSC6" &year == "2023" & survey_depth == "5.5" ~ "no",
-    site_code== "BMSC8" &year == "2023" & survey_depth == "7.5" ~ "no",
-    TRUE ~ as.character("yes")
-    # cut out the rls transects I didn't directly measure nh4 on 
-  )) %>%
+      site_code== "BMSC6" &year =="2022" &depth == "8.5" &survey_depth== "6.5" ~ "no",
+      site_code== "BMSC6" &year =="2022" &depth == "5.5" &survey_depth== "9" ~ "no",
+      site_code== "BMSC6" &year =="2022" &depth == "6" &survey_depth== "9" ~ "no",
+      site_code== "BMSC1" &year == "2021" & survey_depth == "6.5" ~ "no",
+      site_code== "BMSC1" &year == "2022" & survey_depth == "4.7" ~ "no",
+      site_code== "BMSC5" &year == "2022" & survey_depth == "6.2" ~ "no",
+      site_code== "BMSC11" &year == "2022" & survey_depth == "8.5" ~ "no",
+      site_code== "BMSC12" &year == "2022" & survey_depth == "9" ~ "no",
+      site_code== "BMSC11" &year == "2023" & survey_depth == "5.5" ~ "no",
+      site_code== "BMSC12" &year == "2023" & survey_depth == "6.5" ~ "no",
+      site_code== "BMSC24" &year == "2023" & survey_depth == "7.5" ~ "no",
+      site_code== "BMSC25" &year == "2023" & survey_depth == "5.5" ~ "no",
+      site_code== "BMSC26" &year == "2023" & survey_depth == "9.5" ~ "no",
+      site_code== "BMSC27" &year == "2023" & survey_depth == "7" ~ "no",
+      site_code== "BMSC1" &year == "2023" & survey_depth == "8" ~ "no",
+      site_code== "BMSC5" &year == "2023" & survey_depth == "8" ~ "no",
+      site_code== "BMSC6" &year == "2023" & survey_depth == "5.5" ~ "no",
+      site_code== "BMSC8" &year == "2023" & survey_depth == "7.5" ~ "no",
+      TRUE ~ as.character("yes")
+      # cut out the rls transects I didn't directly measure nh4 on 
+    )) %>%
     filter(correct == "yes") %>%
     select(-c(correct, hour))
 }
@@ -848,7 +848,7 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
     background <- "black"
     features <- "white"
   }
-    
+  
   ggplot() +
     geom_sf(data = map_file, fill = land, colour = sea) +
     # add points
@@ -869,37 +869,37 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
     # Themes
     theme_bw() +
     theme(
-          # panel stuff
-          panel.background = element_rect(fill = sea),
-          panel.grid.major = element_line(color = sea),
-          panel.border = element_rect(fill = NA, colour = features),
-          # remove axis
-          axis.title = element_blank(),
-          axis.text = element_blank(),
-          axis.ticks = element_blank(),
-          axis.ticks.length = unit(0, "pt"),
-          plot.title = NULL,
-          plot.margin=grid::unit(c(0,0,0,0), "mm"),
-          # Specify legend options
-          legend.background = element_rect(color = NA, fill = background),  
-          legend.key = element_rect(color = background,  fill = background),  
-          legend.key.size = unit(1.2, "lines"),  
-          legend.key.height = NULL,  
-          legend.key.width = NULL,      
-          legend.text = element_text(size = 24, color = features),  
-          legend.title = element_text(size = 24, face = "bold", hjust = 0, color = features),  
-          legend.position = "right",  
-          legend.text.align = NULL,  
-          legend.title.align = NULL,  
-          legend.direction = "vertical",  
-          legend.box = NULL,
-          # Specify facetting options
-          strip.background = element_rect(fill = "grey30", color = "grey10"),  
-          strip.text.x = element_text(size = 30, color = features),  
-          strip.text.y = element_text(size = 30, color = features,angle = -90),  
-          # Specify plot options
-          plot.background = element_rect(color = background, fill = background),  
-          ) +
+      # panel stuff
+      panel.background = element_rect(fill = sea),
+      panel.grid.major = element_line(color = sea),
+      panel.border = element_rect(fill = NA, colour = features),
+      # remove axis
+      axis.title = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.ticks.length = unit(0, "pt"),
+      plot.title = NULL,
+      plot.margin=grid::unit(c(0,0,0,0), "mm"),
+      # Specify legend options
+      legend.background = element_rect(color = NA, fill = background),  
+      legend.key = element_rect(color = background,  fill = background),  
+      legend.key.size = unit(1.2, "lines"),  
+      legend.key.height = NULL,  
+      legend.key.width = NULL,      
+      legend.text = element_text(size = 24, color = features),  
+      legend.title = element_text(size = 24, face = "bold", hjust = 0, color = features),  
+      legend.position = "right",  
+      legend.text.align = NULL,  
+      legend.title.align = NULL,  
+      legend.direction = "vertical",  
+      legend.box = NULL,
+      # Specify facetting options
+      strip.background = element_rect(fill = "grey30", color = "grey10"),  
+      strip.text.x = element_text(size = 30, color = features),  
+      strip.text.y = element_text(size = 30, color = features,angle = -90),  
+      # Specify plot options
+      plot.background = element_rect(color = background, fill = background),  
+    ) +
     annotation_scale(location = "br", width_hint = 0.4) +
     annotation_north_arrow(location = "br", which_north = "true", 
                            pad_x = unit(0.0, "in"), pad_y = unit(0.2, "in"),
@@ -908,7 +908,7 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
 
 
 map_daddy_np <- function(lat_min, lat_max, long_min, long_max, 
-                      map_file, invert) {
+                         map_file, invert) {
   
   if(invert == FALSE){
     sea <- blue
@@ -1038,8 +1038,8 @@ coeff_plot <- function(coeff_df, pal, theme = "white"){
   }
   
   ggplot(coeff_df, aes(x = estimate, y = variable, 
-                 xmin = lower_CI, xmax = upper_CI, 
-                 colour = variable)) +
+                       xmin = lower_CI, xmax = upper_CI, 
+                       colour = variable)) +
     geom_point(size = 10) +
     geom_errorbar(width = 0, linewidth = 3) +
     geom_vline(xintercept = 0, color = features, linetype = "dashed") +
@@ -1092,14 +1092,14 @@ plot_pred <- function(raw_data, predict_data,
   # then add bells and whistles for kelp plot
   if(plot_type == "kelp"){
     new_plot <- base_pred_plot +
-#      scale_size_continuous(range = c(0.5, 10),
-#                            limits = c(0, 110)) +
+      #      scale_size_continuous(range = c(0.5, 10),
+      #                            limits = c(0, 110)) +
       geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
       guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
              size = guide_legend(override.aes = list(colour = features)),
              colour = guide_legend(override.aes = list(size = 2)))  +
-#      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
-#                         labels = c("0", "0.6", "1.2", "1.8")) +
+      #      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
+      #                         labels = c("0", "0.6", "1.2", "1.8")) +
       labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
            x = expression(paste("Kelp biomass (kg/m"^2,")")),
            size = "Animals (kg)")
@@ -1108,9 +1108,9 @@ plot_pred <- function(raw_data, predict_data,
   # extras for rls plot
   if(plot_type == "rls"){
     new_plot <- base_pred_plot +
-#      scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
-#                         labels = c("300", "600", "900", "1200", "1500")) +
-#      ylim(0, 3.671) +
+      #      scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
+      #                         labels = c("300", "600", "900", "1200", "1500")) +
+      #      ylim(0, 3.671) +
       labs(y = expression(paste("Ammonium ", (mu*M))), 
            x = expression(paste("Animal abundance/m"^2))) +
       scale_size(guide = 'none') +
@@ -1125,7 +1125,7 @@ plot_pred <- function(raw_data, predict_data,
       geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
       labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
            x = x_axis_lab) 
-     # theme(legend.position = "null")
+    # theme(legend.position = "null")
   }
   
   print(new_plot)
@@ -1208,7 +1208,7 @@ plot_pred_fam <- function(raw_data, predict_data,
     theme +
     scale_colour_manual(values = (pal3), drop = TRUE) +
     scale_fill_manual(values = (pal), drop = TRUE)+
-   # ylim(0, 3.671) +
+    # ylim(0, 3.671) +
     labs(y = expression(paste("Ammonium ", (mu*M))), 
          x = expression(paste("Animal abundance/m"^2))) +
     theme(legend.position = "null")
@@ -1256,50 +1256,25 @@ plot_sp_fun <- function(m_data, family, diagnose = FALSE) {
 
 
 
-# New family function  ------
+# Family function for RLS Blitz ------
 v_fun <- function(df, family){
   
   df_fam <- df %>% filter(family == {{family}})
   
-  # predict greenling model?
-  min_fam <- min(df_fam$total_fam)
-  max_fam <- max(df_fam$total_fam)
+  # set levels for ggpredict
+  min_fam <- min(df_fam$fam_den_scale)
+  max_fam <- max(df_fam$fam_den_scale)
   spread_fam <- (max_fam - min_fam)/100
   v_fam <- seq(min_fam, max_fam, spread_fam)
 }
 
-# Now function to get predictions
+# Family function to get predictions for RLS Blitz
 fam_fun <- function(df, family, diagnose = FALSE) {
   
   df_fam <- df %>% filter(family == {{family}})
-
-  # model
-  mod_fam <- glmmTMB(nh4_avg ~ total_fam + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = df_fam)
-
-  if(diagnose == TRUE){
-    print(summary(mod_fam))
-    print(plot(DHARMa::simulateResiduals(mod_fam)))
-    print(performance::r2(mod_fam, tolerance = 0.0000000000001))
-  }
-  
-  # ggpredict
-  predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]")) %>%
-    mutate(total_fam = x,
-           family = {{family}},
-           r2 = as.numeric(performance::r2(mod_fam, tolerance = 0.0000000000001)[1])) 
-
-}
-
-# funtion for full model
-# Now function to get predictions
-fam_fun_tide <- function(df, family, diagnose = FALSE) {
-  
-  df_fam <- df %>% filter(family == {{family}})
   
   # model
-  mod_fam <- glmmTMB(nh4_avg ~ total_fam*tide_scale + shannon_scale + depth_avg_scale  + (1|year) + (1|site_code), 
+  mod_fam <- glmmTMB(nh4_avg ~ fam_den_scale*tide_scale + shannon_scale + depth_avg_scale  + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = df_fam)
   
@@ -1310,8 +1285,9 @@ fam_fun_tide <- function(df, family, diagnose = FALSE) {
   }
   
   # ggpredict
-  predict_fam <- ggpredict(mod_fam, terms = c("total_fam[v_fam]")) %>%
-    mutate(total_fam = x,
+  predict_fam <- ggpredict(mod_fam, terms = c("fam_den_scale[v_fam]")) %>%
+    as.data.frame() %>%
+    mutate(fam_den_scale = x,
            family = {{family}},
            r2 = as.numeric(performance::r2(mod_fam, tolerance = 0.0000000000001)[1])) 
   
