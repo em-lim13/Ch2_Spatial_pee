@@ -256,17 +256,17 @@ data_map <- data %>%
 #  filter(site != "Wizard_I_North" | kelp_sp != "none") # just getting rid of the duplicate row, bc there wasn't kelp on one transect unique misses this one
 
 # write_csv(data_map, "Output/Output_data/kelp_final.csv")
-  
+
 
 
 # Stats for in minus out -----
 
 # Step 0: Ask my question
-  # Does kelp density affect the retention of ammonium in kelp forests?
+# Does kelp density affect the retention of ammonium in kelp forests?
 
 # Response variable = in_minus_out
-  # how much ammonium is inside the forest vs outside
-  # I'm using the transect level data instead of the averaged site data, the residuals look better and it makes more sense
+# how much ammonium is inside the forest vs outside
+# I'm using the transect level data instead of the averaged site data, the residuals look better and it makes more sense
 
 # Step 1: Choose a distribution
 ggplot(data, aes(x = in_minus_out)) +
@@ -278,41 +278,41 @@ ggplot(data, aes(x = in_minus_out)) +
 # And Step 3: Model residuals!
 
 # Biological
-  # Kelp forest
-    # forest_bio_scale (site level = area*biomass*density)
-    # kelp_sp (site level)
-    # kelp_bio_scale (site level, density*biomass)
-    # log_kelp_scale log(bio_mean), also scaled
-    # log_den (site level)
-    # bio_tran_scale (mini transect level)
-    # den_tran_scale (mini transect level)
+# Kelp forest
+# forest_bio_scale (site level = area*biomass*density)
+# kelp_sp (site level)
+# kelp_bio_scale (site level, density*biomass)
+# log_kelp_scale log(bio_mean), also scaled
+# log_den (site level)
+# bio_tran_scale (mini transect level)
+# den_tran_scale (mini transect level)
 # I'm using kelp_bio_scale, best for AIC and better than log(kelp) too
 # Tried including one transect level variable and it wasn't as good
 
-  # RLS community (site level)
-    # Biomass:
-      # weight_sum_scale 
-      # all_weighted_scale 
-      # abundance_scale
-    # Biodiversity
-      # rich_scale
-      # shannon_scale
-      # simpson_scale
+# RLS community (site level)
+# Biomass:
+# weight_sum_scale 
+# all_weighted_scale 
+# abundance_scale
+# Biodiversity
+# rich_scale
+# shannon_scale
+# simpson_scale
 # Using abundance_scale and simpson_scale, best AIC
 
 # Abiotic to control for
-  # depth_avg (depth_scale)
-  # avg_exchange_rate (tide_scale)
+# depth_avg (depth_scale)
+# avg_exchange_rate (tide_scale)
 # Tide doesn't matter but depth does????
 
 # Random variables
-  # side_code: if I use mini transect as the level of study than I need a random effect of site
+# side_code: if I use mini transect as the level of study than I need a random effect of site
 
 # Interactions:
-  # interaction between animal biomass:tide_exchange
-  # interaction between kelp:tide_exchange
-  # interaction between animal biomass:kelp
-  # maybe a triple interaction between kelp:animal_biomass:tide??
+# interaction between animal biomass:tide_exchange
+# interaction between kelp:tide_exchange
+# interaction between animal biomass:kelp
+# maybe a triple interaction between kelp:animal_biomass:tide??
 
 
 # Build full model with gaussian distribution
@@ -396,22 +396,11 @@ mod_c <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
                  data = data) 
 summary(mod_c)
 
-mod_c <- glmmTMB(in_minus_out ~ 
-                   Macro*Nereo +tide_center +
-                   Macro*Nereo + weight_sum_center +
-                   weight_sum_center*tide_center +
-                   shannon_center + depth_center +
-                   (1|site_code),
-                 family = 'gaussian',
-                 data = data) 
-summary(mod_c)
-visreg(mod_c)
-
 # what if I add kelp sp interaction
 # I can't do a triple kelp_sp*kelp_bio_scale*tide_scale interaction bc no nereo flood
 # I want to know if the tide:kelp interaction is the same for nereo and macro
-    # there is no tide:nereo interaction bc nereo only measured at slack tide
-    # and there's no kelp:tide interaction for no kelp bc there's no kelp biomass
+# there is no tide:nereo interaction bc nereo only measured at slack tide
+# and there's no kelp:tide interaction for no kelp bc there's no kelp biomass
 # basically the model is guessing at what's happening with nereo based on what's happening with macro and that's find
 
 
@@ -435,6 +424,7 @@ pal_k <- viridis::viridis(10)
 pal2 <- c(pal_k[8], pal_k[5])
 pal <- viridis::viridis(10)
 pal3 <- c(pal[10], pal[8], pal[5])
+pal1 <- pal_k[4]
 
 # Fig 4a: model coefficients ----
 # Save model coefficients 
@@ -666,11 +656,13 @@ data_fam_no0_a <- data %>%
   left_join((kelp_rls %>%
                mutate(family = as.factor(family))%>%
                group_by(site_code, method, phylum, family) %>% # if i want methods split up, add it back here
-               summarise(total_fam = sum(total),
-                         weight_fam_sum = 1000*sum(weight_size_class_sum))),
-            by = "site_code") %>%
-  mutate(abund_fam_scale = c(scale(total_fam)),
-         weight_fam_scale = c(scale(weight_fam_sum)))
+               summarise(fam_den = sum(survey_den),
+                         weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
+            by = "site_code") 
+
+
+mutate(abund_fam_scale = c(scale(total_fam)),
+       weight_fam_scale = c(scale(weight_fam_sum)))
 
 
 # what are the top families?
@@ -679,7 +671,7 @@ data_fam_no0_a <- data %>%
 # rank of families by total abundance (density)
 kelp_fam_list_total <- kelp_rls %>%
   group_by(family) %>%
-  summarise(sum = sum(total)) %>%
+  summarise(sum = sum(survey_den)) %>%
   drop_na(family) %>%
   arrange(desc(sum)) %>%
   transmute(family = family, 
@@ -744,27 +736,33 @@ data_fam_no0 <- data_fam_no0_a %>%
           filter(!family %in% kelp_fam_list_cut$family) %>%
           mutate(family = "other"))
 
-# since I'm working with each family seperately I want to change density back to abundance
+# since I'm working with each family separately I want to change density back to abundance
 data_fam_no0s <- data_fam_no0 %>%
-  mutate(total_fam = case_when(method == 1 ~ total_fam*500,
-                               method == 2 ~ total_fam*100),
-         abund_fam_scale = c(scale(total_fam))) %>%
-  as.data.frame()
+  mutate(total_fam = case_when(method == 1 ~ fam_den*500,
+                               method == 2 ~ fam_den*100),
+         weight_abund_fam_sum_g = case_when(method == 1 ~ weight_fam_sum_g*500,
+                                            method == 2 ~ weight_fam_sum_g*100),
+         abund_fam_scale = c(scale(total_fam)),
+         weight_abund_fam_scale = c(scale(weight_abund_fam_sum_g)),
+         fam_den_scale = c(scale(fam_den)),
+         weight_den_fam_scale = c(scale(weight_fam_sum_g))) %>%
+  as.data.frame() %>%
+  droplevels()
 
 
 # Family stats ----
 mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + kelp_bio_scale + tide_scale + 
-                        family*abund_fam_scale + depth_scale ,
-                      family = 'gaussian',
-                      data = data_fam_no0)
+                     family*weight_den_fam_scale + depth_scale ,
+                   family = 'gaussian',
+                   data = data_fam_no0s)
 summary(mod_fam)
 plot(DHARMa::simulateResiduals(mod_fam)) 
 
-df <- emmeans::emtrends(mod_fam, pairwise ~ family, var = "abund_fam_scale")$emtrends %>%
+df <- emmeans::emtrends(mod_fam, pairwise ~ family, var = "weight_den_fam_scale")$emtrends %>%
   as.data.frame()
 
 # look at those slopes
-ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.trend), xmin = lower.CL, xmax = upper.CL)) +
+ggplot(df, aes(x = weight_den_fam_scale.trend, y = reorder(family, weight_den_fam_scale.trend), xmin = lower.CL, xmax = upper.CL)) +
   geom_point(size = 2.7) +
   geom_errorbar(width = 0, linewidth = 0.5) +
   geom_vline(xintercept=0, color="black", linetype="dashed")
@@ -775,102 +773,111 @@ ggplot(df, aes(x = abund_fam_scale.trend, y = reorder(family, abund_fam_scale.tr
 # fish family models -----
 
 # One model for each species
-v_fam <- v_fun_kelp(data_fam_no0s, "Hexagrammidae")
-predict_green <- fam_fun_kelp(data_fam_no0s, "Hexagrammidae", diagnose = TRUE)
-# total_fam  9.4316940  3.9924145   2.362  0.01816 * 
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Sebastidae")
-predict_rock <- fam_fun_kelp(data_fam_no0s, "Sebastidae", diagnose = TRUE)
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Embiotocidae")
-predict_per <- fam_fun_kelp(data_fam_no0s, "Embiotocidae", diagnose = TRUE)
+v_fam <- v_fun_kelp(data_fam_no0s, "Gobiidae")
+kelp_fam_predict_Gobiidae <- fam_fun_kelp(data_fam_no0s, "Gobiidae", diagnose = TRUE)
+# no errors, no gobies found in nereo forests
 
 v_fam <- v_fun_kelp(data_fam_no0s, "Cottidae")
-predict_scul <- fam_fun_kelp(data_fam_no0s, "Cottidae", diagnose = TRUE)
+kelp_fam_predict_Cottidae <- fam_fun_kelp(data_fam_no0s, "Cottidae", diagnose = TRUE)
+# red hump in resid plot but not horrific
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Embiotocidae")
+kelp_fam_predict_Embiotocidae <- fam_fun_kelp(data_fam_no0s, "Embiotocidae", diagnose = TRUE)
+# had to increase err, resids looks hecked
 
 # extra fish
-v_fam <- v_fun_kelp(data_fam_no0s, "Gobiidae")
-predict_gob <- fam_fun_kelp(data_fam_no0s, "Gobiidae", diagnose = TRUE)
+v_fam <- v_fun_kelp(data_fam_no0s, "Hexagrammidae")
+kelp_fam_predict_Hexagrammidae <- fam_fun_kelp(data_fam_no0s, "Hexagrammidae")
 
+v_fam <- v_fun_kelp(data_fam_no0s, "Sebastidae")
+kelp_fam_predict_Sebastidae <- fam_fun_kelp(data_fam_no0s, "Sebastidae")
 
 
 # Next do inverts! -----
 # Echinasteridae, Asteropseidae, Muricidae, Asteriidae
 v_fam <- v_fun_kelp(data_fam_no0s, "Echinasteridae")
-predict_blood <- fam_fun_kelp(data_fam_no0s, "Echinasteridae", diagnose = TRUE)
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Asteropseidae")
-predict_leather <- fam_fun_kelp(data_fam_no0s, "Asteropseidae", diagnose = TRUE)
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Muricidae")
-predict_whelk <- fam_fun_kelp(data_fam_no0s, "Muricidae", diagnose = TRUE)
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Asteriidae")
-predict_stars <- fam_fun_kelp(data_fam_no0s, "Asteriidae", diagnose = TRUE)
-
-
-# extra inverts
-v_fam <- v_fun_kelp(data_fam_no0s, "Turbinidae")
-predict_snail <- fam_fun_kelp(data_fam_no0s, "Turbinidae", diagnose = TRUE)
-# red dharma line
+kelp_fam_predict_Echinasteridae <- fam_fun_kelp(data_fam_no0s, "Echinasteridae", diagnose = TRUE)
 
 v_fam <- v_fun_kelp(data_fam_no0s, "Strongylocentrotidae")
-predict_urch <- fam_fun_kelp(data_fam_no0s, "Strongylocentrotidae", diagnose = TRUE)
-# dharma isn't happy, had to increase `err` for some of the quantiles.
+kelp_fam_predict_Strongylocentrotidae <- fam_fun_kelp(data_fam_no0s, "Strongylocentrotidae", diagnose = TRUE)
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Asteriidae")
+kelp_fam_predict_Asteriidae <- fam_fun_kelp(data_fam_no0s, "Asteriidae", diagnose = TRUE)
+# had to increase err, resids looks hecked
+
+# extra inverts
+v_fam <- v_fun_kelp(data_fam_no0s, "Asteropseidae")
+kelp_fam_predict_Asteropseidae <- fam_fun_kelp(data_fam_no0s, "Asteropseidae", diagnose = TRUE)
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Muricidae")
+kelp_fam_predict_Muricidae <- fam_fun_kelp(data_fam_no0s, "Muricidae", diagnose = TRUE)
+
+v_fam <- v_fun_kelp(data_fam_no0s, "Turbinidae")
+kelp_fam_predict_Turbinidae <- fam_fun_kelp(data_fam_no0s, "Turbinidae")
+# red dharma line
 
 v_fam <- v_fun_kelp(data_fam_no0s, "Asterinidae")
-predict_ast <- fam_fun_kelp(data_fam_no0s, "Asterinidae", diagnose = TRUE)
+kelp_fam_predict_Asterinidae <- fam_fun_kelp(data_fam_no0s, "Asterinidae")
 
 v_fam <- v_fun_kelp(data_fam_no0s, "Stichopodidae")
-predict_stic <- fam_fun_kelp(data_fam_no0s, "Stichopodidae", diagnose = FALSE)
+kelp_fam_predict_Stichopodidae <- fam_fun_kelp(data_fam_no0s, "Stichopodidae")
 # error i think
 
 v_fam <- v_fun_kelp(data_fam_no0s, "Haliotidae")
-predict_aba <- fam_fun_kelp(data_fam_no0s, "Haliotidae", diagnose = TRUE)
+kelp_fam_predict_Haliotidae <- fam_fun_kelp(data_fam_no0s, "Haliotidae")
 
 v_fam <- v_fun_kelp(data_fam_no0s, "Acmaeidae")
-predict_lim <- fam_fun_kelp(data_fam_no0s, "Acmaeidae", diagnose = TRUE)
+kelp_fam_predict_Acmaeidae <- fam_fun_kelp(data_fam_no0s, "Acmaeidae")
 # red lines, increased err for quantiles
 
 
-# Put everything together, I'm sorry i haven't found a better method for this yet
-predict_all_fam <- rbind(predict_green, predict_rock, predict_per, predict_scul, predict_blood, predict_leather, predict_whelk, predict_stars, predict_snail, predict_urch, predict_ast, predict_stic, predict_aba, predict_lim) 
+# Put all of the predict dfs together and decide which are best
+kelp_predicts <- ls(pattern = "kelp_fam_predict_*")
+all_kelp_dfs <- ls()[sapply(ls(), function(x) any(class(get(x)) == 'data.frame'))]
+kelp_predict_list <-  mget(Reduce(intersect, list(kelp_predicts, all_kelp_dfs)))  
 
-# just list the top 8 R2 values
-fam_keep <- predict_all_fam %>%
+# rbind the dfs together
+kelp_fam_predicts <- do.call(rbind, kelp_predict_list) %>%
   as.data.frame() %>%
-  select(family, r2) %>%
+  remove_rownames() 
+
+# what are the top 6 inverts and fish?
+top_kelp_fam_r2 <- kelp_fam_predicts %>%
+  select(c(family, r2)) %>%
   unique() %>%
   arrange(desc(r2)) %>%
-  head(8) 
-# top r2 = Echinasteridae, Embiotocidae, Sebastidae, Turbinidae, Asteriidae, Cottidae, Hexagrammidae, Asteropseidae
+  head(6) 
 
-# just keep those top 8 families!
-kelp_fam_predict <- predict_all_fam %>%
-  filter(family %in% fam_keep$family)  %>%
+# Echinasteridae, Gobiidae, Cottidae, Strongylocentrotidae, Embiotocidae, Asteriidae top 6. Hexagrammidae, Sebastidae top 8
+
+# make df of just the tops
+kelp_top_fam_predict <- kelp_fam_predicts %>%
+  filter(family %in% top_kelp_fam_r2$family) %>%
+  # optional reorder of families
   arrange(desc(r2)) %>%
   mutate(family = factor(family, unique(family)))
-  
+
 # now filter data
-kelp_fam <- fam_keep %>%
+kelp_fam <- top_kelp_fam_r2 %>%
   left_join(data_fam_no0s, by = "family") %>%
   arrange(desc(r2)) %>%
   mutate(family = factor(family, unique(family)))
 
 
 # Plot families ----
+
 fam_plot <- ggplot() + 
   geom_point(data = kelp_fam, 
-             aes(x = weight_fam_sum, y = in_out_avg), colour = pal1,
+             aes(x = weight_den_fam_scale, y = in_out_avg), colour = pal1,
              alpha = 0.8) +
   labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
        x = expression(paste("Weight (kg/m2)"))) +
-  facet_wrap(~family, scales = 'free_x', ncol = 4) +
-  geom_line(data = kelp_fam_predict,
-            aes(x = weight_fam_sum, y = predicted), colour = pal1,
+  facet_wrap(~family, scales = 'free_x', ncol = 3) +
+  geom_line(data = kelp_top_fam_predict,
+            aes(x = weight_den_fam_scale, y = predicted), colour = pal1,
             linewidth = 1) +
-  geom_ribbon(data = kelp_fam_predict,
-              aes(x = weight_fam_sum, y = predicted, 
+  geom_ribbon(data = kelp_top_fam_predict,
+              aes(x = weight_den_fam_scale, y = predicted, 
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
   theme_white() +
@@ -950,8 +957,8 @@ mod_simp <- glmmTMB(in_minus_out ~ kelp_sp +
                       weight_sum_scale*tide_scale +
                       simpson_scale + depth_scale + 
                       (1|site_code),
-                      family = 'gaussian',
-                      data = data) 
+                    family = 'gaussian',
+                    data = data) 
 
 # Abundance simpson's is the best AIC mod
 mod_abund_simp <- glmmTMB(in_minus_out ~ kelp_sp + 
@@ -979,15 +986,15 @@ AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
 # This is not complete!!!!
 
 # Step 0: Ask my question
-  # Is there a link between biodiversity or biomass and ammonium concentration? 
+# Is there a link between biodiversity or biomass and ammonium concentration? 
 
 # Step 1: Choose a distribution
 
 # response variables:
-  # nh4_avg (average of in and out)
-  # nh4_in_avg (inside kelp avg)
-  # nh4_out_avg (outside kelp avg)
-    # most comparable to the RLS blitz work?
+# nh4_avg (average of in and out)
+# nh4_in_avg (inside kelp avg)
+# nh4_out_avg (outside kelp avg)
+# most comparable to the RLS blitz work?
 
 ggplot(data_s, aes(x = nh4_out_avg)) +
   geom_histogram(bins = 30) 
@@ -998,49 +1005,49 @@ ggplot(data_s, aes(x = nh4_out_avg)) +
 # Step 2: Choose your predictors
 
 # Biological predictors:
-  # 1) Animal biomass
-    # a) weight_sum = total wet weight of all the animals observed on RLS transects
-    # b) all_weight_weighted = weighted fish weight + invert weight
-    # c) abundance
-      # I'm going with weight_sum
-  # 2) Kelp forest
-    # a) forest_bio_scale (site level = area*biomass*density)
-    # b) kelp_bio_scale (site level, density*biomass)
-    # c) kelp_sp (site level)
+# 1) Animal biomass
+# a) weight_sum = total wet weight of all the animals observed on RLS transects
+# b) all_weight_weighted = weighted fish weight + invert weight
+# c) abundance
+# I'm going with weight_sum
+# 2) Kelp forest
+# a) forest_bio_scale (site level = area*biomass*density)
+# b) kelp_bio_scale (site level, density*biomass)
+# c) kelp_sp (site level)
 
-  # 3) Biodiversity
-   # a) species_richness = total # species on each transect
-   # b) shannon = shannon diversity of each transect
-   # c) simpson = simpson diversity of each transect
-     # I'm going with shannon
+# 3) Biodiversity
+# a) species_richness = total # species on each transect
+# b) shannon = shannon diversity of each transect
+# c) simpson = simpson diversity of each transect
+# I'm going with shannon
 
 # Continuous abiotic predictors
-  # 1) depth_avg = average nh4 sample depths
-  # 2) avg_exchange_rate = average rate of change of the tide height over the 1 hour survey
+# 1) depth_avg = average nh4 sample depths
+# 2) avg_exchange_rate = average rate of change of the tide height over the 1 hour survey
 
 # Interactions
-  # I think whatever biomass and biodiversity variable I choose should have an interaction with exchange rate
-  # maybe triple kelp:biomass:tide interaction
+# I think whatever biomass and biodiversity variable I choose should have an interaction with exchange rate
+# maybe triple kelp:biomass:tide interaction
 
 # And Step 3: Model residuals 
 
 # Build full model with gamma distribution
 mod_kelp_site <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale + shannon_scale + kelp_sp + depth_scale - weight_sum_scale:tide_scale:kelp_bio_scale, 
-                        family = Gamma(link = 'log'),
-                        data = data_s,
-                        na.action = na.fail)
+                         family = Gamma(link = 'log'),
+                         data = data_s,
+                         na.action = na.fail)
 summary(mod_kelp_site)
 plot(simulateResiduals(mod_kelp_site))
 
 # try making a model with MORE interactions!
 mod_kelp_site_ints <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale*shannon_scale + kelp_sp + depth_scale - 
-                           weight_sum_scale:tide_scale:kelp_bio_scale:shannon_scale -
-                           weight_sum_scale:tide_scale:kelp_bio_scale - 
-                           weight_sum_scale:tide_scale:shannon_scale -
-                           weight_sum_scale:kelp_bio_scale:shannon_scale -
-                           tide_scale:kelp_bio_scale:shannon_scale, 
-                         family = Gamma(link = 'log'),
-                         data = data_s)
+                                weight_sum_scale:tide_scale:kelp_bio_scale:shannon_scale -
+                                weight_sum_scale:tide_scale:kelp_bio_scale - 
+                                weight_sum_scale:tide_scale:shannon_scale -
+                                weight_sum_scale:kelp_bio_scale:shannon_scale -
+                                tide_scale:kelp_bio_scale:shannon_scale, 
+                              family = Gamma(link = 'log'),
+                              data = data_s)
 summary(mod_kelp_site_ints) 
 plot(simulateResiduals(mod_kelp_site_ints)) # when I put Second beach south back in, the residuals look fine. Why is that. why. 
 
@@ -1130,13 +1137,13 @@ ggplot(data = data_s,
 
 d <- data %>% filter(kelp_cat != "Mid") %>% as.data.frame()
 mod <- glmmTMB(in_minus_out ~ kelp_sp + 
-                         kelp_bio_scale*tide_scale +
-                         kelp_bio_scale*weight_sum_scale +
-                         weight_sum_scale*tide_scale +
-                         shannon_scale + depth_scale + 
-                         (1|site_code),
-                       family = 'gaussian',
-                       data = data) 
+                 kelp_bio_scale*tide_scale +
+                 kelp_bio_scale*weight_sum_scale +
+                 weight_sum_scale*tide_scale +
+                 shannon_scale + depth_scale + 
+                 (1|site_code),
+               family = 'gaussian',
+               data = data) 
 
 summary(mod)
 
@@ -1148,15 +1155,15 @@ ggplot(data = data,
 
 
 visreg(mod)
-  
-  
+
+
 # old
 ggplot(data) +
   geom_point(aes(BiomassM, nh4_inside, shape = kelp_sp, colour = "inside")) +
   geom_point(aes(BiomassM, nh4_outside, shape = kelp_sp, colour = "outside")) +
   geom_point(aes(BiomassM, in_minus_out, shape = kelp_sp, colour = "delta"), size = 3) +
   geom_hline(yintercept= 0, linetype = "dashed", linewidth = 0.5) 
-  
+
 
 kcca_table <- pee %>%
   select(site_code, date) %>%
@@ -1286,3 +1293,15 @@ depth_pred_plot <- plot_pred(raw_data = data,
                              pal = pal12[6],
                              lty_var = pal12[6]) +  
   place_label("(e)")
+
+
+
+# try to figure out code diffs -----
+
+data_check <- data %>%
+  select(in_minus_out, kelp_sp, kelp_bio_scale, tide_scale, weight_sum_scale, shannon_scale, depth_scale,site_code, BiomassM)
+
+data_old_check <- data_old %>%
+  select(in_minus_out, kelp_sp, kelp_bio_scale, tide_scale, weight_sum_scale, shannon_scale, depth_scale,site_code, BiomassM)
+
+d <- data_check == data_old_check
