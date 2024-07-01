@@ -573,11 +573,12 @@ fam_list_cut <- fam_big_list %>%
 
 # make this final df for the df without 0's
 family_df_no0 <- family_df_no0_a %>%
-  filter(family %in% fam_list_cut$family) %>%
-  # now make all the other families "other"
-  rbind(family_df_no0_a %>%
-          filter(!family %in% fam_list_cut$family) %>%
-          mutate(family = "other"))
+  filter(family %in% fam_list_cut$family)
+# I no longer want to do this!!!!
+# now make all the other families "other"
+# rbind(family_df_no0_a %>%
+#         filter(!family %in% fam_list_cut$family) %>%
+#         mutate(family = "other"))
 
 # since I'm working with each family separately I want to change density back to abundance
 fam_df_no0 <- family_df_no0 %>%
@@ -610,30 +611,31 @@ order_list_bio <- rls_sm %>%
 
 # Family stats ----
 
-# Stats beers said I can run a separate model for each family!!!! WAHOOOOOO
+# list family names
+fam_levels <- levels(fam_df_no0$family)
 
-# For fish: Hexagrammidae, Sebastidae, Cottidae, Gobiidae
-# For inverts: Asteriidae, Muricidae, Acmaeidae, Echinasteridae by size of slope
+# try to lapply fam_fun over each family name
+fam_predictions <- lapply(fam_levels, function(fam_levels) {
+  fam_fun_combo(fam_df_no0, fam_levels)  # Adjust diagnose as needed
+})
 
-# one model for each family
-# Use function to determine max and min abundance of each family
-# the function model is just nh4 ~ raw fam abundance with random effect of site and year
-# for all 4 fish, the model with just abundance had a lower AIC than abund*tide
-# looks like just abundance is also best for the inverts
+# join up those predictions
+rls_fam_predicts <- bind_rows(fam_predictions)
 
+# I think I can get rid of the following code now that I can do everything with the above code!!! ----
 # indiv fam models
+fam_predict_Hexagrammidae1 <- fam_fun_combo(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
+
 
 # Greenlings
-v_fam <- v_fun(fam_df_no0, "Hexagrammidae") 
-fam_predict_Hexagrammidae <- fam_fun(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
+fam_predict_Hexagrammidae3 <- fam_fun(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
 
 # Rockfish
-v_fam <- v_fun(fam_df_no0, "Sebastidae")
-fam_predict_Sebastidae <- fam_fun(fam_df_no0, "Sebastidae", diagnose = TRUE)
+fam_predict_Sebastidae <- fam_fun_combo(fam_df_no0, "Sebastidae", diagnose = TRUE)
 
 # Gobies
 v_fam <- v_fun(fam_df_no0, "Gobiidae")
-fam_predict_Gobiidae <- fam_fun(fam_df_no0, "Gobiidae", diagnose = TRUE)
+fam_predict_Gobiidae <- fam_fun_combo(fam_df_no0, "Gobiidae", diagnose = TRUE)
 # some quantile deviations in dharma
 
 
@@ -641,7 +643,7 @@ fam_predict_Gobiidae <- fam_fun(fam_df_no0, "Gobiidae", diagnose = TRUE)
 # Asteriidae, Muricidae, Acmaeidae, Echinasteridae are the four inverts with the biggest slope estimates
 
 v_fam <- v_fun(fam_df_no0, "Muricidae")
-fam_predict_Muricidae <- fam_fun(fam_df_no0, "Muricidae", diagnose = TRUE)
+fam_predict_Muricidae <- fam_fun_combo(fam_df_no0, "Muricidae", diagnose = TRUE)
 # no errors
 
 v_fam <- v_fun(fam_df_no0, "Asterinidae")
@@ -681,7 +683,7 @@ v_fam <- v_fun(fam_df_no0, "Pectinidae")
 fam_predict_Pectinidae <- fam_fun(fam_df_no0, "Pectinidae")
 
 v_fam <- v_fun(fam_df_no0, "Asteriidae")
-fam_predict_Asteriidae <- fam_fun(fam_df_no0, "Asteriidae")
+fam_predict_Asteriidae <- fam_fun_combo(fam_df_no0, "Asteriidae")
 # no errors
 
 # Put all of the predict dfs together and decide which are best
@@ -901,6 +903,8 @@ fam_plot <- ggplot() +
 #    hjust   = 1.1,
 #    vjust   = 1.5,
 #    size = 9)
+
+fam_plot
 
 #ggsave("Output/Pub_figs/Fig3d.png", device = "png", height = 18, width = 12, dpi = 400)
 
