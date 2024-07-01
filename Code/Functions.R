@@ -1186,20 +1186,20 @@ fam_fun_combo <- function(df, family) {
   df_fam <- df %>% filter(family == {{family}})
   
   # set levels for ggpredict
-  min_fam <- min(df_fam$fam_den_scale)
-  max_fam <- max(df_fam$fam_den_scale)
+  min_fam <- min(df_fam$fam_den)
+  max_fam <- max(df_fam$fam_den)
   spread_fam <- (max_fam - min_fam)/100
   v_fam <- seq(min_fam, max_fam, spread_fam)
   
   # model
-  mod_fam <- glmmTMB(nh4_avg ~ fam_den_scale*tide_scale + shannon_scale + depth_avg_scale  + (1|year) + (1|site_code), 
+  mod_fam <- glmmTMB(nh4_avg ~ fam_den*tide_scale + shannon_scale + depth_avg_scale  + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = df_fam)
   
   # ggpredict
-  predict_fam <- ggpredict(mod_fam, terms = c("fam_den_scale[v_fam]")) %>%
+  predict_fam <- ggpredict(mod_fam, terms = c("fam_den[v_fam]")) %>%
     as.data.frame() %>%
-    mutate(fam_den_scale = x,
+    mutate(fam_den = x,
            family = as.character({{family}}),  # Ensure `family` is coerced to character if necessary
            r2 = as.numeric(performance::r2(mod_fam, tolerance = 0.0000000000001)[1])) 
   
