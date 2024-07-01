@@ -660,11 +660,6 @@ data_fam_no0_a <- data %>%
                          weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
             by = "site_code") 
 
-
-mutate(abund_fam_scale = c(scale(total_fam)),
-       weight_fam_scale = c(scale(weight_fam_sum)))
-
-
 # what are the top families?
 
 # CHOOSE THE FAMILIES TO INCLUDE
@@ -769,6 +764,43 @@ ggplot(df, aes(x = weight_den_fam_scale.trend, y = reorder(family, weight_den_fa
 
 # For fish: Hexagrammidae, Sebastidae, Embiotocidae, Cottidae
 # For inverts: Echinasteridae, Asteropseidae, Muricidae, Asteriidae by size of slope
+
+# FAMILY MODELS
+# I want to run one model for each family
+# list family names
+fam_kelp_levels <- levels(data_fam_no0s$family)
+
+# lapply fam_fun over each family name to create df of predictions for each fam mod
+fam_kelp_predictions <- lapply(fam_kelp_levels, function(family_name) {
+  fam_fun_kelp_combo(data_fam_no0s, family_name)  # Adjust diagnose as needed
+})
+
+# join up those predictions
+kelp_fam_predicts <- bind_rows(fam_kelp_predictions)
+
+# what are the top 6 inverts and fish?
+top_fam_kelp_r2 <- kelp_fam_predicts %>%
+  select(c(family, r2)) %>%
+  unique() %>%
+  arrange(desc(r2)) %>%
+  head(6) 
+
+# make df of just the tops
+top_fam_kelp_predict <- kelp_fam_predicts %>%
+  filter(family %in% top_fam_kelp_r2$family) %>%
+  # optional reorder of families
+  arrange(desc(r2)) %>%
+  mutate(family = factor(family, unique(family)))
+
+# Outputs for these families
+# list top 6 family names
+top_fam_kelp_levels <- levels(top_fam_kelp_predict$family)
+
+# get model outputs for each family model
+lapply(top_fam_kelp_levels, function(family_name) {
+  diagnose_kelp_fun(data_fam_no0s, family_name) 
+})
+
 
 # fish family models -----
 

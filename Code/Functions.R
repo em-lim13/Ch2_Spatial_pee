@@ -1298,25 +1298,13 @@ diagnose_fun <- function(df, family){
   print(performance::r2(mod_fam, tolerance = 0.0000000000001))
 }
 
-# kelp v function
-v_fun_kelp <- function(df, family){
+
+# Family function for the kelp pee model
+fam_fun_kelp_combo <- function(df, family) {
   
   df_fam <- df %>% filter(family == {{family}})
   
-  # predict greenling model?
-  min_fam <- min(df_fam$weight_den_fam_scale)
-  max_fam <- max(df_fam$weight_den_fam_scale)
-  spread_fam <- (max_fam - min_fam)/100
-  v_fam <- seq(min_fam, max_fam, spread_fam)
-}
-
-
-# function for kelp pee mod
-fam_fun_combo_kelp <- function(df, family, diagnose = FALSE) {
-  
-  df_fam <- df %>% filter(family == {{family}})
-  
-  # predict greenling model?
+  # set levels for ggpredict
   min_fam <- min(df_fam$weight_den_fam_scale)
   max_fam <- max(df_fam$weight_den_fam_scale)
   spread_fam <- (max_fam - min_fam)/100
@@ -1331,12 +1319,6 @@ fam_fun_combo_kelp <- function(df, family, diagnose = FALSE) {
                      family = 'gaussian',
                      data = df_fam)
   
-  if(diagnose == TRUE){
-    print(summary(mod_fam))
-    print(plot(DHARMa::simulateResiduals(mod_fam)))
-    print(performance::r2(mod_fam, tolerance = 0.0000000000001))
-  }
-  
   # ggpredict
   predict_fam <- ggpredict(mod_fam, terms = c("weight_den_fam_scale[v_fam]")) %>%
     as.data.frame() %>%
@@ -1344,5 +1326,26 @@ fam_fun_combo_kelp <- function(df, family, diagnose = FALSE) {
            family = {{family}},
            r2 = as.numeric(performance::r2(mod_fam, tolerance = 0.0000000000001)[1])) 
   
+}
+
+# Diagnose kelp pee model
+diagnose_kelp_fun <- function(df, family){
+  # Print family name so I know which results are which
+  print({{family}})
+  
+  df_fam <- df %>% filter(family == {{family}})
+  
+  # model
+  mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + 
+                       kelp_bio_scale*tide_scale +
+                       kelp_bio_scale*weight_den_fam_scale +
+                       weight_den_fam_scale*tide_scale +
+                       shannon_scale + depth_scale, 
+                     family = 'gaussian',
+                     data = df_fam)
+  
+  print(summary(mod_fam))
+  print(plot(DHARMa::simulateResiduals(mod_fam)))
+  print(performance::r2(mod_fam, tolerance = 0.0000000000001))
 }
 
