@@ -1305,24 +1305,24 @@ fam_fun_kelp_combo <- function(df, family) {
   df_fam <- df %>% filter(family == {{family}})
   
   # set levels for ggpredict
-  min_fam <- min(df_fam$weight_den_fam_scale)
-  max_fam <- max(df_fam$weight_den_fam_scale)
+  min_fam <- min(df_fam$weight_fam_sum_g)
+  max_fam <- max(df_fam$weight_fam_sum_g)
   spread_fam <- (max_fam - min_fam)/100
   v_fam <- seq(min_fam, max_fam, spread_fam)
   
   # model
   mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + 
                        kelp_bio_scale*tide_scale +
-                       kelp_bio_scale*weight_den_fam_scale +
-                       weight_den_fam_scale*tide_scale +
+                       kelp_bio_scale*weight_fam_sum_g +
+                       weight_fam_sum_g*tide_scale +
                        shannon_scale + depth_scale, 
                      family = 'gaussian',
                      data = df_fam)
   
   # ggpredict
-  predict_fam <- ggpredict(mod_fam, terms = c("weight_den_fam_scale[v_fam]")) %>%
+  predict_fam <- ggpredict(mod_fam, terms = c("weight_fam_sum_g[v_fam]")) %>%
     as.data.frame() %>%
-    mutate(weight_den_fam_scale = x,
+    mutate(weight_fam_sum_g = x,
            family = {{family}},
            r2 = as.numeric(performance::r2(mod_fam, tolerance = 0.0000000000001)[1])) 
   

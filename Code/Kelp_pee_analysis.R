@@ -772,7 +772,8 @@ fam_kelp_levels <- levels(data_fam_no0s$family)
 
 # lapply fam_fun over each family name to create df of predictions for each fam mod
 fam_kelp_predictions <- lapply(fam_kelp_levels, function(family_name) {
-  fam_fun_kelp_combo(data_fam_no0s, family_name)  # Adjust diagnose as needed
+  # This model has untransformed weight var for ease of plotting
+  fam_fun_kelp_combo(data_fam_no0s, family_name)  
 })
 
 # join up those predictions
@@ -798,6 +799,7 @@ top_fam_kelp_predict <- kelp_fam_predicts %>%
 top_fam_kelp_levels <- levels(top_fam_kelp_predict$family)
 
 # get model outputs for each family model
+# this function uses the scaled weight variable, which is what I want for the 'real' model
 lapply(top_fam_kelp_levels, function(family_name) {
   diagnose_kelp_fun(data_fam_no0s, family_name) 
 })
@@ -814,16 +816,16 @@ kelp_fam <- top_fam_kelp_r2 %>%
 
 fam_plot <- ggplot() + 
   geom_point(data = kelp_fam, 
-             aes(x = weight_den_fam_scale, y = in_out_avg), colour = pal1,
+             aes(x = weight_fam_sum_g, y = in_out_avg), colour = pal1,
              alpha = 0.8) +
   labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-       x = expression(paste("Weight (kg/m2)"))) +
+       x = expression(paste("Weight (g/m2)"))) +
   facet_wrap(~family, scales = 'free_x', ncol = 3) +
   geom_line(data = top_fam_kelp_predict,
-            aes(x = weight_den_fam_scale, y = predicted), colour = pal1,
+            aes(x = weight_fam_sum_g, y = predicted), colour = pal1,
             linewidth = 1) +
   geom_ribbon(data = top_fam_kelp_predict,
-              aes(x = weight_den_fam_scale, y = predicted, 
+              aes(x = weight_fam_sum_g, y = predicted, 
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
   theme_white() +
