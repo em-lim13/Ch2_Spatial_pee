@@ -1255,48 +1255,9 @@ plot_sp_fun <- function(m_data, family, diagnose = FALSE) {
 }
 
 
-
 # Family function for RLS Blitz ------
-v_fun <- function(df, family){
-  
-  df_fam <- df %>% filter(family == {{family}})
-  
-  # set levels for ggpredict
-  min_fam <- min(df_fam$fam_den_scale)
-  max_fam <- max(df_fam$fam_den_scale)
-  spread_fam <- (max_fam - min_fam)/100
-  v_fam <- seq(min_fam, max_fam, spread_fam)
-}
-
 # Family function to get predictions for RLS Blitz
-fam_fun <- function(df, family, diagnose = FALSE) {
-  
-  df_fam <- df %>% filter(family == {{family}})
-  
-  # model
-  mod_fam <- glmmTMB(nh4_avg ~ fam_den_scale*tide_scale + shannon_scale + depth_avg_scale  + (1|year) + (1|site_code), 
-                     family = Gamma(link = 'log'),
-                     data = df_fam)
-  
-  if(diagnose == TRUE){
-    print(summary(mod_fam))
-    print(plot(DHARMa::simulateResiduals(mod_fam)))
-    print(performance::r2(mod_fam, tolerance = 0.0000000000001))
-  }
-  
-  # ggpredict
-  predict_fam <- ggpredict(mod_fam, terms = c("fam_den_scale[v_fam]")) %>%
-    as.data.frame() %>%
-    mutate(fam_den_scale = x,
-           family = {{family}},
-           r2 = as.numeric(performance::r2(mod_fam, tolerance = 0.0000000000001)[1])) 
-  
-}
-
-# try myself -----
-
-# Family function to get predictions for RLS Blitz
-fam_fun_combo <- function(df, family, diagnose = FALSE) {
+fam_fun_combo <- function(df, family) {
   
   df_fam <- df %>% filter(family == {{family}})
   
@@ -1310,12 +1271,6 @@ fam_fun_combo <- function(df, family, diagnose = FALSE) {
   mod_fam <- glmmTMB(nh4_avg ~ fam_den_scale*tide_scale + shannon_scale + depth_avg_scale  + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = df_fam)
-  
-  if(diagnose == TRUE){
-    print(summary(mod_fam))
-    print(plot(DHARMa::simulateResiduals(mod_fam)))
-    print(performance::r2(mod_fam, tolerance = 0.0000000000001))
-  }
   
   # ggpredict
   predict_fam <- ggpredict(mod_fam, terms = c("fam_den_scale[v_fam]")) %>%
@@ -1326,6 +1281,22 @@ fam_fun_combo <- function(df, family, diagnose = FALSE) {
   
 }
 
+# Diagnose fam models
+diagnose_fun <- function(df, family){
+  # Print family name so I know which results are which
+  print({{family}})
+  
+  df_fam <- df %>% filter(family == {{family}})
+  
+  # model
+  mod_fam <- glmmTMB(nh4_avg ~ fam_den_scale*tide_scale + shannon_scale + depth_avg_scale  + (1|year) + (1|site_code), 
+                     family = Gamma(link = 'log'),
+                     data = df_fam)
+  
+  print(summary(mod_fam))
+  print(plot(DHARMa::simulateResiduals(mod_fam)))
+  print(performance::r2(mod_fam, tolerance = 0.0000000000001))
+}
 
 # kelp v function
 v_fun_kelp <- function(df, family){
@@ -1341,9 +1312,15 @@ v_fun_kelp <- function(df, family){
 
 
 # function for kelp pee mod
-fam_fun_kelp <- function(df, family, diagnose = FALSE) {
+fam_fun_combo_kelp <- function(df, family, diagnose = FALSE) {
   
   df_fam <- df %>% filter(family == {{family}})
+  
+  # predict greenling model?
+  min_fam <- min(df_fam$weight_den_fam_scale)
+  max_fam <- max(df_fam$weight_den_fam_scale)
+  spread_fam <- (max_fam - min_fam)/100
+  v_fam <- seq(min_fam, max_fam, spread_fam)
   
   # model
   mod_fam <- glmmTMB(in_out_avg ~ kelp_sp + 

@@ -611,80 +611,17 @@ order_list_bio <- rls_sm %>%
 
 # Family stats ----
 
+# I want to run one model for each family
 # list family names
 fam_levels <- levels(fam_df_no0$family)
 
-# try to lapply fam_fun over each family name
-fam_predictions <- lapply(fam_levels, function(fam_levels) {
-  fam_fun_combo(fam_df_no0, fam_levels)  # Adjust diagnose as needed
+# lapply fam_fun over each family name to create df of predictions for each fam mod
+fam_predictions <- lapply(fam_levels, function(family_name) {
+  fam_fun_combo(fam_df_no0, family_name)  # Adjust diagnose as needed
 })
 
 # join up those predictions
 rls_fam_predicts <- bind_rows(fam_predictions)
-
-# I think I can get rid of the following code now that I can do everything with the above code!!! ----
-# indiv fam models
-fam_predict_Hexagrammidae1 <- fam_fun_combo(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
-
-
-# Greenlings
-fam_predict_Hexagrammidae3 <- fam_fun(fam_df_no0, "Hexagrammidae", diagnose = TRUE) 
-
-# Rockfish
-fam_predict_Sebastidae <- fam_fun_combo(fam_df_no0, "Sebastidae", diagnose = TRUE)
-
-# Gobies
-v_fam <- v_fun(fam_df_no0, "Gobiidae")
-fam_predict_Gobiidae <- fam_fun_combo(fam_df_no0, "Gobiidae", diagnose = TRUE)
-# some quantile deviations in dharma
-
-
-# Muricidae, Asterinidae, Acmaeidae have the highest R2 values
-# Asteriidae, Muricidae, Acmaeidae, Echinasteridae are the four inverts with the biggest slope estimates
-
-v_fam <- v_fun(fam_df_no0, "Muricidae")
-fam_predict_Muricidae <- fam_fun_combo(fam_df_no0, "Muricidae", diagnose = TRUE)
-# no errors
-
-v_fam <- v_fun(fam_df_no0, "Asterinidae")
-fam_predict_Asterinidae <- fam_fun(fam_df_no0, "Asterinidae", diagnose = TRUE)
-
-v_fam <- v_fun(fam_df_no0, "Acmaeidae")
-fam_predict_Acmaeidae <- fam_fun(fam_df_no0, "Acmaeidae", diagnose = TRUE)
-# no errors
-
-
-# Extra fish
-v_fam <- v_fun(fam_df_no0, "Cottidae")
-fam_predict_Cottidae <- fam_fun(fam_df_no0, "Cottidae")
-
-# Extra inverts
-v_fam <- v_fun(fam_df_no0, "Haliotidae")
-fam_predict_Haliotidae <- fam_fun(fam_df_no0, "Haliotidae")
-
-# Echinasteridae has the next highest slope but the p-value isn't great.. 
-v_fam <- v_fun(fam_df_no0, "Echinasteridae")
-fam_predict_Echinasteridae <- fam_fun(fam_df_no0, "Echinasteridae")
-
-# urchins
-v_fam <- v_fun(fam_df_no0, "Strongylocentrotidae")
-fam_predict_Strongylocentrotidae <- fam_fun(fam_df_no0, "Strongylocentrotidae")
-
-v_fam <- v_fun(fam_df_no0, "Stichopodidae")
-fam_predict_Stichopodidae <- fam_fun(fam_df_no0, "Stichopodidae")
-
-v_fam <- v_fun(fam_df_no0, "Turbinidae")
-fam_predict_Turbinidae <- fam_fun(fam_df_no0, "Turbinidae")
-
-v_fam <- v_fun(fam_df_no0, "Asteropseidae")
-fam_predict_Asteropseidae <- fam_fun(fam_df_no0, "Asteropseidae")
-
-v_fam <- v_fun(fam_df_no0, "Pectinidae")
-fam_predict_Pectinidae <- fam_fun(fam_df_no0, "Pectinidae")
-
-v_fam <- v_fun(fam_df_no0, "Asteriidae")
-fam_predict_Asteriidae <- fam_fun_combo(fam_df_no0, "Asteriidae")
-# no errors
 
 # Put all of the predict dfs together and decide which are best
 predicts <- ls(pattern = "fam_predict_*")
@@ -710,6 +647,15 @@ rls_top_fam_predict <- rls_fam_predicts %>%
   # optional reorder of families
   mutate(family = factor(family, levels = 
                            c("Hexagrammidae", "Sebastidae", "Gobiidae", "Acmaeidae", "Muricidae", "Asterinidae")))
+
+# Outputs for these families
+# list top 6 family names
+top_fam_levels <- levels(rls_top_fam_predict$family)
+
+# get model outputs for each family model
+lapply(top_fam_levels, function(family_name) {
+  diagnose_fun(fam_df_no0, family_name)  # Adjust diagnose as needed
+})
 
 
 # Family community analysis -----
