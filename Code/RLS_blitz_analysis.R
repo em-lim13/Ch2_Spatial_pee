@@ -617,7 +617,7 @@ fam_levels <- levels(fam_df_no0$family)
 
 # lapply fam_fun over each family name to create df of predictions for each fam mod
 fam_predictions <- lapply(fam_levels, function(family_name) {
-  fam_fun_combo(fam_df_no0, family_name)  # Adjust diagnose as needed
+  fam_fun_combo(fam_df_no0, family_name)  
 })
 
 # join up those predictions
@@ -636,8 +636,9 @@ top_fam_r2 <- rls_fam_predicts %>%
 rls_top_fam_predict <- rls_fam_predicts %>%
   filter(family %in% top_fam_r2$family) %>%
   # optional reorder of families
-  mutate(family = factor(family, levels = 
-                           c("Hexagrammidae", "Sebastidae", "Gobiidae", "Acmaeidae", "Muricidae", "Asterinidae")))
+  arrange(desc(r2)) %>%
+  mutate(family = factor(family, unique(family)))
+
 
 # Outputs for these families
 # list top 6 family names
@@ -645,8 +646,14 @@ top_fam_levels <- levels(rls_top_fam_predict$family)
 
 # get model outputs for each family model
 lapply(top_fam_levels, function(family_name) {
-  diagnose_fun(fam_df_no0, family_name)  # Adjust diagnose as needed
+  diagnose_fun(fam_df_no0, family_name) 
 })
+
+# now filter full family df to just include those top 6 families
+rls_top_fam <- top_fam_r2 %>%
+  left_join(fam_df_no0, by = "family") %>%
+  arrange(desc(r2)) %>%
+  mutate(family = factor(family, unique(family)))
 
 
 # Family community analysis -----
@@ -790,6 +797,7 @@ v <- c(as.numeric(tide_means[1,2]), as.numeric(tide_means[2,2]), as.numeric(tide
 
 # ggpredict
 predict <- ggpredict(mod_pred_plot, terms = c("abundance", "tide_scale [v]")) %>% 
+  as.data.frame() %>%
   mutate(abundance = x,
          tide_cat = factor(as.factor(case_when(group == as.numeric(tide_means[1,2]) ~ "Ebb",
                                                group == as.numeric(tide_means[2,2]) ~ "Slack",
@@ -809,27 +817,19 @@ rls_pred_plot <-
 
 
 # Fig 3c: Family plots -----
-# filter data to only include those families too
-rls_top_fam <- fam_df_no0 %>%
-  filter(family %in% top_fam_r2$family)%>%
-  # optional reorder of families
-  mutate(family = factor(family, levels = 
-                           c("Hexagrammidae", "Sebastidae", "Gobiidae", "Acmaeidae", "Muricidae", "Asterinidae")))
 
-
-# plot all 
 fam_plot <- ggplot() + 
   geom_point(data = rls_top_fam, 
-             aes(x = fam_den_scale, y = nh4_avg), colour = pal1,
+             aes(x = fam_den, y = nh4_avg), colour = pal1,
              alpha = 0.8) +
   labs(y = expression(paste("Ammonium ", (mu*M))), 
-       x = expression(paste("Abundance"))) +
+       x = expression(paste("Animal abundance/m"^2))) +
   facet_wrap(~family, scales = 'free_x', ncol = 3) +
   geom_line(data = rls_top_fam_predict,
-            aes(x = fam_den_scale, y = predicted), colour = pal1,
+            aes(x = fam_den, y = predicted), colour = pal1,
             linewidth = 1) +
   geom_ribbon(data = rls_top_fam_predict,
-              aes(x = fam_den_scale, y = predicted, 
+              aes(x = fam_den, y = predicted, 
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
   theme_white() +
@@ -862,7 +862,7 @@ squish <- theme(axis.title.y = element_text(margin = margin(r = -120, unit = "pt
   theme(plot.tag.position = c(0, 1),
         plot.tag = element_text(hjust = -1, vjust = 0))
 
-# ggsave("Output/Pub_figs/Fig3panel.png", device = "png", height = 18, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig3panele.png", device = "png", height = 18, width = 16, dpi = 400)
 
 
 # Figs for presentations -----
