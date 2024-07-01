@@ -623,15 +623,6 @@ fam_predictions <- lapply(fam_levels, function(family_name) {
 # join up those predictions
 rls_fam_predicts <- bind_rows(fam_predictions)
 
-# Put all of the predict dfs together and decide which are best
-predicts <- ls(pattern = "fam_predict_*")
-all_dfs <- ls()[sapply(ls(), function(x) any(class(get(x)) == 'data.frame'))]
-predict_list <-  mget(Reduce(intersect, list(predicts, all_dfs)))  
-
-# rbind the dfs together
-rls_fam_predicts <- do.call(rbind, predict_list) %>%
-  as.data.frame() %>%
-  remove_rownames() 
 
 # what are the top 6 inverts and fish?
 top_fam_r2 <- rls_fam_predicts %>%
