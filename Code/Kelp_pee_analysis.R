@@ -784,6 +784,7 @@ top_fam_kelp_r2 <- kelp_fam_predicts %>%
   unique() %>%
   arrange(desc(r2)) %>%
   head(6) 
+# Echinasteridae, Gobiidae, Cottidae, Strongylocentrotidae, Embiotocidae, Asteriidae top 6. Hexagrammidae, Sebastidae top 8
 
 # make df of just the tops
 top_fam_kelp_predict <- kelp_fam_predicts %>%
@@ -802,95 +803,8 @@ lapply(top_fam_kelp_levels, function(family_name) {
 })
 
 
-# fish family models -----
-
-# One model for each species
-v_fam <- v_fun_kelp(data_fam_no0s, "Gobiidae")
-kelp_fam_predict_Gobiidae <- fam_fun_kelp(data_fam_no0s, "Gobiidae", diagnose = TRUE)
-# no errors, no gobies found in nereo forests
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Cottidae")
-kelp_fam_predict_Cottidae <- fam_fun_kelp(data_fam_no0s, "Cottidae", diagnose = TRUE)
-# red hump in resid plot but not horrific
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Embiotocidae")
-kelp_fam_predict_Embiotocidae <- fam_fun_kelp(data_fam_no0s, "Embiotocidae", diagnose = TRUE)
-# had to increase err, resids looks hecked
-
-# extra fish
-v_fam <- v_fun_kelp(data_fam_no0s, "Hexagrammidae")
-kelp_fam_predict_Hexagrammidae <- fam_fun_kelp(data_fam_no0s, "Hexagrammidae")
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Sebastidae")
-kelp_fam_predict_Sebastidae <- fam_fun_kelp(data_fam_no0s, "Sebastidae")
-
-
-# Next do inverts! -----
-# Echinasteridae, Asteropseidae, Muricidae, Asteriidae
-v_fam <- v_fun_kelp(data_fam_no0s, "Echinasteridae")
-kelp_fam_predict_Echinasteridae <- fam_fun_kelp(data_fam_no0s, "Echinasteridae", diagnose = TRUE)
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Strongylocentrotidae")
-kelp_fam_predict_Strongylocentrotidae <- fam_fun_kelp(data_fam_no0s, "Strongylocentrotidae", diagnose = TRUE)
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Asteriidae")
-kelp_fam_predict_Asteriidae <- fam_fun_kelp(data_fam_no0s, "Asteriidae", diagnose = TRUE)
-# had to increase err, resids looks hecked
-
-# extra inverts
-v_fam <- v_fun_kelp(data_fam_no0s, "Asteropseidae")
-kelp_fam_predict_Asteropseidae <- fam_fun_kelp(data_fam_no0s, "Asteropseidae", diagnose = TRUE)
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Muricidae")
-kelp_fam_predict_Muricidae <- fam_fun_kelp(data_fam_no0s, "Muricidae", diagnose = TRUE)
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Turbinidae")
-kelp_fam_predict_Turbinidae <- fam_fun_kelp(data_fam_no0s, "Turbinidae")
-# red dharma line
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Asterinidae")
-kelp_fam_predict_Asterinidae <- fam_fun_kelp(data_fam_no0s, "Asterinidae")
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Stichopodidae")
-kelp_fam_predict_Stichopodidae <- fam_fun_kelp(data_fam_no0s, "Stichopodidae")
-# error i think
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Haliotidae")
-kelp_fam_predict_Haliotidae <- fam_fun_kelp(data_fam_no0s, "Haliotidae")
-
-v_fam <- v_fun_kelp(data_fam_no0s, "Acmaeidae")
-kelp_fam_predict_Acmaeidae <- fam_fun_kelp(data_fam_no0s, "Acmaeidae")
-# red lines, increased err for quantiles
-
-
-# Put all of the predict dfs together and decide which are best
-kelp_predicts <- ls(pattern = "kelp_fam_predict_*")
-all_kelp_dfs <- ls()[sapply(ls(), function(x) any(class(get(x)) == 'data.frame'))]
-kelp_predict_list <-  mget(Reduce(intersect, list(kelp_predicts, all_kelp_dfs)))  
-
-# rbind the dfs together
-kelp_fam_predicts <- do.call(rbind, kelp_predict_list) %>%
-  as.data.frame() %>%
-  remove_rownames() 
-
-# what are the top 6 inverts and fish?
-top_kelp_fam_r2 <- kelp_fam_predicts %>%
-  select(c(family, r2)) %>%
-  unique() %>%
-  arrange(desc(r2)) %>%
-  head(6) 
-
-# Echinasteridae, Gobiidae, Cottidae, Strongylocentrotidae, Embiotocidae, Asteriidae top 6. Hexagrammidae, Sebastidae top 8
-
-# make df of just the tops
-kelp_top_fam_predict <- kelp_fam_predicts %>%
-  filter(family %in% top_kelp_fam_r2$family) %>%
-  # optional reorder of families
-  arrange(desc(r2)) %>%
-  mutate(family = factor(family, unique(family)))
-
-# now filter data
-kelp_fam <- top_kelp_fam_r2 %>%
+# now filter full family df to just include those top 6 families
+kelp_fam <- top_fam_kelp_r2 %>%
   left_join(data_fam_no0s, by = "family") %>%
   arrange(desc(r2)) %>%
   mutate(family = factor(family, unique(family)))
@@ -905,10 +819,10 @@ fam_plot <- ggplot() +
   labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
        x = expression(paste("Weight (kg/m2)"))) +
   facet_wrap(~family, scales = 'free_x', ncol = 3) +
-  geom_line(data = kelp_top_fam_predict,
+  geom_line(data = top_fam_kelp_predict,
             aes(x = weight_den_fam_scale, y = predicted), colour = pal1,
             linewidth = 1) +
-  geom_ribbon(data = kelp_top_fam_predict,
+  geom_ribbon(data = top_fam_kelp_predict,
               aes(x = weight_den_fam_scale, y = predicted, 
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
