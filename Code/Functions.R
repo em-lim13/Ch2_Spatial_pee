@@ -1115,7 +1115,7 @@ plot_pred <- function(raw_data, predict_data,
            x = expression(paste("Animal abundance/m"^2))) +
       scale_size(guide = 'none') +
       scale_fill_manual(values = pal, drop = FALSE) +
-      scale_colour_manual(values = (pal3), drop = FALSE) +
+      scale_colour_manual(values = (pal), drop = FALSE) +
       theme(legend.position = c(0.85, 0.89))
   }
   

@@ -739,15 +739,14 @@ orditorp(myNMDS, display = "sites", cex = 0.75, air = 0.01)
 
 
 # Graphing ----
-pal6 <- viridis::viridis(5)
-pal <- viridis::viridis(10)
-pal3 <- c(pal[10], pal[8], pal[5])
-pal1 <- pal[7]
+# sort out some palettes!
+pal20 <- viridis::viridis(20)
+pie(rep(1, 20), col = pal20)
 
-# ALRIGHT I'M GOING WITH MOD_BRAIN
-# Just using AIC blindly isn't good! I had reasons for all these predictors and I'm gonna keep them!!!
+pal1 <- pal20[14] # fam plots
+pal3 <- c(pal20[20], pal20[15], pal20[11]) # pred plot
+pal5 <- c(pal20[1], pal20[3], pal20[5], pal20[7], pal20[9]) # coeff plot
 
-pie(rep(1, 10), col = pal)
 
 # Fig 3a: Coefficient plot ----
 
@@ -767,14 +766,15 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
   tail(-1) %>%
   mutate(
     variable = factor(as.factor(variable), 
-                      levels = c("abundance_scale", "tide_scale", "abundance_scale:tide_scale", "shannon_scale", "depth_avg_scale"),
-                      labels = c("Abundance", "Tide", "Abundance:tide", "Biodiversity", "Depth")))
+                      labels = c("Abundance", "Tide", "Biodiversity", "Depth", "Abundance:tide"))) %>%
+  arrange(desc(estimate)) %>%
+  mutate(variable = factor(variable, unique(variable)))
 
 
 
 # Coefficient plot 
 rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs, 
-                             pal = pal6) +
+                             pal = pal5) +
   place_label("(a)")
 
 
@@ -809,7 +809,7 @@ rls_pred_plot <-
             plot_type = "rls",
             x_var = abundance, y_var = nh4_avg, 
             lty_var = tide_cat,
-            pal = pal3,
+            pal = pal3b,
             theme = "white") +
   place_label("(b)")
 
@@ -860,7 +860,7 @@ squish <- theme(axis.title.y = element_text(margin = margin(r = -120, unit = "pt
   theme(plot.tag.position = c(0, 1),
         plot.tag = element_text(hjust = -1, vjust = 0))
 
-# ggsave("Output/Pub_figs/Fig3panele.png", device = "png", height = 18, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 18, width = 16, dpi = 400)
 
 
 # Figs for presentations -----
