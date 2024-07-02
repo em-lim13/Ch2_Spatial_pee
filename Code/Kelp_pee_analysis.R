@@ -418,13 +418,23 @@ car::vif(lm(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + weight_sum_sc
 # Graphing ------
 
 # Palettes
-pal12 <- viridis::viridis(11)
-pal8 <- viridis::viridis(8)
-pal_k <- viridis::viridis(10)
-pal2 <- c(pal_k[8], pal_k[5])
-pal <- viridis::viridis(10)
-pal3 <- c(pal[10], pal[8], pal[5])
-pal1 <- pal_k[4]
+#pal12 <- viridis::viridis(11)
+#pal8 <- viridis::viridis(8)
+#pal_k <- viridis::viridis(10)
+#pal2 <- c(pal_k[8], pal_k[5])
+#pal <- viridis::viridis(10)
+#pal3 <- c(pal[10], pal[8], pal[5])
+#pal1 <- pal_k[4]
+
+# remake with 30 colour palette
+pal30 <- viridis::viridis(30)
+pie(rep(1, 30), col = pal30)
+
+pal8c <- viridis::viridis(30)[1:8] # coeff plot
+pal_spc <- c(pal30[11], pal30[10], pal30[9]) # kelp sp colours
+pal3c <- c(pal30[13], pal30[17], pal30[22]) # kelp biomass colours 
+pal2c <- c(pal30[25], pal30[29]) # tide colours
+
 
 # Fig 4a: model coefficients ----
 # Save model coefficients 
@@ -446,7 +456,7 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
 
 # plot just cont vars
 kelp_coeff_plot <- coeff_plot(coeff_df = (df %>% tail(-3) %>% droplevels()),
-                              pal = pal8) +
+                              pal = pal8c) +
   place_label("(a)")
 
 
@@ -482,7 +492,7 @@ kelp_sp_plot <-
               y_var = in_minus_out,
               pch_var = kelp_sp,
               labels = sp_labs,
-              pal = c(pal12[3], pal12[2],pal12[1])) +
+              pal = pal_spc) +
   labs(y = expression(paste(Delta, " Ammonium ", (mu*M))),
        x = "Kelp species") +
   geom_hline(yintercept = 0, lty = "dashed") +
@@ -523,7 +533,7 @@ kelp_tide_int_plot <-
     plot_type = "kelp",
     x_var = kelp_bio_scale, y_var = in_minus_out, 
     lty_var = tide_cat,
-    pal = pal2) +
+    pal = pal2c) +
   theme(legend.position = "none") +
   #  theme(legend.position = c(0.8, 0.17)) +
   guides(size = "none") +
@@ -576,7 +586,7 @@ abund_kelp_int_plot <-
             x_var = weight_sum_scale, y_var = in_minus_out, 
             lty_var = kelp_cat,
             x_axis_lab = expression(paste("Animal biomass (kg/m"^2,")")),
-            pal = pal3) +
+            pal = pal3c) +
   guides(size = "none") +
   ylim(c(-0.79, 1.05)) +
   theme(#legend.position = c(0.58, 0.95), legend.direction="horizontal",
@@ -624,7 +634,7 @@ abund_tide_int_plot <-
             x_var = weight_sum_scale, y_var = in_minus_out, 
             lty_var = tide_cat,
             x_axis_lab = expression(paste("Animal biomass (kg/m"^2,")")),
-            pal = pal2) +
+            pal = pal2c) +
   theme(axis.text.y = element_blank(),
         axis.title.y = element_blank())+
   place_label("(e)") +
@@ -640,7 +650,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
                     abund_tide_int_plot ) & theme(legend.justification = "left")
 
 
-# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 16, width = 14, dpi = 400)
+# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 16, width = 16, dpi = 400)
 
 # comparing the coeff plots, making depth a random effect doesn't really change anything REAL. It just makes the no kelp coeff LOOK like its not signif diff from 0, but when you estimate the delta at the mean no kelp biomass (0) it's basically the same estimate as the model with depth
 
