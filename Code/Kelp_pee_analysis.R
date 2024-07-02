@@ -803,7 +803,7 @@ top_fam_kelp_levels <- levels(top_fam_kelp_predict$family)
 lapply(top_fam_kelp_levels, function(family_name) {
   diagnose_kelp_fun(data_fam_no0s, family_name) 
 })
-
+# Asteriidae and Embiotocidae have ugly DHARMA plots
 
 # now filter full family df to just include those top 6 families
 kelp_fam <- top_fam_kelp_r2 %>%
