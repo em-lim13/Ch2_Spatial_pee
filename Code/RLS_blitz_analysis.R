@@ -743,8 +743,13 @@ orditorp(myNMDS, display = "sites", cex = 0.75, air = 0.01)
 pal20 <- viridis::viridis(20)
 pie(rep(1, 20), col = pal20)
 
+pal30 <- viridis::viridis(30)
+
+
 pal1 <- pal20[14] # fam plots
-pal3 <- c(pal20[20], pal20[15], pal20[11]) # pred plot
+#pal3 <- c(pal20[20], pal20[15], pal20[11]) # pred plot
+pal3 <- c(pal30[16], pal30[25], pal30[29]) # tide colours
+
 pal5 <- c(pal20[1], pal20[3], pal20[5], pal20[7], pal20[9]) # coeff plot
 
 
@@ -809,7 +814,7 @@ rls_pred_plot <-
             plot_type = "rls",
             x_var = abundance, y_var = nh4_avg, 
             lty_var = tide_cat,
-            pal = pal3b,
+            pal = pal3,
             theme = "white") +
   place_label("(b)")
 
