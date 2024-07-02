@@ -30,8 +30,6 @@ theme_set(theme_bw())
 
 # RLS data: Load data + manipulate  ------
 # RLS data from the website!
-
-# Just the pelagic and cryptic fish
 fish_invert <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
                         show_col_types = FALSE) %>%
   rbind(read_csv("Data/RLS/RLS_data/cryptobenthic_fish_abundance_sizes_added.csv",
