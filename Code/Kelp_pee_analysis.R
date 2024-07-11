@@ -420,11 +420,9 @@ car::vif(lm(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + weight_sum_sc
 # Palettes
 #pal12 <- viridis::viridis(11)
 #pal8 <- viridis::viridis(8)
-#pal_k <- viridis::viridis(10)
 #pal2 <- c(pal_k[8], pal_k[5])
 #pal <- viridis::viridis(10)
 #pal3 <- c(pal[10], pal[8], pal[5])
-#pal1 <- pal_k[4]
 
 # remake with 30 colour palette
 pal30 <- viridis::viridis(30)
@@ -823,6 +821,8 @@ kelp_fam <- top_fam_kelp_r2 %>%
 
 
 # Plot families ----
+pal_k <- viridis::viridis(10)
+pal1 <- pal_k[4]
 
 fam_plot <- ggplot() + 
   geom_point(data = kelp_fam, 
@@ -850,9 +850,9 @@ fam_plot
 # Community stuff -----
 # make wide for families
 fam_kelp_wide <- data_fam_no0s %>% 
-  dplyr::select(site_code, family, weight_fam_sum) %>% 
+  dplyr::select(site_code, family, weight_fam_sum_g) %>% 
   group_by(site_code, family) %>%
-  summarise(total = sum(weight_fam_sum)) %>%
+  summarise(total = sum(weight_fam_sum_g)) %>%
   ungroup() %>%
   spread(key = family, value = total) %>%
   replace(is.na(.), 0) %>%

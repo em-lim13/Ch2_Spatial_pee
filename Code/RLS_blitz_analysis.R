@@ -6,7 +6,6 @@
 library(tidyverse)
 library(visreg)
 library(ggplot2)
-library(PNWColors)
 library(ggeffects)
 library(lubridate)
 library(vegan) # for diversity indexes

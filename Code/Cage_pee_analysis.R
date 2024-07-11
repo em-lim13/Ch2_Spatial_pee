@@ -13,7 +13,7 @@ library(DHARMa)
 library(png)
 library(ggtext)
 
-renv::restore()
+# renv::restore()
 # Load functions
 source("Code/Functions.R")
 
@@ -159,7 +159,6 @@ cuke_plot + crab_plot &
 
 # Map -----
 library(sf)
-library(osmdata)
 library(ggimage) # for the pictures!
 
 # Load not great shapefile ----
