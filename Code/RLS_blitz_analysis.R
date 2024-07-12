@@ -845,9 +845,8 @@ fam_plot <- ggplot() +
 
 fam_plot
 
-#ggsave("Output/Pub_figs/Fig3d.png", device = "png", height = 18, width = 12, dpi = 400)
+# ggsave("Output/Pub_figs/SuppFig1.png", device = "png", height = 9, width = 16, dpi = 400)
 
-#ggsave("Output/Pub_figs/Fig3d.png", device = "png", height = 9, width = 16, dpi = 400)
 
 # Fig 3 -----
 rls_coeff_plot + rls_pred_plot  &
@@ -864,7 +863,7 @@ squish <- theme(axis.title.y = element_text(margin = margin(r = -120, unit = "pt
   theme(plot.tag.position = c(0, 1),
         plot.tag = element_text(hjust = -1, vjust = 0))
 
-# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 18, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig3_fam.png", device = "png", height = 18, width = 16, dpi = 400)
 
 
 # Figs for presentations -----
