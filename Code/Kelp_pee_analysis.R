@@ -83,7 +83,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
 
 
 # RLS data ----
-kelp_rls <- read_csv("Data/Team_kelp/RLS_KCCA_2022.csv")%>%
+kelp_rls <- read_csv("Data/Team_kelp/RLS_KCCA_2022.csv") %>%
   # processing required to get this df into the RLS data format
   filter(Method != 0) %>% # get rid of all method 0's
   slice(2:n()) %>% # cuts the first blank row
@@ -110,6 +110,7 @@ kelp_rls <- read_csv("Data/Team_kelp/RLS_KCCA_2022.csv")%>%
   drop_na(total) %>%
   filter(total > 0) %>%
   select(-Total) %>%
+  # group blocks 1 and 2
   group_by(site_code, site_name, Date, date_time_survey, Depth, method, species_name, common_name, size_class) %>%
   summarise(survey_total = sum(total)) %>% # sum blocks 1 and 2
   ungroup() %>%

@@ -150,9 +150,8 @@ cuke_plot + crab_plot &
 # ggsave("Output/Pres_figs/Fig5.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
 
-# Fig 4 white background for pub ----
+# Fig 5 white background for pub ----
 # ggsave("Output/Pub_figs/Fig5.png", device = "png", height = 9, width = 16, dpi = 400)
-
 
 
 
