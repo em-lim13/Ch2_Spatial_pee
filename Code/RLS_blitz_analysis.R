@@ -652,6 +652,17 @@ rls_top_fam <- top_fam_r2 %>%
   arrange(desc(r2)) %>%
   mutate(family = factor(family, unique(family)))
 
+# What % of the total abundance do these top 6 families make up?
+all_fam <- fam_df_no0 %>%
+  summarise(type = "all",
+            total_den = sum(fam_den),
+            total_weight = sum(weight_fam_sum_g)) %>%
+  rbind(rls_top_fam %>%
+          summarise(type = "top",
+                    total_den = sum(fam_den),
+                    total_weight = sum(weight_fam_sum_g)))
+
+
 
 # Family community analysis -----
 # multivariate space for the big fam model??? are communities dominated by certain fams when there's a lot of nh4 in the water?

@@ -820,6 +820,15 @@ kelp_fam <- top_fam_kelp_r2 %>%
   arrange(desc(r2)) %>%
   mutate(family = factor(family, unique(family)))
 
+# what % do these top 6 families make up
+all_fam <- data_fam_no0s %>%
+  summarise(type = "all",
+            total_den = sum(fam_den),
+            total_weight = sum(weight_fam_sum_g)) %>%
+  rbind(kelp_fam %>%
+          summarise(type = "top",
+                    total_den = sum(fam_den),
+                    total_weight = sum(weight_fam_sum_g)))
 
 # Plot families ----
 pal_k <- viridis::viridis(10)
