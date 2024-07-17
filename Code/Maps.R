@@ -7,23 +7,21 @@ library(tidyverse)
 library(ggplot2)
 library(ggspatial)
 library(sf)
+library(viridis)
 
 # Load functions ----
 source("Code/Functions.R") # Length to weight function here!
 
 # Load data ----
 # these are csv files created by the rls and kelp analysis files
-
-data_map <- read_csv("Output/Output_data/kelp_final.csv")
+kelp_map_data <- read_csv("Output/Output_data/kelp_map_data.csv")
 
 rls_final <- read_csv("Output/Output_data/rls_final.csv")
 
-kelp_rls <- read_csv("Output/Output_data/kelp_rls.csv")
-
-# load all RLS data
+# load all rls pee data
 rls_nh4_all <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
-                 read_csv("Output/Output_data/RLS_nh4_2022.csv"),
-                 read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
+                     read_csv("Output/Output_data/RLS_nh4_2022.csv"),
+                     read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
   rename(site_code = site_ID) %>%
   group_by(site_code) %>%
   mutate(nh4_overall_avg_all = mean(nh4_conc)) %>%
@@ -36,11 +34,6 @@ hakai_map <- sf::st_read("Data/Hakaii_coast/COAST_TEST2.shp") %>%
   st_sf() %>%
   st_set_crs(4326)
 
-# Load not great shapefile that renders quicker
-potato_map <- sf::st_read("Data/Potato_shapefiles/eez.shp") %>%
-  st_sf() %>%
-  st_set_crs(4326)
-
 # Make map without pies, just scaling size of point to %
 sf_use_s2(FALSE)
 
@@ -50,60 +43,78 @@ blue <- paste("#b9d1df", sep="")
 
 # RLS coords ------
 rls_coords <- rls_final %>%
-  select(site_code, survey_id, year, nh4_avg, abundance, tide_cat) %>%
+  group_by(site_code) %>%
+  mutate(nh4_avg = mean(nh4_avg)) %>%
+  ungroup() %>%
+  select(site_code, nh4_avg) %>%
+  unique() %>%
   left_join(
     # use real coordinates not the RLS rounded ones
-    read_csv("Data/RLS/RLS_data/true_coords.csv") 
-  ) %>%
-  st_as_sf(coords = c("longitude", "latitude")) %>%
-  st_set_crs(4326) %>%
-  group_by(site_code) %>%
-  mutate(nh4_overall_avg = mean(nh4_avg),
-         nh4_min = min(nh4_avg),
-         nh4_max = max(nh4_avg)) %>%
-  ungroup() %>%
+    read_csv("Data/RLS/RLS_data/true_coords.csv"), by = "site_code") %>%
   mutate(Habitat = "Reef") %>%
-  left_join(rls_nh4_all)
-
+  left_join(rls_nh4_all, by = "site_code")
 
 # Kelp data coords -----
-kelp_coords <- data_map %>%
-  select(site_code, nh4_in_avg, nh4_out_avg, nh4_avg, kelp_sp, tide_cat) %>%
-  left_join(
-    kelp_rls %>%
-      mutate(Habitat = "Kelp")
-  ) %>%
-  st_as_sf(coords = c("longitude", "latitude")) %>%
-  st_set_crs(4326) %>%
-  group_by(site_code)
-
+kelp_coords <- kelp_map_data %>%
+  transmute(site_code = site_code,
+            site_name = site_name,
+            nh4_avg = nh4_avg,
+            nh4_overall_avg_all = nh4_avg,
+            longitude = longitude,
+            latitude = latitude,
+            Habitat = "Kelp")
 
 # Both sets of coords ----
-all_coords <- rls_coords %>%
-  transmute(site_code = site_code,
-            nh4_avg = nh4_overall_avg_all,
-            geometry = geometry,
-            Habitat = Habitat) %>%
-  unique() %>%
-  rbind(
-    (kelp_coords %>% transmute(nh4_avg = nh4_out_avg,
-                               geometry = geometry,
-                               Habitat = Habitat)) ) %>%
+all_coords <- rbind(rls_coords, kelp_coords) %>%
+  # stupidly manually jitter points that are on top of each other
+  mutate(latitude = case_when(site_code == "KCCA12" ~ 48.855840, 
+                              site_code == "KCCA22" ~ 48.826736,
+                              site_code == "KCCA19" ~ 48.859774,
+                              site_code == "BMSC11" ~ 48.857512,
+                              site_code == "BMSC12" ~ 48.858478,
+                              TRUE ~ as.numeric(latitude)),
+         longitude = case_when(site_code == "KCCA12" ~ -125.166141, 
+                               site_code == "KCCA22" ~ -125.197578,
+                               site_code == "KCCA19" ~ -125.159304,
+                               site_code == "BMSC11" ~ -125.157674,
+                               site_code == "KCCA1" ~ -125.159031,
+                               site_code == "BMSC8" ~ -125.152681,
+                               site_code == "BMSC12" ~ -125.161694,
+                               TRUE ~ as.numeric(longitude))) %>%
+  st_as_sf(coords = c("longitude", "latitude")) %>%
+  st_set_crs(4326) %>%
   # shrink the two sites over 1 uM to 2 uM so the scale is nicer
   mutate(Habitat = factor(as.factor(Habitat), levels = c("Reef", "Kelp")),
          nh4_avg = ifelse(nh4_avg > 2, 2, nh4_avg),
+         nh4_overall_avg_all = ifelse(nh4_overall_avg_all > 2, 2, nh4_overall_avg_all),
          dummy = 2) 
 
 
 
 # Make maps! ------
 
+# All sites
+map_daddy(lat_min = -125.375,
+          lat_max = -125.025, 
+          long_min = 48.801, 
+          long_max = 48.965, 
+          coord_data = all_coords, 
+          nh4_var = nh4_overall_avg_all, 
+          kelp_var = Habitat,
+          point_size = 6.5, 
+          map_file = hakai_map,
+          invert = FALSE,
+          white_background = TRUE)
+
+# ggsave("Output/Pub_figs/Fig.1.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
 # Barkley Sound map
 map_daddy_np(lat_min = -127,
           lat_max = -123, 
           long_min = 48.5, 
           long_max = 51, 
-          map_file = potato_map,
+          map_file = hakai_map,
           invert = FALSE) +
   # add rectangle for zoomed in part
   geom_rect(aes(xmin = -125.4, xmax = -125.0, ymin = 48.80, ymax = 49),
@@ -181,23 +192,6 @@ map_daddy(lat_min = -125.3,
   guides(pch = "none")
 
 #ggsave("Output/Figures/kelp_nh4_map2.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-
-# All sites
-map_daddy(lat_min = -125.4,
-          lat_max = -125.0, 
-          long_min = 48.80, 
-          long_max = 49, 
-          coord_data = all_coords, 
-          nh4_var = nh4_avg, 
-          kelp_var = Habitat,
-          point_size = 7, 
-          map_file = hakai_map,
-          invert = FALSE,
-          white_background = TRUE)
-
-# ggsave("Output/Pub_figs/Fig.all_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # calcs -----
