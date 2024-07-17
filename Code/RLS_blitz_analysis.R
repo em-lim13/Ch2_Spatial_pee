@@ -1186,7 +1186,7 @@ mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale +
                        family = Gamma(link = 'log'),
                        data = family_df_no0)
 
-d <- ranef(mod_fam_no0)
+#d <- ranef(mod_fam_no0)
 
 # OK
 # No random effect of family because the same nh4 value is replicated for each family, so I can't really have a random effect of family too
