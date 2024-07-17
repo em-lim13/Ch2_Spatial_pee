@@ -28,7 +28,12 @@ source("Code/Functions.R")
 # kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
 pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv") %>%
   as.data.frame() %>%
-  filter(site_code != "KCCA13") # remove second beach south
+  filter(site_code != "KCCA13") %>% # remove second beach south
+  left_join(
+    read_csv("Data/Team_kelp/Output_data/site_names.csv") %>%
+               rename(site_name = SiteName), by = "site_code") %>%
+  select(-site)
+  
 
 # just save the sites we surveyed
 kcca_surveys <- pee %>%
@@ -132,16 +137,6 @@ kelp_rls <- read_csv("Data/Team_kelp/RLS_KCCA_2022.csv") %>%
   as.data.frame() 
 
 
-# save csv for mapping 
-#  kelp_rls_csv <- kelp_rls %>%
-#    transmute(site_code = site_code,
-#              latitude = Latitude,
-#              longitude = Longitude) %>%
-#    unique()
-#  
-#  write_csv(kelp_rls_csv, "Output/Output_data/kelp_rls.csv")
-
-
 # extract just one row per survey to join with the pee data and tide data
 # Only keep the surveys I have pee samples for!
 kcca_survey_info <- kcca_surveys %>%
@@ -221,7 +216,7 @@ data <- pee %>%
          depth_avg = mean(depth_m)) %>%
   ungroup() %>%
   # join kelp data with both transect + site avgs
-  left_join(kelp, by = c("site_code", "sample")) %>%
+  left_join(kelp, by = c("site_code", "site_name", "sample")) %>%
   # join site survey info for the survey ID
   left_join(kcca_survey_info %>%
               select(-c(Date, site_name)), by = "site_code"
@@ -250,13 +245,19 @@ data <- pee %>%
            levels = c("Low", "Mid", "High"))) %>%
   as.data.frame()
 
-# reduced data to export a file for mapping
-data_map <- data %>%
-  select(site, site_code, survey_id, in_out_avg, nh4_in_avg, nh4_out_avg, nh4_avg, depth_avg, avg_exchange_rate, kelp_sp, BiomassM, kelp_bio_scale, forest_bio_scale, weight_sum, weight_sum_scale, all_weighted_scale, abundance_scale, rich_scale, shannon_scale, simpson_scale, tide_scale, depth_scale, tide_cat) %>%
-  unique()
-#  filter(site != "Wizard_I_North" | kelp_sp != "none") # just getting rid of the duplicate row, bc there wasn't kelp on one transect unique misses this one
 
-# write_csv(data_map, "Output/Output_data/kelp_final.csv")
+# reduced data to export a file for mapping
+
+# save csv for mapping 
+kelp_map_data <- data %>%
+  select(site_name, site_code, in_out_avg, nh4_in_avg, nh4_out_avg, nh4_avg) %>%
+  left_join(read_csv("Data/Team_kelp/RLS_KCCA_2022.csv") %>%
+              transmute(site_code = `Site No.`,
+                        latitude = Latitude,
+                        longitude = Longitude) %>%
+              unique(), by = "site_code") %>%
+  unique()
+# write_csv(kelp_map_data, "Output/Output_data/kelp_map_data.csv")
 
 
 
