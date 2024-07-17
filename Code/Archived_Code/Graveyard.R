@@ -162,18 +162,12 @@ filter(species_name != "Bolinopsis infundibulum") %>%
   
   
   # Put all predictors in a model
-  mod_full <- lmer(nh4_avg ~ scale(weight_sum) * scale(shannon) * scale(abundance) * scale(avg_exchange_rate) + (1|site_code), rls_final)
+#  mod_full <- lmer(nh4_avg ~ scale(weight_sum) * scale(shannon) * scale(abundance) * scale(avg_exchange_rate) + (1|site_code), rls_final)
 summary(mod_full)
 
 # Put all predictors in a model + depth
 # Cut the triple + interactions
-mod_fuller <- lmer(nh4_avg ~ scale(weight_sum) + scale(simpson) + scale(abundance) + scale(avg_exchange_rate) + scale(depth_avg) +
-                     scale(weight_sum):scale(simpson) + scale(weight_sum):scale(abundance) + 
-                     scale(weight_sum):scale(avg_exchange_rate) + scale(weight_sum):scale(depth_avg) +
-                     scale(simpson):scale(abundance) + scale(simpson):scale(avg_exchange_rate) + scale(simpson):scale(depth_avg) +
-                     scale(abundance):scale(avg_exchange_rate) + scale(abundance):scale(depth_avg) +
-                     scale(avg_exchange_rate):scale(depth_avg) +
-                     (1|site_code), rls_final)
+#mod_fuller <- lmer(nh4_avg ~ scale(weight_sum) + scale(simpson) + scale(abundance) + scale(avg_exchange_rate) + scale(depth_avg) + scale(weight_sum):scale(simpson) + scale(weight_sum):scale(abundance) + scale(weight_sum):scale(avg_exchange_rate) + scale(weight_sum):scale(depth_avg) + scale(simpson):scale(abundance) + scale(simpson):scale(avg_exchange_rate) + scale(simpson):scale(depth_avg) + scale(abundance):scale(avg_exchange_rate) + scale(abundance):scale(depth_avg) + scale(avg_exchange_rate):scale(depth_avg) + (1|site_code), rls_final)
 summary(mod_fuller)
 
 
@@ -188,7 +182,7 @@ dred <- dredge(mod_fuller)
 # When I add depth and only the 2-way interactions top mod = intercept, 2nd = richness (delta 0.73), 3rd is just depth (delta 5.6)
 
 # look at this "best mod"
-mod_rich <- lmer(nh4_avg ~ species_richness + (1|site_code), rls_final)
+#mod_rich <- lmer(nh4_avg ~ species_richness + (1|site_code), rls_final)
 summary(mod_rich)
 visreg(mod_rich)
 # Negative relationship between species richness and NH4+...... cool cool cool cool cool
@@ -427,12 +421,12 @@ ggplot(p$fit, aes(kelp_bio_scale, visregFit,
 # I don't think this is linear I'm going to have to fit some kind of curve to it.....
 
 # linear model though for fun
-kelp_pee_mod <- lmer(in_minus_out ~ kelp_den + (1|site), data = data)
+#kelp_pee_mod <- lmer(in_minus_out ~ kelp_den + (1|site), data = data)
 summary(kelp_pee_mod)
 visreg(kelp_pee_mod)
 
 # full model for dredging
-model_all <- lmer(in_minus_out ~ den_scale + bio_tran_scale + kelp_bio_scale + area_scale + forest_bio_scale + kelp_sp + (1|site), data = data, na.action = na.fail)
+#model_all <- lmer(in_minus_out ~ den_scale + bio_tran_scale + kelp_bio_scale + area_scale + forest_bio_scale + kelp_sp + (1|site), data = data, na.action = na.fail)
 summary(model_all)
 visreg(model_all)
 
@@ -444,14 +438,13 @@ dredge <- as.data.frame(dredge(model_all)) %>%
 # second best is just mean bio
 # third is mean bio + total forest biomass + total area
 
-bio_mod <- lmer(in_minus_out ~ kelp_bio_scale + (1|site), data = data)
+#bio_mod <- lmer(in_minus_out ~ kelp_bio_scale + (1|site), data = data)
 summary(bio_mod)
 visreg(bio_mod)
 # Forests with more mean biomass/m2 retain more pee!
 
 # redo dredge with the rest of the vars
-model_all <- lmer(in_minus_out ~ den_scale + bio_tran_scale + kelp_bio_scale + area_scale + forest_bio_scale + kelp_sp +
-                    weight_stand + rich_scale + abundance_scale + tide_scale + depth_stand + (1|site), data = data, na.action = na.fail)
+#model_all <- lmer(in_minus_out ~ den_scale + bio_tran_scale + kelp_bio_scale + area_scale + forest_bio_scale + kelp_sp +weight_stand + rich_scale + abundance_scale + tide_scale + depth_stand + (1|site), data = data, na.action = na.fail)
 summary(model_all)
 
 dredge <- as.data.frame(dredge(model_all)) %>%
@@ -465,7 +458,7 @@ ggplot(data, aes(kelp_bio_scale, in_minus_out)) +
 # Let's be intelligent and build the model I think would be best
 # I'd guess the biomass/m2 (density x biomass) = bio_tran_scale would matter bc that's the info about the kelp on the transect the samples were taken on
 # And I'd guess the mean biomass/m2 (den x bio) of the kelp forest (how much kelp is around) will matter
-mod1 <- lmer(in_minus_out ~ bio_tran_scale* kelp_bio_scale  + (1|site), data = data, na.action = na.fail)
+#mod1 <- lmer(in_minus_out ~ bio_tran_scale* kelp_bio_scale  + (1|site), data = data, na.action = na.fail)
 summary(mod1)
 visreg(mod1, "bio_tran_scale", by = "kelp_bio_scale")
 # It looks like at high mean biomass, the relationship levels out
@@ -473,13 +466,13 @@ visreg(mod1, "bio_tran_scale", by = "kelp_bio_scale")
 
 # let's try taking the log of the  in_minus_out and see if that improves fit
 
-mod2 <- lmer(log_pee_diff ~ bio_tran_scale* kelp_bio_scale  + (1|site), data = data, na.action = na.fail)
+#mod2 <- lmer(log_pee_diff ~ bio_tran_scale* kelp_bio_scale  + (1|site), data = data, na.action = na.fail)
 summary(mod1)
 visreg(mod1, "bio_tran_scale", by = "kelp_bio_scale")
 
 
 # go back to the preferred model with just mean biomass
-bio_mod2 <- lmer(log_pee_diff ~ kelp_bio_scale  + (1|site), data = data)
+#bio_mod2 <- lmer(log_pee_diff ~ kelp_bio_scale  + (1|site), data = data)
 summary(bio_mod2)
 visreg(bio_mod2)
 
