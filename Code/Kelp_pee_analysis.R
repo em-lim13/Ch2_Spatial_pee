@@ -446,16 +446,20 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
          lower_CI = `2.5 %`,
          upper_CI = `97.5 %`,
          estimate = Estimate) %>%
-  head(- 1)  %>%
+  head(- 1) %>%
+  tail(-3) %>%
   mutate(variable = factor(as.factor(variable), 
-                           levels = c("kelp_spmacro", "kelp_spnereo", "kelp_spnone", "kelp_bio_scale", "kelp_bio_scale:tide_scale", "tide_scale", "depth_scale","weight_sum_scale", "shannon_scale",  "kelp_bio_scale:weight_sum_scale", "tide_scale:weight_sum_scale"),
-                           labels = c("Macro", "Nereo", "None", "Kelp biomass", "Kelp:tide", "Tide", "Depth",  "Animal biomass", "Biodiversity", "Kelp:animals", "Tide:animals")),
+                           labels = c("Depth", "Kelp biomass", "Kelp:tide", "Kelp:animals", "Biodiversity", "Tide", "Tide:animals", "Animal biomass")),
          se = (upper_CI - estimate)/1.96
-  )
+  )%>%
+  arrange(desc(estimate)) %>%
+  mutate(variable = factor(variable, unique(variable)))
+
+
 
 
 # plot just cont vars
-kelp_coeff_plot <- coeff_plot(coeff_df = (df %>% tail(-3) %>% droplevels()),
+kelp_coeff_plot <- coeff_plot(coeff_df = df,
                               pal = pal8c) +
   place_label("(a)")
 
