@@ -779,13 +779,10 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
          upper_CI = `97.5 %`,
          estimate = Estimate) %>%
   head(- 2)  %>% # remove random effects
-  mutate(estimate = ifelse(variable == "(Intercept)", exp(estimate), estimate),
-         lower_CI = ifelse(variable == "(Intercept)", exp(lower_CI), lower_CI),
-         upper_CI = ifelse(variable == "(Intercept)", exp(upper_CI), upper_CI)) %>%
-  tail(-1) %>%
+  tail(-1) %>% # remove intercept
   mutate(
     variable = factor(as.factor(variable), 
-                      labels = c("Abundance", "Tide", "Biodiversity", "Depth", "Abundance:tide"))) %>%
+                      labels = c("Abundance", "Abundance:tide", "Depth", "Biodiversity", "Tide" ))) %>%
   arrange(desc(estimate)) %>%
   mutate(variable = factor(variable, unique(variable)))
 
@@ -833,6 +830,13 @@ rls_pred_plot <-
   place_label("(b)")
 
 
+# Fig 3 -----
+rls_coeff_plot + rls_pred_plot  &
+  theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(hjust = -1, vjust = 0))
+
+# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+
 # Fig 3c: Family plots -----
 
 fam_plot <- ggplot() + 
@@ -861,14 +865,6 @@ fam_plot <- ggplot() +
 fam_plot
 
 # ggsave("Output/Pub_figs/SuppFig1.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-# Fig 3 -----
-rls_coeff_plot + rls_pred_plot  &
-  theme(plot.tag.position = c(0, 1),
-        plot.tag = element_text(hjust = -1, vjust = 0))
-
-# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Alt Fig 3 tri-panel -----
