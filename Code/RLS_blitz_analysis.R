@@ -182,11 +182,15 @@ for (x in 1:nrow(rls_survey_info)) {
   
   output = tide %>%
     filter(between(date_time, survey_start, survey_end)) %>%
-    mutate(rate = 100 * (tide_m - lag(tide_m))/lag(tide_m),
-           max = rate[which.max(abs(rate))]) %>%
+    mutate(rate = (tide_m - lag(tide_m))*60,
+           percent_change = 100 * (tide_m - lag(tide_m))/lag(tide_m),
+           max_rate = rate[which.max(abs(rate))],
+           max_percent_change = percent_change[which.max(abs(percent_change))]
+    ) %>%
     slice(-1) %>%
-    summarise(avg_exchange_rate = mean(rate),
-              max_exchange_rate = mean(max)
+    # the "rate" here is actually a % change
+    summarise(avg_exchange_rate = mean(percent_change), 
+              max_exchange_rate = mean(percent_change)
     ) %>%
     mutate(survey_id = rls_survey_info$survey_id[x:x])
   
