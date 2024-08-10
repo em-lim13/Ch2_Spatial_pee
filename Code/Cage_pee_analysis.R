@@ -39,6 +39,7 @@ crab_pee <- read_csv("Data/Cage_experiment/crab_cage_pee.csv") %>%
 # Load and label images for plots
 # Load cuke images
 cuke <- readPNG("Images/cuke_no_background.png")
+cuke <- readPNG("Images/cuke_KC.png")
 cuke_two <- readPNG("Images/two_cukes_no_background.png")
 
 # label them
@@ -48,11 +49,32 @@ cuke_labels <- c(Control = "Control",
 
 # crab image
 crab <- readPNG("Images/red_crab_no_background.png")
+crab <- readPNG("Images/Red_rock_crab_KC.png")
 
 # label it
 crab_labels <- c(Control = "Control",
                  Medium = "<img src='Images/red_crab_no_background.png' width='65' />",
                  Large = "<img src='Images/red_crab_no_background.png' width='100' />")
+
+# New images from Kieran 
+
+# Load and label images for plots ----
+# Load cuke images
+cuke <- readPNG("Images/cuke_KC1.png")
+cuke_two <- readPNG("Images/cuke_KC2.png")
+
+# label them
+cuke_labels <- c(Control = "Control",
+                 Medium = "<img src='Images/cuke_KC1.png' width='250' />",
+                 Large = "<img src='Images/cuke_KC2.png' width='250' />")
+
+# crab image
+crab <- readPNG("Images/Red_rock_crab_KC.png")
+
+# label it
+crab_labels <- c(Control = "Control",
+                 Medium = "<img src='Images/Red_rock_crab_KC.png' width='101' />",
+                 Large = "<img src='Images/Red_rock_crab_KC.png' width='156' />")
 
 
 # Cuke stats -----
@@ -101,11 +123,9 @@ summary(mod_cr_gamma)
 #Graphing time folks-------
 set.seed(1991)
 # palettes
-pal_cu <- viridis::viridis(6)
-pal_c <- c(pal_cu[1], pal_cu[3], pal_cu[5])
+pal <- viridis::viridis(10)
+pal_c <- c(pal[5], pal[6], pal[8])
 
-pal_cu2 <- viridis::viridis(11)
-pal_c2 <- c(pal_cu2[11], pal_cu2[10], pal_cu2[7])
 
 # use ggpredict to get estimates for the cuke model
 sum_cukes <- ggpredict(mod_cu, terms = "cukes") %>% 
@@ -119,7 +139,7 @@ sum_crabs <- ggpredict(mod_cr_gamma, terms = "treatment") %>%
                 nh4_avg = predicted) %>% 
   as_tibble()
 
-# Make the plots
+# Figure 5 ----
 # plot cukes
 cuke_plot <- dot_whisker(sum_data = sum_cukes, 
                          all_data = cuke_pee, 
@@ -147,11 +167,11 @@ cuke_plot + crab_plot &
   plot_annotation(theme = theme(plot.background = 
       element_rect(color = "white", fill = "white")))
 
+# Fig 5 white background for pub
+# ggsave("Output/Pub_figs/Fig5.png", device = "png", height = 9, width = 16, dpi = 400)
+
 # ggsave("Output/Pres_figs/Fig5.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
-
-# Fig 5 white background for pub ----
-# ggsave("Output/Pub_figs/Fig5.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 
