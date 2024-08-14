@@ -1,5 +1,4 @@
 phylum,class,order,family,species_name
-Chordata,Actinopterygii,Perciformes,Gobiidae,Rhinogobiops nicholsii
 Chordata,Actinopterygii,Perciformes,Hexagrammidae,Hexagrammos decagrammus
 Chordata,Actinopterygii,Perciformes,Sebastidae,Sebastes caurinus
 Chordata,Actinopterygii,Perciformes,Sebastidae,Sebastes spp.
@@ -11,10 +10,8 @@ Chordata,Actinopterygii,Perciformes,Sebastidae,Sebastes melanops
 Ctenophora,Tentaculata,Lobata,Bolinopsidae,Bolinopsis infundibulum
 Chordata,Actinopterygii,Perciformes,Hexagrammidae,Ophiodon elongatus
 Chordata,Actinopterygii,Perciformes,Hexagrammidae,Oxylebius pictus
-Chordata,Actinopterygii,NA,NA,Actinopterygii spp.
 Chordata,Actinopterygii,Perciformes,Embiotocidae,Embiotoca lateralis
 Cnidaria,Hydrozoa,Anthoathecata,Corynidae,Polyorchis penicillatus
-Chordata,Actinopterygii,Perciformes,Cottidae,Artedius harringtoni
 Chordata,Actinopterygii,Perciformes,Sebastidae,Sebastes flavidus
 Chordata,Actinopterygii,Perciformes,Sebastidae,Sebastes pinniger
 Chordata,Actinopterygii,Perciformes,Sebastidae,Sebastes maliger
@@ -24,24 +21,26 @@ Chordata,Actinopterygii,Perciformes,Hexagrammidae,Hexagrammos stelleri
 Chordata,Actinopterygii,Perciformes,Sebastidae,Sebastes nebulosus
 Chordata,Actinopterygii,Perciformes,Rhamphocottidae,Rhamphocottus richardsonii
 Chordata,Actinopterygii,Blenniiformes,Clinidae,Gibbonsia metzi
-Chordata,Actinopterygii,Perciformes,Cottidae,Enophrys bison
-Chordata,Actinopterygii,Perciformes,Cottidae,Jordania zonope
-Chordata,Actinopterygii,Perciformes,Cottidae,Hemilepidotus hemilepidotus
 Chordata,Actinopterygii,Perciformes,Hexagrammidae,Hexagrammos spp.
-Chordata,Actinopterygii,Perciformes,Cottidae,Scorpaenichthys marmoratus
 Chordata,Actinopterygii,Perciformes,Embiotocidae,Embiotocidae spp.
 Chordata,Actinopterygii,Perciformes,Percidae,Percidae spp.
+Chordata,Actinopterygii,Perciformes,Gobiidae,Rhinogobiops nicholsii
+Chordata,Actinopterygii,Perciformes,Cottidae,Artedius harringtoni
+Chordata,Actinopterygii,Perciformes,Cottidae,Jordania zonope
 Chordata,Actinopterygii,Perciformes,Cottidae,Cottidae spp.
+Chordata,Actinopterygii,Perciformes,Cottidae,Hemilepidotus hemilepidotus
 Chordata,Actinopterygii,Perciformes,Stichaeidae,Chirolophis nugator
 Chordata,Actinopterygii,Perciformes,Pholidae,Apodichthys flavidus
 Chordata,Actinopterygii,Perciformes,Pholidae,Pholis spp.
 Chordata,Actinopterygii,Perciformes,Pholidae,Pholis laeta
+Chordata,Actinopterygii,Perciformes,Cottidae,Enophrys bison
 Chordata,Actinopterygii,Perciformes,Pholidae,Pholis clemensi
 Chordata,Actinopterygii,Pleuronectiformes,Paralichthyidae,Citharichthys stigmaeus
 Chordata,Actinopterygii,Perciformes,Liparidae,Liparis florae
 Chordata,Actinopterygii,Pleuronectiformes,Pleuronectidae,Pleuronichthys coenosus
 Chordata,Actinopterygii,Perciformes,Cottidae,Asemichthys taylori
 Chordata,Actinopterygii,Perciformes,Cottidae,Oligocottus maculosus
+Chordata,Actinopterygii,Perciformes,Cottidae,Scorpaenichthys marmoratus
 Chordata,Actinopterygii,Perciformes,Pholidae,Pholis ornata
 Arthropoda,Malacostraca,Decapoda,Epialtidae,Scyra acutifrons
 Echinodermata,Asteroidea,Forcipulatida,Asteriidae,Stylasterias forreri
@@ -108,7 +107,6 @@ Mollusca,Gastropoda,Nudibranchia,Cadlinidae,Cadlina modesta
 Mollusca,Gastropoda,Nudibranchia,Arminidae,Armina californica
 Arthropoda,Malacostraca,Decapoda,Oregoniidae,Oregonia gracilis
 Arthropoda,Malacostraca,Decapoda,Pandalidae,Pandalus spp.
-Arthropoda,Malacostraca,Decapoda,NA,Unidentified shrimp
 Arthropoda,Malacostraca,Decapoda,Epialtidae,Chorilia longipes
 Mollusca,Gastropoda,Lepetellida,Fissurellidae,Megathura crenulata
 Arthropoda,Malacostraca,Decapoda,Epialtidae,Scyra spp.
@@ -128,5 +126,4 @@ Arthropoda,Malacostraca,Decapoda,Epialtidae,Pugettia richii
 Arthropoda,Malacostraca,Decapoda,Epialtidae,Pugettia gracilis
 Arthropoda,Malacostraca,Decapoda,Pandalidae,Pandalus gurneyi
 Arthropoda,Malacostraca,Decapoda,Epialtidae,Pugettia foliata
-Arthropoda,Malacostraca,Decapoda,NA,Brachyura spp.
 Mollusca,Cephalopoda,Octopoda,Enteroctopodidae,Enteroctopus dofleini
