@@ -36,28 +36,6 @@ crab_pee <- read_csv("Data/Cage_experiment/crab_cage_pee.csv") %>%
   as.data.frame()
 # this csv is created in the Ch4_Crabs/Code/Crab_cages.R file
 
-# Load and label images for plots
-# Load cuke images
-cuke <- readPNG("Images/cuke_no_background.png")
-cuke <- readPNG("Images/cuke_KC.png")
-cuke_two <- readPNG("Images/two_cukes_no_background.png")
-
-# label them
-cuke_labels <- c(Control = "Control",
-                 Medium = "<img src='Images/cuke_no_background.png' width='100' />",
-                 Large = "<img src='Images/two_cukes_no_background.png' width='100' />")
-
-# crab image
-crab <- readPNG("Images/red_crab_no_background.png")
-crab <- readPNG("Images/Red_rock_crab_KC.png")
-
-# label it
-crab_labels <- c(Control = "Control",
-                 Medium = "<img src='Images/red_crab_no_background.png' width='65' />",
-                 Large = "<img src='Images/red_crab_no_background.png' width='100' />")
-
-# New images from Kieran 
-
 # Load and label images for plots ----
 # Load cuke images
 cuke <- readPNG("Images/cuke_KC1.png")
@@ -173,8 +151,14 @@ cuke_plot + crab_plot &
 # ggsave("Output/Pres_figs/Fig5.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
 
-
-
+# Summary stats -----
+sum_crab <- crab_pee %>%
+  group_by(cage, treatment, week) %>%
+  summarise(mean_nh4 = mean(nh4_conc)) %>%
+  group_by(week) %>%
+  summarise(min = min(mean_nh4),
+            max = max(mean_nh4),
+            per_diff = 100*(max-min)/min) # the max and min were from the same day!
 
 # Map -----
 library(sf)

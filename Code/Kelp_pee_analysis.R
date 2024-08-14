@@ -212,7 +212,7 @@ data <- pee %>%
          nh4_in_avg = mean(nh4_inside),
          nh4_out_avg = mean(nh4_outside),
          in_out_avg = mean(in_minus_out),
-         percent_diff = 100*(nh4_inside-nh4_outside)/nh4_outside,
+         percent_diff = 100*((nh4_in_avg-nh4_out_avg)/nh4_out_avg),
          depth_avg = mean(depth_m)) %>%
   ungroup() %>%
   # join kelp data with both transect + site avgs
@@ -951,6 +951,20 @@ AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
          AICw = round((likelihood/sum), digits = 2),
          AIC = round(AIC, digits = 2)) %>%
   select(rowname, df, AIC, delta, AICw) 
+
+
+# Summary stats -----
+sum_kelp_pee <- data %>%
+  group_by(site_code) %>%
+  reframe(change = 100*((nh4_in_avg-nh4_out_avg)/nh4_out_avg)) %>%
+  unique()
+
+
+  rowwise() %>%
+  mutate(percent)
+  summarise(min = min(abs(in_minus_out)),
+            max = max(abs(in_minus_out)),
+            per_diff = 100*(max-min/min))
 
 
 # Stats: site to site variation ----

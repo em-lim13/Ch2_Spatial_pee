@@ -912,6 +912,12 @@ plot_pred(raw_data = rls_final,
 
 #ggsave("Output/Pres_figs/Fig3b.png", device = "png", height = 9, width = 12, dpi = 400)
 
+# Summary stats -------
+sum_pee <- rls_final %>%
+  group_by(year) %>%
+  summarise(min = min(nh4_avg),
+            max = max(nh4_avg),
+            percent_diff = 100*(max-min)/min)
 
 # Data exploration ------
 
