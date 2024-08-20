@@ -917,7 +917,7 @@ sum_pee <- rls_final %>%
   group_by(year) %>%
   summarise(min = min(nh4_avg),
             max = max(nh4_avg),
-            percent_diff = 100*(max-min)/min)
+            percent_diff = max/min)
 
 # Data exploration ------
 
@@ -1144,6 +1144,26 @@ testSpatialAutocorrelation(new_resids, x = rls_auto$longitude, y = rls_auto$lati
 
 # Fuck around ----
 
+rls_animals <- rls_final %>%
+  select(site_code, year, weight_sum, abundance, species_richness, shannon) %>%
+  mutate(kelp_sp = ifelse(site_code == "BMSC15", "macro", "none"))
+
+kelp_animals <- data %>%
+  select(site_code, weight_sum, abundance, species_richness, shannon, kelp_sp) %>%
+  unique() %>%
+  mutate(year = 2022)
+
+animals <- rbind(rls_animals, kelp_animals) %>%
+  mutate(kelp_sp = ifelse(kelp_sp == "none", "none", "kelp"))
+
+ggplot(animals, aes(kelp_sp, species_richness)) +
+  geom_boxplot()
+
+mod_r <- glmmTMB(species_richness ~ kelp_sp + (1|site_code) + (1|year), data = animals)
+summary(mod_r)
+# ok so no diff for abundance but kelp had higher richness
+
+# other stuff
 abalone <- rls %>%
   filter(species_name == "Haliotis kamtschatkana") %>%
   group_by(survey_id) %>%
