@@ -417,6 +417,14 @@ car::vif(lm(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + weight_sum_sc
 #  Double check that the negative in – out sites aren’t the places where the transect was on the other side of the forest.
 # Maybe try to PCA????? see if there's clustering?
 
+# is there a kelp ~ animal relationship?
+mod_kelp <- glmmTMB(abundance ~ BiomassM,
+                      family = 'gaussian',
+                      data = data %>% select(BiomassM, abundance, depth_avg) %>% unique) 
+
+plot(DHARMa::simulateResiduals(mod_kelp))
+summary(mod_kelp)
+
 # Graphing ------
 
 # Palettes
@@ -956,15 +964,10 @@ AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
 # Summary stats -----
 sum_kelp_pee <- data %>%
   group_by(site_code) %>%
-  reframe(change = 100*((nh4_in_avg-nh4_out_avg)/nh4_out_avg)) %>%
-  unique()
-
-
-  rowwise() %>%
-  mutate(percent)
-  summarise(min = min(abs(in_minus_out)),
-            max = max(abs(in_minus_out)),
-            per_diff = 100*(max-min/min))
+  reframe(x_change = nh4_in_avg/nh4_out_avg) %>%
+  unique() %>%
+  arrange(desc(x_change)) %>%
+  head(1)
 
 
 # Stats: site to site variation ----
