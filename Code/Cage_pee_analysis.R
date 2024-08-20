@@ -158,7 +158,100 @@ sum_crab <- crab_pee %>%
   group_by(week) %>%
   summarise(min = min(mean_nh4),
             max = max(mean_nh4),
-            per_diff = 100*(max-min)/min) # the max and min were from the same day!
+            x_diff = max/min) # the max and min were from the same day!
+
+# Calculate excretion rate for cukes -----
+
+# Load my other cuke excretion data
+# This csv is written in the CH0_Pilot project in the Excretion_Rate.R file
+cuke_exc <- read_csv("Data/Cage_experiment/all_cuke_excretion.csv") %>%
+  mutate(exp = "amodel")
+
+# fit a size index model
+mod_index <- lm(nh4_rate ~ size_index, cuke_exc)
+plot(DHARMa::simulateResiduals(mod_index))  
+
+summary(mod_index)  # Adjusted R2 is only 0.3666 but the weight model is even worse
+visreg(mod_index)
+
+int <- coef(mod_index)[1]
+slope <- coef(mod_index)[2]
+
+# reload the cuke measurements from the cage experiments
+cuke1 <- read_csv("Data/Cage_experiment/2021_05_28_cage_samples.csv") %>%
+  select(cage_ID, cukes, cuke_len1, cuke_width1) %>%
+  filter(cuke_len1 > 0) %>%
+  rename(length_cm = cuke_len1, 
+         girth_cm = cuke_width1)
+
+cuke2 <- read_csv("Data/Cage_experiment/2021_05_28_cage_samples.csv") %>%
+  select(cage_ID, cukes, cuke_len2, cuke_width2) %>%
+  filter(cuke_len2 > 0) %>%
+  rename(length_cm = cuke_len2, 
+         girth_cm = cuke_width2) 
+
+cage_cuke_sizes <- rbind(cuke1, cuke2) %>%
+  mutate(size_index = sqrt(length_cm*girth_cm),
+         nh4_rate = size_index*slope + int,
+         exp = "cage")
+
+cuke_nh4_rates <- cage_cuke_sizes %>%
+  group_by(cage_ID, cukes) %>%
+  summarise(nh4_rate = sum(nh4_rate)) %>%
+  group_by(cukes) %>%
+  summarise(nh4_rate = mean(nh4_rate))
+
+# make sure the cage cukes don't look wild compared to the others
+all_cukes <- cage_cuke_sizes %>% select(length_cm, girth_cm, size_index, nh4_rate, exp) %>%
+  rbind(cuke_exc %>% select(length_cm, girth_cm, size_index, nh4_rate, exp))
+
+# sizes
+ggplot(all_cukes, aes(length_cm, girth_cm, colour = exp)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+ggplot(all_cukes, aes(size_index, nh4_rate, colour = exp)) +
+  geom_jitter() +
+  geom_smooth(method = lm)
+
+
+# Calculate excretion rate for crabs ----
+# this csv was generated in the Crab_pee_analysis.R script in the Ch4_Crabs project
+red <- read_csv("Data/Cage_experiment/red_crab_data.csv")
+
+# model the red rock crabs
+mod_red <- lm(log_pee ~ carapace_mm, 
+              data = red)
+summary(mod_red)
+plot(simulateResiduals(mod_red))
+
+# save coefficients
+int <- coef(mod_red) [1]
+slope <- coef(mod_red)[2]
+
+# calculate nh4 rates for each cage crab 
+cage_crab_rates <- crab_pee %>%
+  select(cage, treatment, carapaceA, carapaceB) %>%
+  unique() %>%
+  pivot_longer(cols = carapaceA:carapaceB, values_to = "carapace_cm", names_to = "crab") %>%
+  filter(carapace_cm > 0) %>%
+  mutate(carapace_mm = carapace_cm*10,
+         log_pee = int + slope*carapace_mm,
+         nh4_rate = exp(log_pee)) 
+
+# take treatment avg
+crab_treat_rates <- cage_crab_rates %>%
+  group_by(treatment) %>%
+  summarise(nh4_rate = mean(nh4_rate))
+
+
+
+# plot the crabs I measured next to the cage crabs to check
+ggplot() +
+  geom_point(aes(carapace_mm, log_pee), colour = "red", red) +
+  geom_smooth(method = lm, aes(carapace_mm, log_pee), colour = "red", red) +
+  geom_point(aes(carapace_mm, log_pee), colour = "blue", cage_crab_rates)
+
 
 # Map -----
 library(sf)
