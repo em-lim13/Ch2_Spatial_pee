@@ -154,7 +154,13 @@ cuke_plot + crab_plot &
 # Summary stats -----
 sum_crab <- crab_pee %>%
   group_by(cage, treatment, week) %>%
-  summarise(mean_nh4 = mean(nh4_conc)) %>%
+  summarise(mean_nh4 = mean(nh4_conc))
+
+treat_avgs <- sum_crab %>%
+  group_by(treatment) %>%
+  summarise(mean_nh4 = mean(mean_nh4))
+
+max_diff <- sum_crab %>%
   group_by(week) %>%
   summarise(min = min(mean_nh4),
             max = max(mean_nh4),
