@@ -67,19 +67,26 @@ kelp_coords <- kelp_map_data %>%
 # Both sets of coords ----
 all_coords <- rbind(rls_coords, kelp_coords) %>%
   # stupidly manually jitter points that are on top of each other
-  mutate(latitude = case_when(site_code == "KCCA12" ~ 48.855840, 
-                              site_code == "KCCA22" ~ 48.826736,
-                              site_code == "KCCA19" ~ 48.859774,
+  mutate(latitude = case_when(site_code == "KCCA12" ~ 48.854448, 
+                              site_code == "KCCA22" ~ 48.825960,
+                              site_code == "KCCA19" ~ 48.860970,
+                              site_code == "KCCA9" ~ 48.855602,
+                              site_code == "BMSC8" ~ 48.956866,
                               site_code == "BMSC11" ~ 48.857512,
                               site_code == "BMSC12" ~ 48.858478,
+                              site_code == "BMSC4" ~ 48.815043,
+                              site_code == "KCCA14" ~ 48.878305,
+                              site_code == "KCCA7" ~ 48.837319,
                               TRUE ~ as.numeric(latitude)),
-         longitude = case_when(site_code == "KCCA12" ~ -125.166141, 
-                               site_code == "KCCA22" ~ -125.197578,
+         longitude = case_when(site_code == "KCCA12" ~ -125.168718, 
+                               site_code == "KCCA22" ~ -125.19822,
                                site_code == "KCCA19" ~ -125.159304,
                                site_code == "BMSC11" ~ -125.157674,
-                               site_code == "KCCA1" ~ -125.159031,
-                               site_code == "BMSC8" ~ -125.152681,
+                               site_code == "KCCA1" ~ -125.156543,
+                               site_code == "BMSC8" ~ -125.151189,
                                site_code == "BMSC12" ~ -125.161694,
+                               site_code == "BMSC4" ~ -125.177346,
+                               site_code == "KCCA7" ~ -125.212146,
                                TRUE ~ as.numeric(longitude))) %>%
   st_as_sf(coords = c("longitude", "latitude")) %>%
   st_set_crs(4326) %>%
@@ -106,8 +113,13 @@ map_daddy(lat_min = -125.375,
           invert = FALSE,
           white_background = TRUE)
 
+# size adjusted
+# ggsave("Output/Pub_figs/Fig.1.png", device = "png", height = 9, width = 12.606299, dpi = 400)
+
+# old size
 # ggsave("Output/Pub_figs/Fig.1.png", device = "png", height = 9, width = 16, dpi = 400)
 
+#  5 inches in width and 6 inches in height
 
 # Barkley Sound map
 map_daddy_np(lat_min = -127,
