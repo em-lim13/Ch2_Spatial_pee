@@ -886,13 +886,21 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
       legend.key.size = unit(1.2, "lines"),  
       legend.key.height = NULL,  
       legend.key.width = NULL,      
-      legend.text = element_text(size = 24, color = features),  
-      legend.title = element_text(size = 24, face = "bold", hjust = 0, color = features),  
-      legend.position = "right",  
+      legend.text = element_text(size = 22, color = features),  
+      legend.title = element_text(size = 22, face = "bold", hjust = 0, color = features),  
       legend.text.align = NULL,  
       legend.title.align = NULL,  
       legend.direction = "vertical",  
-      legend.box = NULL,
+      # if you want the legend back on the side unhash these and hash the inside bit
+#      legend.box = NULL,
+#      legend.position = "right", 
+      
+      # try to get legend boxes inside plot
+      legend.position = "inside",
+      legend.position.inside = c(0.99, 0.15),
+      legend.justification.inside = c(0.99, 0.15),
+      legend.box.background = element_rect(color = features, linewidth = 0),
+      
       # Specify facetting options
       strip.background = element_rect(fill = "grey30", color = "grey10"),  
       strip.text.x = element_text(size = 30, color = features),  
