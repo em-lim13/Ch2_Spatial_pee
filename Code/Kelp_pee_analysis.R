@@ -964,7 +964,9 @@ AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
 # Summary stats -----
 sum_kelp_pee <- data %>%
   group_by(site_code) %>%
-  reframe(x_change = nh4_in_avg/nh4_out_avg) %>%
+  reframe(nh4_in = nh4_in_avg,
+          nh4_out_avg = nh4_out_avg,
+          x_change = nh4_in_avg/nh4_out_avg) %>%
   unique() %>%
   arrange(desc(x_change)) %>%
   head(1)
