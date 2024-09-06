@@ -1122,7 +1122,51 @@ ggplot(data = data_s,
   scale_colour_manual(values = pal5) +
   scale_fill_manual(values = pal5)
 
-# messig around -----
+
+# messing around -----
+
+# looks like there's a positive relationship between shannon and delta nh4+
+ggplot(data, aes(species_richness, shannon, colour = kelp_sp)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+# but there's a positive relationship between kelp biomass and shannon?
+ggplot(data, aes(kelp_bio_scale, shannon_scale, colour = kelp_sp)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+
+# what about weight? positive weight relationship
+ggplot(data, aes(weight_sum_scale, shannon_scale, colour = kelp_sp)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+# 
+ggplot(data, aes(weight_sum_scale, shannon_scale, colour = kelp_sp)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+# try dropping not scaling the variables
+mod_div <- glmmTMB(in_minus_out ~ kelp_sp + 
+                     BiomassM*avg_exchange_rate +
+                     BiomassM*weight_sum +
+                     weight_sum*avg_exchange_rate +
+                     BiomassM*shannon + depth_avg + 
+                     (1|site_code),
+                      family = 'gaussian',
+                      data = data) 
+
+summary(mod_div) # but when I remove the no kelp sites the trend is still negative
+# but when you remove the kelp biomass shannon becomes positive
+
+
+
+
+
+
+
+
+
 # when i remove weight shannon becomes + and NOT signif
 # when I remove kelp biomass it becomes + and not signif
 
