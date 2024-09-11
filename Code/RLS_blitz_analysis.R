@@ -667,91 +667,6 @@ all_fam <- fam_df_no0 %>%
                     total_weight = sum(weight_fam_sum_g)))
 
 
-
-# Family community analysis -----
-# multivariate space for the big fam model??? are communities dominated by certain fams when there's a lot of nh4 in the water?
-# make matrix from communities and then see which direction the nh4 loads???
-# envfit
-# if there's a site with a lots of greenlings, do those sites have higher nh4
-
-# create the wide form family data
-
-# make wide for families
-fam_wide <- family_df_no0 %>% 
-  dplyr::select(survey_id, family, fam_den) %>% 
-  group_by(survey_id, family) %>%
-  summarise(total = sum(fam_den)) %>%
-  ungroup() %>%
-  spread(key = family, value = total) %>%
-  replace(is.na(.), 0) %>%
-  select(-17) # cut the last column, it's NA
-
-# first use the rls final to filter for included surveys and make sure the order of rows is the same  
-com <- rls_final %>%
-  left_join(fam_wide, by = "survey_id") %>%
-  select(34:48)
-
-# make env data
-env <- rls_final %>%
-  select(nh4_avg, depth_avg, avg_exchange_rate)
-
-#convert com to a matrix
-m_com = as.matrix(com)
-
-# Perform the NMDS ordination
-set.seed(123)
-nmds = metaMDS(m_com, distance = "bray")
-nmds
-
-# Now we run the envfit function with our environmental data frame, env
-en = envfit(nmds, env, permutations = 999, na.rm = TRUE)
-# The first parameter is the metaMDS object from the NMDS ordination we just performed. Next is env, our environmental data frame. Then we state we want 999 permutations, and to remove any rows with missing data.
-en
-
-plot(nmds)
-plot(en)
-
-plot(nmds, type = "t")
-plot(en)
-
-
-# my old code
-# make the dissim matrix
-dissim_mat <- vegdist(fam_wider, method = "horn")
-mod <- adonis(dissim_mat ~ nh4_avg, data = rls_final, permutations = 9999)
-# this looks at species distribution as function of environmental data
-summary(mod)
-
-# Ordination: nMDS
-myNMDS <- metaMDS(fam_wider, k = 2)
-myNMDS #most important: is the stress low? Here it is 0.22 which is a bit on the high side
-stressplot(myNMDS) #low stress means that the observed dissimilarity between site pairs matches that on the 2-D plot fairly well (points hug the line)
-
-my_envfit <- envfit(myNMDS, site_data, permutations = 999)
-spp_fit <- envfit(myNMDS, fam_wider, permutations = 999)
-
-# try to plot?
-
-#save NMDS results into dataframe
-site_scrs <- as.data.frame(scores(myNMDS, display = "sites")) 
-
-spp_scrs <- as.data.frame(scores(spp_fit, display = "vectors")) #save species intrinsic values into dataframe
-spp_scrs <- cbind(spp_scrs, Species = rownames(spp_scrs)) #add species names to dataframe
-spp_scrs <- cbind(spp_scrs, pval = spp_fit$vectors$pvals) #add pvalues to dataframe so you can select species which are significant
-
-# order species
-signif_spp_scrs1 <- spp_scrs[order(spp_scrs$pval),]
-
-#cut species that weren't significant
-sig_spp_scrs <- subset(signif_spp_scrs1, pval<0.137) #subset data to show species significant at 0.05
-
-#ugly plot
-ordiplot(myNMDS, type = "n") 
-ordihull(myNMDS, groups = site_data$beach,draw = "polygon",col = "grey99",label = T)
-orditorp(myNMDS, display = "species", col = "purple4",air = 0.01, cex = 0.9)
-orditorp(myNMDS, display = "sites", cex = 0.75, air = 0.01)
-
-
 # Graphing ----
 # sort out some palettes!
 pal20 <- viridis::viridis(20)
@@ -1171,6 +1086,94 @@ abalone <- rls %>%
 
 
 # Graveyard -----
+
+# Family community analysis -----
+# multivariate space for the big fam model??? are communities dominated by certain fams when there's a lot of nh4 in the water?
+# make matrix from communities and then see which direction the nh4 loads???
+# envfit
+# if there's a site with a lots of greenlings, do those sites have higher nh4
+
+# create the wide form family data
+
+# make wide for families
+fam_wide <- family_df_no0 %>% 
+  dplyr::select(survey_id, family, fam_den) %>% 
+  group_by(survey_id, family) %>%
+  summarise(total = sum(fam_den)) %>%
+  ungroup() %>%
+  spread(key = family, value = total) %>%
+  replace(is.na(.), 0) %>%
+  select(-17) # cut the last column, it's NA
+
+# first use the rls final to filter for included surveys and make sure the order of rows is the same  
+com <- rls_final %>%
+  left_join(fam_wide, by = "survey_id") %>%
+  select(34:48)
+
+# make env data
+env <- rls_final %>%
+  select(nh4_avg, depth_avg, avg_exchange_rate)
+
+#convert com to a matrix
+m_com = as.matrix(com)
+
+# Perform the NMDS ordination
+set.seed(123)
+nmds = metaMDS(m_com, distance = "bray")
+nmds
+
+# Now we run the envfit function with our environmental data frame, env
+en = envfit(nmds, env, permutations = 999, na.rm = TRUE)
+# The first parameter is the metaMDS object from the NMDS ordination we just performed. Next is env, our environmental data frame. Then we state we want 999 permutations, and to remove any rows with missing data.
+en
+
+plot(nmds)
+plot(en)
+
+plot(nmds, type = "t")
+plot(en)
+
+
+# my old code
+# make the dissim matrix
+dissim_mat <- vegdist(fam_wider, method = "horn")
+mod <- adonis(dissim_mat ~ nh4_avg, data = rls_final, permutations = 9999)
+# this looks at species distribution as function of environmental data
+summary(mod)
+
+# Ordination: nMDS
+myNMDS <- metaMDS(fam_wider, k = 2)
+myNMDS #most important: is the stress low? Here it is 0.22 which is a bit on the high side
+stressplot(myNMDS) #low stress means that the observed dissimilarity between site pairs matches that on the 2-D plot fairly well (points hug the line)
+
+my_envfit <- envfit(myNMDS, site_data, permutations = 999)
+spp_fit <- envfit(myNMDS, fam_wider, permutations = 999)
+
+# try to plot?
+
+#save NMDS results into dataframe
+site_scrs <- as.data.frame(scores(myNMDS, display = "sites")) 
+
+spp_scrs <- as.data.frame(scores(spp_fit, display = "vectors")) #save species intrinsic values into dataframe
+spp_scrs <- cbind(spp_scrs, Species = rownames(spp_scrs)) #add species names to dataframe
+spp_scrs <- cbind(spp_scrs, pval = spp_fit$vectors$pvals) #add pvalues to dataframe so you can select species which are significant
+
+# order species
+signif_spp_scrs1 <- spp_scrs[order(spp_scrs$pval),]
+
+#cut species that weren't significant
+sig_spp_scrs <- subset(signif_spp_scrs1, pval<0.137) #subset data to show species significant at 0.05
+
+#ugly plot
+ordiplot(myNMDS, type = "n") 
+ordihull(myNMDS, groups = site_data$beach,draw = "polygon",col = "grey99",label = T)
+orditorp(myNMDS, display = "species", col = "purple4",air = 0.01, cex = 0.9)
+orditorp(myNMDS, display = "sites", cex = 0.75, air = 0.01)
+
+
+
+
+
 # wendy code for R2 values 
 performance::r2(beta_reg_model, tolerance = 0.0000000000001)
 performance::r2_nakagawa(beta_reg_model)
