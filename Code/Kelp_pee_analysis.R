@@ -32,7 +32,8 @@ pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv") %>%
   left_join(
     read_csv("Data/Team_kelp/Output_data/site_names.csv") %>%
                rename(site_name = SiteName), by = "site_code") %>%
-  select(-site)
+  select(-site) %>%
+  mutate(x_change = nh4_inside/nh4_outside)
   
 
 # just save the sites we surveyed
@@ -358,6 +359,20 @@ mod_in_out <- glmmTMB(in_minus_out ~ kelp_sp +
 
 plot(simulateResiduals(mod_in_out)) # looks ok!
 summary(mod_in_out)
+
+# what about looking at % change
+mod_xchange <- glmmTMB(x_change ~ -1 + kelp_sp + 
+                        kelp_bio_scale*tide_scale +
+                        kelp_bio_scale*weight_sum_scale +
+                        weight_sum_scale*tide_scale +
+                        shannon_scale + depth_scale + 
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data) 
+# when I remove no kelp sites the coeffs hardly change
+
+plot(simulateResiduals(mod_xchange)) # looks ok!
+summary(mod_xchange)
 
 # Let's look at those interactions some more:
 
@@ -964,12 +979,16 @@ AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
 # Summary stats -----
 sum_kelp_pee <- data %>%
   group_by(site_code) %>%
-  reframe(nh4_in = nh4_in_avg,
+  reframe(kelp_sp = kelp_sp,
+          nh4_in = nh4_in_avg,
           nh4_out_avg = nh4_out_avg,
           x_change = nh4_in_avg/nh4_out_avg) %>%
   unique() %>%
-  arrange(desc(x_change)) %>%
-  head(1)
+  arrange(desc(x_change))
+
+x_ch <- sum_kelp_pee %>%
+  group_by(kelp_sp) %>% 
+  summarise(mean_x_change = mean(x_change))
 
 
 # Stats: site to site variation ----
@@ -987,7 +1006,7 @@ sum_kelp_pee <- data %>%
 # nh4_out_avg (outside kelp avg)
 # most comparable to the RLS blitz work?
 
-ggplot(data_s, aes(x = nh4_out_avg)) +
+ggplot(data, aes(x = nh4_out_avg)) +
   geom_histogram(bins = 30) 
 # Either way we're using Gamma!
 
@@ -1022,10 +1041,22 @@ ggplot(data_s, aes(x = nh4_out_avg)) +
 
 # And Step 3: Model residuals 
 
+mod_site <- glmmTMB(nh4_outside ~ kelp_sp + 
+                        kelp_bio_scale*tide_scale +
+                        kelp_bio_scale*weight_sum_scale +
+                        weight_sum_scale*tide_scale +
+                        shannon_scale + depth_scale + 
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data) 
+summary(mod_site)
+plot(simulateResiduals(mod_site))
+
 # Build full model with gamma distribution
-mod_kelp_site <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale + shannon_scale + kelp_sp + depth_scale - weight_sum_scale:tide_scale:kelp_bio_scale, 
+mod_kelp_site <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale + shannon_scale + kelp_sp + depth_scale - weight_sum_scale:tide_scale:kelp_bio_scale +
+                           (1|site_code), 
                          family = Gamma(link = 'log'),
-                         data = data_s,
+                         data = data,
                          na.action = na.fail)
 summary(mod_kelp_site)
 plot(simulateResiduals(mod_kelp_site))
@@ -1205,6 +1236,33 @@ kcca_table <- pee %>%
   unique() %>%
   filter(site_code != "KCCA13")
 
+
+# Can i fit a asymptote??
+
+data1 <- data %>%
+  mutate(invert_in_out = 1/in_minus_out,
+         invert_max_pee = 1/max(in_minus_out),
+         invert_biomass = 1/BiomassM) %>%
+  filter(BiomassM > 0)
+
+lm(invert_mass ~ (k/maxC)*invert_Hct + invert_maxC)
+
+
+mod_invert <- glmmTMB(invert_in_out ~ constant*invert_biomass + invert_max_pee, data = data1)
+
+mod_invert2 <- glmmTMB(invert_in_out ~ invert_biomass, data = data1)
+summary(mod_invert2)
+
+data2 <- data1 %>%
+  mutate(k = 8.4565/2)
+
+mod_invert3 <- glmmTMB(invert_in_out ~ k*invert_max_pee*invert_biomass + invert_max_pee, data = data2)
+summary(mod_invert3)
+visreg(mod_invert3)
+
+ggplot(data, aes(BiomassM, in_minus_out)) +
+  geom_point() +
+  geom_smooth()
 
 
 # Graveyard ------
