@@ -301,12 +301,10 @@ ggplot(data, aes(x = in_minus_out)) +
 # rich_scale
 # shannon_scale
 # simpson_scale
-# Using abundance_scale and simpson_scale, best AIC
 
 # Abiotic to control for
 # depth_avg (depth_scale)
 # avg_exchange_rate (tide_scale)
-# Tide doesn't matter but depth does????
 
 # Random variables
 # side_code: if I use mini transect as the level of study than I need a random effect of site
@@ -955,7 +953,6 @@ mod_simp <- glmmTMB(in_minus_out ~ kelp_sp +
                     family = 'gaussian',
                     data = data) 
 
-# Abundance simpson's is the best AIC mod
 mod_abund_simp <- glmmTMB(in_minus_out ~ kelp_sp + 
                             kelp_bio_scale*tide_scale +
                             kelp_bio_scale*abundance_scale +
@@ -964,6 +961,25 @@ mod_abund_simp <- glmmTMB(in_minus_out ~ kelp_sp +
                             (1|site_code),
                           family = 'gaussian',
                           data = data) 
+
+mod_rich <- glmmTMB(in_minus_out ~ kelp_sp + 
+                        kelp_bio_scale*tide_scale +
+                        kelp_bio_scale*weight_sum_scale +
+                        weight_sum_scale*tide_scale +
+                        rich_scale + depth_scale + 
+                        (1|site_code),
+                      family = 'gaussian',
+                      data = data) 
+
+mod_rich_abund <- glmmTMB(in_minus_out ~ kelp_sp + 
+                      kelp_bio_scale*tide_scale +
+                      kelp_bio_scale*abundance_scale +
+                      abundance_scale*tide_scale +
+                      rich_scale + depth_scale + 
+                      (1|site_code),
+                    family = 'gaussian',
+                    data = data) 
+
 
 AIC_tab_kelp <- AIC(mod_in_out, mod_abund, mod_simp, mod_abund_simp) %>%
   rownames_to_column() %>%
