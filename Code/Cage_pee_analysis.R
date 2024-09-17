@@ -99,7 +99,7 @@ summary(mod_cr_gamma)
 
 
 #Graphing time folks-------
-set.seed(1991)
+set.seed(1995)
 # palettes
 pal <- viridis::viridis(10)
 pal_c <- c(pal[5], pal[6], pal[8])
@@ -131,7 +131,7 @@ cuke_plot <- dot_whisker(sum_data = sum_cukes,
 
 # plot crabs
 crab_plot <- dot_whisker(sum_data = sum_crabs, 
-                         all_data = crab_pee,
+                         all_data = crab_pee %>% select(treatment, nh4_avg) %>% unique(),
                          x_var = treatment,
                          y_var = nh4_avg,
                          labels = crab_labels,
@@ -139,6 +139,7 @@ crab_plot <- dot_whisker(sum_data = sum_crabs,
                          theme = "white") +
   ylim(c(0, 3.8)) +
   place_label("(b)")
+
 
 # plot together
 cuke_plot + crab_plot & 

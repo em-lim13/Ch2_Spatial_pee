@@ -1006,7 +1006,7 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL,
                   linewidth = 1.5) +
     geom_jitter(data = {{all_data}}, 
                 aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}), 
-                size = 5, alpha = 0.5, height=0, width = 0.3) +
+                size = 5, alpha = 0.5, height=0, width = 0.2) +
     theme + 
     theme(legend.position = "none",
           plot.title = element_text(size = 30)) +
