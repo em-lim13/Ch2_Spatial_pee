@@ -127,7 +127,7 @@ cuke_plot <- dot_whisker(sum_data = sum_cukes,
                          pal = pal_c,
                          theme = "white") +
   ylim(c(0, 3.8)) +
-  place_label("(a)")
+  place_label("(a)") # this is a function I create in the Functions.R file
 
 # plot crabs
 crab_plot <- dot_whisker(sum_data = sum_crabs, 

@@ -482,7 +482,7 @@ df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all"
 # plot just cont vars
 kelp_coeff_plot <- coeff_plot(coeff_df = df,
                               pal = pal8c) +
-  place_label("(a)")
+  place_label("(a)") # this is a function I create in the Functions.R file
 
 
 # Fig 4b: Kelp species predictions ----
@@ -621,7 +621,7 @@ abund_kelp_int_plot <-
   place_label("(d)") 
 
 
-# Fig 43: Abundance x tide interaction ------
+# Fig 4e: Abundance x tide interaction ------
 visreg(mod_in_out, "weight_sum_scale", by = "tide_scale", overlay=TRUE,
        xlab = "Animal biomass (kg/m2)")
 visreg(mod_in_out, "tide_scale", by = "weight_sum_scale", overlay=TRUE)
