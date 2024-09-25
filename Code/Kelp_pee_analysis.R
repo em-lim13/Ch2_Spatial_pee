@@ -686,7 +686,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
 
 # Family manipulations ------
 data_fam_no0_a <- data %>%
-  select(site, site_code, in_out_avg, kelp_bio_scale, kelp_sp, depth_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
+  select(site_name, site_code, in_out_avg, kelp_bio_scale, kelp_sp, depth_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
   unique() %>%
   left_join((kelp_rls %>%
                mutate(family = as.factor(family))%>%
@@ -865,7 +865,7 @@ fam_plot <- ggplot() +
              aes(x = weight_fam_sum_g, y = in_out_avg), colour = pal1,
              alpha = 0.8) +
   labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-       x = expression(paste("Weight (g/m2)"))) +
+       x = expression(paste("Biomass (g/m"^2,")"))) +
   facet_wrap(~family, scales = 'free_x', ncol = 3) +
   geom_line(data = top_fam_kelp_predict,
             aes(x = weight_fam_sum_g, y = predicted), colour = pal1,
@@ -875,7 +875,11 @@ fam_plot <- ggplot() +
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
   theme_white() +
-  theme(strip.background = element_rect(fill = "grey", color = "grey"))
+  theme(strip.background = element_rect(fill = "grey", color = "grey"),
+        axis.text = element_text(size = 18, color = "black", lineheight = 0.9)) + 
+  theme(panel.spacing = unit(1, "lines")) +
+  geom_hline(yintercept= 0, linetype = "dashed", color = "black", linewidth = 0.5)
+
 
 fam_plot
 
