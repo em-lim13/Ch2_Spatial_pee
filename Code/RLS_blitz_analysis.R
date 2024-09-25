@@ -12,6 +12,7 @@ library(vegan) # for diversity indexes
 library(MuMIn) # for dredge?
 library(glmmTMB) # better for random effects?
 library(patchwork)
+library(ggh4x) # customizing axes for facet wrap panels
 library(emmeans)
 # for R2 value
 library(insight)
@@ -722,15 +723,18 @@ tide_means <- rls_final %>%
   group_by(tide_cat) %>%
   summarise(tide = mean(tide_scale))
 
-v <- c(as.numeric(tide_means[1,2]), as.numeric(tide_means[2,2]), as.numeric(tide_means[3,2]))
+v <- c(as.numeric(tide_means[1,2]), 
+       as.numeric(tide_means[2,2]), 
+       as.numeric(tide_means[3,2]))
 
 # ggpredict
 predict <- ggpredict(mod_pred_plot, terms = c("abundance", "tide_scale [v]")) %>% 
   as.data.frame() %>%
   mutate(abundance = x,
-         tide_cat = factor(as.factor(case_when(group == as.numeric(tide_means[1,2]) ~ "Ebb",
-                                               group == as.numeric(tide_means[2,2]) ~ "Slack",
-                                               group == as.numeric(tide_means[3,2]) ~ "Flood")),
+         tide_cat = factor(as.factor(case_when(
+           group == as.numeric(tide_means[1,2]) ~ "Ebb",
+           group == as.numeric(tide_means[2,2]) ~ "Slack",
+           group == as.numeric(tide_means[3,2]) ~ "Flood")),
                            levels = c("Ebb", "Slack", "Flood")))
 
 # now plot these predictions
@@ -752,8 +756,23 @@ rls_coeff_plot + rls_pred_plot  &
 
 # ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
-# Fig 3c: Family plots -----
+# Fig S1: Family plots -----
+# set scales for each panel manually
+position_scales <- list(
+  scale_x_continuous(n.breaks = 3,
+                     label = c("0", "0.1", "0.2")), #seb
+  scale_x_continuous(breaks = c(0, 0.6, 1.2),
+                     label = c("0", "0.6", "1.2")), # muricid
+  scale_x_continuous(n.breaks = 3), # ast
+  scale_x_continuous(breaks = c(0, 0.04, 0.08),
+                     label = c("0", "0.04", "0.08")), # hexa
+  scale_x_continuous(n.breaks = 3,
+                     label = c("0", "0.3", "0.6")), # acmae
+  scale_x_continuous(breaks = c(0, 1.3, 2.6),
+                     label = c("0", "1.3", "2.6")) # gob
+)
 
+# now make plot
 fam_plot <- ggplot() + 
   geom_point(data = rls_top_fam, 
              aes(x = fam_den, y = nh4_avg), colour = pal1,
@@ -769,13 +788,11 @@ fam_plot <- ggplot() +
                   ymin = conf.low, ymax = conf.high), fill = pal1,
               alpha = 0.15) +
   theme_white() +
-  theme(strip.background = element_rect(fill = "grey", color = "grey"))
-#  geom_text(
-#    data = rls_fam %>% select(family, slope) %>% unique(),
-#    mapping = aes(x = Inf, y = Inf, label = slope),
-#    hjust   = 1.1,
-#    vjust   = 1.5,
-#    size = 9)
+  theme(strip.background = element_rect(fill = "grey", color = "grey"),
+        axis.text = element_text(size = 18, color = "black", lineheight = 0.9)) + 
+  theme(panel.spacing = unit(1, "lines")) +
+ facetted_pos_scales(x = position_scales)
+
 
 fam_plot
 
