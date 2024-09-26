@@ -796,7 +796,7 @@ fam_plot <- ggplot() +
 
 fam_plot
 
-# ggsave("Output/Pub_figs/SuppFig1.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Supp1Fig1.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Alt Fig 3 tri-panel -----

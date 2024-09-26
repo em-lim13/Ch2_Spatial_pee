@@ -883,7 +883,7 @@ fam_plot <- ggplot() +
 
 fam_plot
 
-# ggsave("Output/Pub_figs/SuppFig2.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Supp1Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Community stuff -----
