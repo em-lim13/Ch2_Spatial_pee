@@ -117,7 +117,7 @@ sum_crabs <- ggpredict(mod_cr_gamma, terms = "treatment") %>%
                 nh4_avg = predicted) %>% 
   as_tibble()
 
-# Figure 5 ----
+# Figure 4 ----
 # plot cukes
 cuke_plot <- dot_whisker(sum_data = sum_cukes, 
                          all_data = cuke_pee, 
@@ -147,9 +147,9 @@ cuke_plot + crab_plot &
       element_rect(color = "white", fill = "white")))
 
 # Fig 5 white background for pub
-# ggsave("Output/Pub_figs/Fig5.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 9, width = 16, dpi = 400)
 
-# ggsave("Output/Pres_figs/Fig5.png", device = "png", height = 6, width = 12, dpi = 400)
+# ggsave("Output/Pres_figs/Fig4.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
 
 # Summary stats -----
