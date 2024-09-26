@@ -457,7 +457,7 @@ pal3c <- c(pal30[13], pal30[17], pal30[22]) # kelp biomass colours
 pal2c <- c(pal30[25], pal30[29]) # tide colours
 
 
-# Fig 4a: model coefficients ----
+# Fig 3a: model coefficients ----
 # Save model coefficients 
 # use the no intercept model for plotting
 df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
@@ -485,7 +485,7 @@ kelp_coeff_plot <- coeff_plot(coeff_df = df,
   place_label("(a)") # this is a function I create in the Functions.R file
 
 
-# Fig 4b: Kelp species predictions ----
+# Fig 3b: Kelp species predictions ----
 # make predictions for each kelp sp at the group mean kelp bio for that species
 d <- data %>%
   mutate(kelp = ifelse(kelp_sp == "none", "none", "kelp")) %>%
@@ -525,7 +525,7 @@ kelp_sp_plot <-
   ylim(c(-0.79, 1.05))
 
 
-# Fig 4c: Kelp biomass x tide interaction ------
+# Fig 3c: Kelp biomass x tide interaction ------
 visreg(mod_in_out, "kelp_bio_scale", by = "tide_scale", overlay=TRUE,
        xlab = "Kelp biomass (kg/m2)")
 
@@ -566,7 +566,7 @@ kelp_tide_int_plot <-
   place_label("(c)")
 
 
-# Fig 4d: Kelp biomass x abundance interaction -----
+# Fig 3d: Kelp biomass x abundance interaction -----
 visreg(mod_in_out2, "weight_sum_scale", by = "kelp_bio_scale", 
        overlay=TRUE,
        xlab = "Animal biomass (kg/m2)") # looks better
@@ -621,7 +621,7 @@ abund_kelp_int_plot <-
   place_label("(d)") 
 
 
-# Fig 4e: Abundance x tide interaction ------
+# Fig 3e: Abundance x tide interaction ------
 visreg(mod_in_out, "weight_sum_scale", by = "tide_scale", overlay=TRUE,
        xlab = "Animal biomass (kg/m2)")
 visreg(mod_in_out, "tide_scale", by = "weight_sum_scale", overlay=TRUE)
@@ -665,7 +665,7 @@ abund_tide_int_plot <-
   place_label("(e)") +
   guides(size = "none")
 
-# Fig 4 panels ----
+# Fig 3 panels ----
 # plot coeffs + interactions
 squish <- theme(axis.title.y = element_text(margin = margin(r = -200, unit = "pt")))
 
@@ -856,7 +856,7 @@ all_fam <- data_fam_no0s %>%
                     total_den = sum(fam_den),
                     total_weight = sum(weight_fam_sum_g)))
 
-# Plot families ----
+# Supplement 2 Fig 2: Family plots ----
 pal_k <- viridis::viridis(10)
 pal1 <- pal_k[4]
 

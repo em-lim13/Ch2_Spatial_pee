@@ -683,7 +683,7 @@ pal3 <- c(pal30[16], pal30[25], pal30[29]) # tide colours
 pal5 <- c(pal20[1], pal20[3], pal20[5], pal20[7], pal20[9]) # coeff plot
 
 
-# Fig 3a: Coefficient plot ----
+# Fig 2a: Coefficient plot ----
 
 # generate coefficients
 # try using emtrends to generate standard error/ confidence intervals around slope estimates
@@ -713,7 +713,7 @@ rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs,
 # ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
-# Fig 3b: Abundance vs nh4 -----
+# Fig 2b: Abundance vs nh4 -----
 mod_pred_plot <- glmmTMB(nh4_avg ~ abundance*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                          family = Gamma(link = 'log'),
                          data = rls_final)
@@ -749,14 +749,14 @@ rls_pred_plot <-
   place_label("(b)")
 
 
-# Fig 3 -----
+# Fig 2 -----
 rls_coeff_plot + rls_pred_plot  &
   theme(plot.tag.position = c(0, 1),
         plot.tag = element_text(hjust = -1, vjust = 0))
 
-# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
-# Fig S1: Family plots -----
+# Supplement 2 Fig 1: Family plots -----
 # set scales for each panel manually
 position_scales <- list(
   scale_x_continuous(n.breaks = 3,
