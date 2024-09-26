@@ -224,7 +224,7 @@ ggplot(all_cukes, aes(size_index, nh4_rate, colour = exp)) +
 
 # Calculate excretion rate for crabs ----
 # this csv was generated in the Crab_pee_analysis.R script in the Ch4_Crabs project
-red <- read_csv("Data/Cage_experiment/red_crab_data.csv")
+red <- read_csv("Data/Cage_experiment/red_crab_excretion.csv")
 
 # model the red rock crabs
 mod_red <- lm(log_pee ~ carapace_mm, 
