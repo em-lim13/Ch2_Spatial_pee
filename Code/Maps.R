@@ -114,10 +114,10 @@ map_daddy(lat_min = -125.375,
           white_background = TRUE)
 
 # size adjusted
-# ggsave("Output/Pub_figs/Fig.1.png", device = "png", height = 9, width = 12.606299, dpi = 400)
+# ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1.png", device = "png", height = 9, width = 12.606299, dpi = 400)
 
 # old size
-# ggsave("Output/Pub_figs/Fig.1.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1.png", device = "png", height = 9, width = 16, dpi = 400)
 
 #  5 inches in width and 6 inches in height
 
