@@ -52,4 +52,4 @@ kcca_not_final <- kcca %>%
          sample = as.numeric(sample)) %>%
   select(-kelp)
 
-# write_csv(kcca_not_final, "Data/Team_kelp/Output_data/kelp_pee.csv")
+# write_csv(kcca_not_final, "Output/Output_data/kelp_pee.csv")

@@ -26,7 +26,7 @@ source("Code/Functions.R")
 
 # NH4+ data -----
 # kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
-pee <- read_csv("Data/Team_kelp/Output_data/kelp_pee.csv") %>%
+pee <- read_csv("Output/Output_data/kelp_pee.csv") %>%
   as.data.frame() %>%
   filter(site_code != "KCCA13") %>% # remove second beach south
   left_join(
