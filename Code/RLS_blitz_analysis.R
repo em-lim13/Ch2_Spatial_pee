@@ -671,19 +671,17 @@ all_fam <- fam_df_no0 %>%
 # Graphing ----
 # sort out some palettes!
 pal20 <- viridis::viridis(20)
-pie(rep(1, 20), col = pal20)
-
 pal30 <- viridis::viridis(30)
 
-pal1 <- pal20[14] # fam plots
-#pal3 <- c(pal20[20], pal20[15], pal20[11]) # pred plot
-pal3 <- c(pal30[16], pal30[25], pal30[29]) # tide colours
-
-pal5 <- c(pal20[1], pal20[3], pal20[5], pal20[7], pal20[9]) # coeff plot
-
-# MAKE YET ANOTHER PALETTE
-pal3 <- c(pal30[1], pal30[9], pal30[15]) # tide colours
 pal5 <- c(pal30[16], pal30[18], pal30[20], pal30[22], pal30[24]) # coeff plot
+pal3 <- c(pal30[1], pal30[9], pal30[15]) # tide colours
+pal1 <- pal20[14] # fam plots
+
+# old palettes
+#pal3 <- c(pal20[20], pal20[15], pal20[11]) # pred plot
+#pal3 <- c(pal30[16], pal30[25], pal30[29]) # tide colours
+#pal5 <- c(pal20[1], pal20[3], pal20[5], pal20[7], pal20[9]) # coeff plot
+
 
 # Fig 2a: Coefficient plot ----
 
