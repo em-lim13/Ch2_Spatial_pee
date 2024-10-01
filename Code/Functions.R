@@ -261,7 +261,7 @@ pee_calc2 <- function(data_path) {
     mutate(nh4_conc = (mean_FLU - int2)/slope2)
 }
 
-# Clean up messy frigin taxonomy -----
+# Clean up messy taxonomy -----
 clean_sp_names <- function(datafile) {
   new_data <- datafile %>%
     mutate(
@@ -1065,7 +1065,6 @@ plot_pred <- function(raw_data, predict_data,
                       x_var, y_var, 
                       lty_var = NULL,
                       pch_var = NULL,
-                      size_var = 3, 
                       x_axis_lab = NULL,
                       pal,
                       theme = "white"){
@@ -1081,9 +1080,8 @@ plot_pred <- function(raw_data, predict_data,
     geom_point(data = raw_data, 
                aes(x = {{x_var}}, y = {{y_var}}, 
                    colour = {{lty_var}}, fill = {{lty_var}},
-                   pch = {{pch_var}},
-                   size = {{size_var}}), 
-               alpha = 0.8) +
+                   pch = {{pch_var}}), 
+               alpha = 0.8, size = 4) +
     geom_line(data = predict_data,
               aes(x = {{x_var}}, y = predicted, 
                   colour = {{lty_var}}),
@@ -1095,22 +1093,19 @@ plot_pred <- function(raw_data, predict_data,
     labs(colour = "Tide", fill = "Tide", pch = "Tide") +
     theme +
     scale_colour_manual(values = (pal)) +
-    scale_fill_manual(values = (pal))
+    scale_fill_manual(values = (pal)) +
+    guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
+           size = guide_legend(override.aes = list(colour = features)),
+           colour = guide_legend(override.aes = list(size = 3, linewidth = 1)))
   
-  # then add bells and whistles for kelp plot
-  if(plot_type == "kelp"){
+  # then add bells and whistles for new kelp plot
+  if(plot_type == "new_kelp"){
     new_plot <- base_pred_plot +
-      #      scale_size_continuous(range = c(0.5, 10),
-      #                            limits = c(0, 110)) +
-      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
-      guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
-             size = guide_legend(override.aes = list(colour = features)),
-             colour = guide_legend(override.aes = list(size = 2)))  +
-      #      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
-      #                         labels = c("0", "0.6", "1.2", "1.8")) +
+      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5) +
       labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-           x = expression(paste("Kelp biomass (kg/m"^2,")")),
-           size = "Animals (kg)")
+           x = x_axis_lab) 
+    #      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
+    #                         labels = c("0", "0.6", "1.2", "1.8"))
   }
   
   # extras for rls plot
@@ -1121,19 +1116,9 @@ plot_pred <- function(raw_data, predict_data,
       #      ylim(0, 3.671) +
       labs(y = expression(paste("Ammonium ", (mu*M))), 
            x = expression(paste("Animal abundance/m"^2))) +
-      scale_size(guide = 'none') +
       scale_fill_manual(values = pal, drop = FALSE) +
       scale_colour_manual(values = (pal), drop = FALSE) +
       theme(legend.position = c(0.85, 0.89))
-  }
-  
-  # then add bells and whistles for new kelp plot
-  if(plot_type == "new_kelp"){
-    new_plot <- base_pred_plot +
-      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5)+
-      labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-           x = x_axis_lab) 
-    # theme(legend.position = "null")
   }
   
   print(new_plot)
