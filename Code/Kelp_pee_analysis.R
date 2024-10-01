@@ -411,6 +411,16 @@ mod_c <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
                  data = data) 
 summary(mod_c)
 
+# untransformed variables for plotting
+mod_in_out3 <- glmmTMB(in_minus_out ~ -1 + kelp_sp + 
+                         BiomassM*avg_exchange_rate +
+                         BiomassM*weight_sum +
+                         weight_sum*avg_exchange_rate +
+                         shannon_scale + depth_scale + 
+                         (1|site_code),
+                       family = 'gaussian',
+                       data = data)
+
 # what if I add kelp sp interaction
 # I can't do a triple kelp_sp*kelp_bio_scale*tide_scale interaction bc no nereo flood
 # I want to know if the tide:kelp interaction is the same for nereo and macro
@@ -465,7 +475,7 @@ pal2c <- c(pal30[1], pal30[9]) # tide colours
 # Fig 3a: model coefficients ----
 # Save model coefficients 
 # use the no intercept model for plotting
-df <- confint(mod_in_out2, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
+df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all", "cond", "zi", "other"), estimate = TRUE) %>%
   as.data.frame() %>%
   rownames_to_column() %>%
   rename(variable = rowname,
@@ -493,19 +503,19 @@ kelp_coeff_plot <- coeff_plot(coeff_df = df,
 kelp_means <- data %>%
   mutate(kelp = ifelse(kelp_sp == "none", "none", "kelp")) %>%
   group_by(kelp) %>%
-  summarise(mean = mean(kelp_bio_scale))
+  summarise(mean = mean(BiomassM))
 
 v <- c(kelp_means$mean[1], kelp_means$mean[2])
 
-predict_sp <- ggpredict(mod_in_out2, terms = c("kelp_bio_scale[v]", "kelp_sp")) %>% 
+predict_sp <- ggpredict(mod_in_out3, terms = c("BiomassM[v]", "kelp_sp")) %>% 
   as.data.frame() %>%
-  dplyr::rename(kelp_bio_scale = x,
+  dplyr::rename(BiomassM = x,
                 in_minus_out = predicted,
                 kelp_sp = group) %>%
   mutate(kelp = ifelse(kelp_sp == "none", "none", "kelp"),
          kelp_sp = factor(kelp_sp, levels = c("nereo", "macro", "none"))) %>%
   left_join(kelp_means, by = "kelp") %>%
-  filter(mean ==  kelp_bio_scale)
+  filter(mean ==  BiomassM)
 
 data2 <- data %>%
   mutate(kelp_sp = factor(kelp_sp, levels = c("nereo", "macro", "none")))
@@ -535,22 +545,23 @@ visreg(mod_in_out, "kelp_bio_scale", by = "tide_scale", overlay=TRUE,
 # create range vector
 tide_means_kelp <- data %>%
   group_by(tide_cat) %>%
-  summarise(tide = mean(tide_scale))
+  summarise(tide = mean(avg_exchange_rate))
 
 v2 <- c(as.numeric(tide_means_kelp[2,2]), as.numeric(tide_means_kelp[1,2]))
-v_kelp <- seq(from = min(data$kelp_bio_scale), 
-              to = max(data$kelp_bio_scale),
-              length.out = 30)
+
+v_kelp <- seq(from = min(data$BiomassM), 
+              to = max(data$BiomassM),
+              length.out = 100)
 
 # now make predictions
-predict_kelp <- ggpredict(mod_in_out2, terms = c("kelp_bio_scale [v_kelp]", "tide_scale [v2]")) %>% 
+predict_kelp <- ggpredict(mod_in_out3, terms = c("BiomassM [v_kelp]", "avg_exchange_rate [v2]")) %>% 
   as.data.frame() %>%
-  mutate(kelp_bio_scale = x,
+  mutate(BiomassM = x,
          tide_cat = factor(as.factor(ifelse(
            group == as.character(tide_means_kelp[1,2]), "Slack", "Flood")),
            levels = c("Ebb", "Slack", "Flood"))) %>%
-  filter(tide_cat != "Flood" | kelp_bio_scale < 0.21) %>%
-  filter(tide_cat != "Flood" | kelp_bio_scale > -0.6)
+  filter(tide_cat != "Flood" | BiomassM < 0.75) %>%
+  filter(tide_cat != "Flood" | BiomassM > 0.36)
 
 
 # now plot these predictions
@@ -559,7 +570,7 @@ kelp_tide_int_plot <-
     tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
     predict_data = predict_kelp, 
     plot_type = "new_kelp",
-    x_var = kelp_bio_scale, y_var = in_minus_out, 
+    x_var = BiomassM, y_var = in_minus_out, 
     lty_var = tide_cat,
     pch_var = tide_cat,
     pal = rev(pal2c),
@@ -579,9 +590,9 @@ hist(data$kelp_bio_scale)
 # get mean kelp bio for each kelp category, and find min and max animal biomass to limit the lines to the available data
 kelp_sp_means <- data %>%
   group_by(kelp_cat) %>%
-  summarise(mean = mean(kelp_bio_scale),
-            min = min(weight_sum_scale) - 0.2,
-            max = max(weight_sum_scale) + 0.5)
+  summarise(mean = mean(BiomassM),
+            min = min(weight_sum),
+            max = max(weight_sum))
 
 # mean kelp bio for low, mid, and high help biomass
 v6 <- c(kelp_sp_means$mean[1], kelp_sp_means$mean[2], kelp_sp_means$mean[3])
@@ -592,11 +603,10 @@ v6 <- c(kelp_sp_means$mean[1], kelp_sp_means$mean[2], kelp_sp_means$mean[3])
 #v4 <- c(-0.822849, 0, 1.5)
 #v5 <- c(-1, 0, 1.75) # based on eyeballed means of the three bins looking at the hist
 
-
 # now make predictions
-predict_abund_kelp <- ggpredict(mod_in_out2, terms = c("weight_sum_scale", "kelp_bio_scale [v6]")) %>% 
+predict_abund_kelp <- ggpredict(mod_in_out3, terms = c("weight_sum", "BiomassM [v6]")) %>% 
   as.data.frame() %>%
-  mutate(weight_sum_scale = x,
+  mutate(weight_sum = x,
          kelp_cat = factor(as.factor(case_when(
            group == kelp_sp_means$mean[1] ~ "Low",
            group == kelp_sp_means$mean[2] ~ "Mid",
@@ -604,7 +614,7 @@ predict_abund_kelp <- ggpredict(mod_in_out2, terms = c("weight_sum_scale", "kelp
            levels = c("High", "Mid", "Low"))) %>%
   left_join(kelp_sp_means, by = "kelp_cat") %>%
   rowwise() %>%
-  filter(between(weight_sum_scale, min, max))
+  filter(between(weight_sum, min, max))
 
 
 # now plot these predictions
@@ -614,7 +624,7 @@ abund_kelp_int_plot <-
                                        levels = c("High", "Mid", "Low"))),
             predict_data = predict_abund_kelp, 
             plot_type = "new_kelp",
-            x_var = weight_sum_scale, y_var = in_minus_out, 
+            x_var = weight_sum, y_var = in_minus_out, 
             lty_var = kelp_cat,
             pch_var = kelp_cat,
             x_axis_lab = expression(paste("Animal biomass (kg/m"^2,")")),
@@ -636,26 +646,26 @@ visreg(mod_in_out, "tide_scale", by = "weight_sum_scale", overlay=TRUE)
 # create range vector
 tide_means_kelp <- data %>%
   group_by(tide_cat) %>%
-  summarise(tide = mean(tide_scale))
+  summarise(tide = mean(avg_exchange_rate))
 
 v2 <- c(as.numeric(tide_means_kelp[2,2]), as.numeric(tide_means_kelp[1,2]))
 
 # range of animal vs tide
 d2 <- data %>%
   group_by(tide_cat) %>%
-  summarise(min = min(weight_sum_scale) - 0.3,
-            max = max(weight_sum_scale) + 0.5)
+  summarise(min = min(weight_sum) - 0.025,
+            max = max(weight_sum) + 0.01)
 
 # now make predictions
-predict_abund_tide <- ggpredict(mod_in_out2, terms = c("weight_sum_scale", "tide_scale [v2]")) %>% 
+predict_abund_tide <- ggpredict(mod_in_out3, terms = c("weight_sum", "avg_exchange_rate [v2]")) %>% 
   as.data.frame() %>%
-  mutate(weight_sum_scale = x,
+  mutate(weight_sum = x,
          tide_cat = factor(as.factor(ifelse(
            group == as.character(tide_means_kelp[1,2]), "Slack", "Flood")),
            levels = c("Ebb", "Slack", "Flood"))) %>%
   left_join(d2, by = "tide_cat") %>%
   rowwise() %>%
-  filter(between(weight_sum_scale, min, max))
+  filter(between(weight_sum, min, max))
 
 # now plot these predictions
 abund_tide_int_plot <- 
@@ -663,7 +673,7 @@ abund_tide_int_plot <-
                           mutate(tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
             predict_data = predict_abund_tide, 
             plot_type = "new_kelp",
-            x_var = weight_sum_scale, y_var = in_minus_out, 
+            x_var = weight_sum, y_var = in_minus_out, 
             lty_var = tide_cat,
             pch_var = tide_cat,
             x_axis_lab = expression(paste("Animal biomass (kg/m"^2,")")),
@@ -683,7 +693,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
                     abund_tide_int_plot ) & theme(legend.justification = "left")
 
 
- ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
 
 # comparing the coeff plots, making depth a random effect doesn't really change anything REAL. It just makes the no kelp coeff LOOK like its not signif diff from 0, but when you estimate the delta at the mean no kelp biomass (0) it's basically the same estimate as the model with depth
 
