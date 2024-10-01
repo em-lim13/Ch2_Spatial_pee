@@ -30,7 +30,7 @@ rls_nh4_all <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   unique()
 
 # Load GREAT shapefile ----
-hakai_map <- sf::st_read("Data/Hakaii_coast/COAST_TEST2.shp") %>%
+hakai_map <- sf::st_read("Data/Hakai_coast/COAST_TEST2.shp") %>%
   st_sf() %>%
   st_set_crs(4326)
 
