@@ -558,15 +558,13 @@ kelp_tide_int_plot <-
   plot_pred(raw_data = (data %>% mutate(
     tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
     predict_data = predict_kelp, 
-    plot_type = "kelp",
+    plot_type = "new_kelp",
     x_var = kelp_bio_scale, y_var = in_minus_out, 
     lty_var = tide_cat,
     pch_var = tide_cat,
-    pal = rev(pal2c)) +
+    pal = rev(pal2c),
+    x_axis_lab = expression(paste("Kelp biomass (kg/m"^2,")"))) +
   theme(legend.position = "none") +
-  #  theme(legend.position = c(0.8, 0.17)) +
-  guides(size = "none") +
-  #  ylim(c(-0.5, 0.8)) +
   place_label("(c)")
 
 
@@ -685,7 +683,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
                     abund_tide_int_plot ) & theme(legend.justification = "left")
 
 
-# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
+ ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
 
 # comparing the coeff plots, making depth a random effect doesn't really change anything REAL. It just makes the no kelp coeff LOOK like its not signif diff from 0, but when you estimate the delta at the mean no kelp biomass (0) it's basically the same estimate as the model with depth
 
