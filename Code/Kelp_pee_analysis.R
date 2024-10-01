@@ -440,28 +440,27 @@ summary(mod_kelp)
 
 # Graphing ------
 
-# Palettes
-#pal12 <- viridis::viridis(11)
-#pal8 <- viridis::viridis(8)
-#pal2 <- c(pal_k[8], pal_k[5])
-#pal <- viridis::viridis(10)
-#pal3 <- c(pal[10], pal[8], pal[5])
-
 # remake with 30 colour palette
 pal30 <- viridis::viridis(30)
 pie(rep(1, 30), col = pal30)
 
-pal8c <- viridis::viridis(30)[1:8] # coeff plot
-pal_spc <- c(pal30[11], pal30[10], pal30[9]) # kelp sp colours
-pal3c <- c(pal30[13], pal30[17], pal30[22]) # kelp biomass colours 
-pal2c <- c(pal30[25], pal30[29]) # tide colours
-
-# MAKE YET ANOTHER PALETTE
 pal8c <- viridis::viridis(30)[22:30] # coeff plot
 pal_spc <- c(pal30[19], pal30[20], pal30[21]) # kelp sp colours
 pal3c <- c(pal30[7], pal30[12], pal30[17]) # kelp biomass colours 
 pal2c <- c(pal30[1], pal30[9]) # tide colours
 
+# More recent but also old palette
+# pal8c <- viridis::viridis(30)[1:8] # coeff plot
+# pal_spc <- c(pal30[11], pal30[10], pal30[9]) # kelp sp colours
+# pal3c <- c(pal30[13], pal30[17], pal30[22]) # kelp biomass colours 
+# pal2c <- c(pal30[25], pal30[29]) # tide colours
+
+# Old Palette
+#pal12 <- viridis::viridis(11)
+#pal8 <- viridis::viridis(8)
+#pal2 <- c(pal_k[8], pal_k[5])
+#pal <- viridis::viridis(10)
+#pal3 <- c(pal[10], pal[8], pal[5])
 
 # Fig 3a: model coefficients ----
 # Save model coefficients 
