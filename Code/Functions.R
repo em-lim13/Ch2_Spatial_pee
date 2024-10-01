@@ -1086,13 +1086,13 @@ plot_pred <- function(raw_data, predict_data,
                alpha = 0.8) +
     geom_line(data = predict_data,
               aes(x = {{x_var}}, y = predicted, 
-                  colour = {{lty_var}}, lty = {{lty_var}}),
+                  colour = {{lty_var}}),
               linewidth = 2) +
     geom_ribbon(data = predict_data,
                 aes(x = {{x_var}}, y = predicted, fill = {{lty_var}},
                     ymin = conf.low, ymax = conf.high), 
                 alpha = 0.15) +
-    labs(colour = "Tide", fill = "Tide", lty = "Tide") +
+    labs(colour = "Tide", fill = "Tide", pch = "Tide") +
     theme +
     scale_colour_manual(values = (pal)) +
     scale_fill_manual(values = (pal))
