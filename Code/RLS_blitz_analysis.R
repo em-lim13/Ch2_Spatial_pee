@@ -675,13 +675,15 @@ pie(rep(1, 20), col = pal20)
 
 pal30 <- viridis::viridis(30)
 
-
 pal1 <- pal20[14] # fam plots
 #pal3 <- c(pal20[20], pal20[15], pal20[11]) # pred plot
 pal3 <- c(pal30[16], pal30[25], pal30[29]) # tide colours
 
 pal5 <- c(pal20[1], pal20[3], pal20[5], pal20[7], pal20[9]) # coeff plot
 
+# MAKE YET ANOTHER PALETTE
+pal3 <- c(pal30[1], pal30[9], pal30[15]) # tide colours
+pal5 <- c(pal30[16], pal30[18], pal30[20], pal30[22], pal30[24]) # coeff plot
 
 # Fig 2a: Coefficient plot ----
 
@@ -703,10 +705,9 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
   mutate(variable = factor(variable, unique(variable)))
 
 
-
 # Coefficient plot 
 rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs, 
-                             pal = pal5) +
+                             pal = rev(pal5)) +
   place_label("(a)")
 
 
@@ -723,12 +724,12 @@ tide_means <- rls_final %>%
   group_by(tide_cat) %>%
   summarise(tide = mean(tide_scale))
 
-v <- c(as.numeric(tide_means[1,2]), 
+v_rls <- c(as.numeric(tide_means[1,2]), 
        as.numeric(tide_means[2,2]), 
        as.numeric(tide_means[3,2]))
 
 # ggpredict
-predict <- ggpredict(mod_pred_plot, terms = c("abundance", "tide_scale [v]")) %>% 
+predict <- ggpredict(mod_pred_plot, terms = c("abundance", "tide_scale [v_rls]")) %>% 
   as.data.frame() %>%
   mutate(abundance = x,
          tide_cat = factor(as.factor(case_when(
@@ -744,7 +745,8 @@ rls_pred_plot <-
             plot_type = "rls",
             x_var = abundance, y_var = nh4_avg, 
             lty_var = tide_cat,
-            pal = pal3,
+            pch_var = tide_cat,
+            pal = rev(pal3),
             theme = "white") +
   place_label("(b)")
 
