@@ -947,7 +947,7 @@ plot(kelp_nmds, type = "t")
 plot(kelp_en)
 
 
-# try plotting in ggplot?
+# try plotting in ggplot? this code doesn't work
 #save NMDS results into dataframe
 site_scrs <- as.data.frame(scores(kelp_nmds, display = "sites")) 
 
