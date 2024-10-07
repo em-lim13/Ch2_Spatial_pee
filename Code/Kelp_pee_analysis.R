@@ -34,7 +34,7 @@ pee <- read_csv("Output/Output_data/kelp_pee.csv") %>%
                rename(site_name = SiteName), by = "site_code") %>%
   select(-site) %>%
   mutate(x_change = nh4_inside/nh4_outside)
-  
+      
 
 # just save the sites we surveyed
 kcca_surveys <- pee %>%
