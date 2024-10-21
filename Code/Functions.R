@@ -937,7 +937,7 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL,
                   width = 0.4,
                   linewidth = 1.5) +
     geom_jitter(data = {{all_data}}, 
-                aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}), 
+                aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}), 
                 size = 5, alpha = 0.5, height=0, width = 0.2) +
     theme + 
     theme(legend.position = "none",
