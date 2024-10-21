@@ -528,7 +528,7 @@ kelp_sp_plot <-
               all_data = data2,
               x_var = kelp_sp,
               y_var = in_minus_out,
-              pch_var = kelp_sp,
+              #pch_var = kelp_sp,
               labels = sp_labs,
               pal = pal_spc) +
   labs(y = expression(paste(Delta, " Ammonium ", (mu*M))),
