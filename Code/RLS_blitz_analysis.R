@@ -123,7 +123,6 @@ rls_wider <- rls %>%
   ungroup() %>%
   spread(key = species_name, value = survey_den) %>%
   replace(is.na(.), 0)
-
 # write_csv(rls_wider, "Output/Output_data/rls_wider.csv")
 
 # then calculate biodiversity metrics
@@ -854,10 +853,10 @@ sum_pee <- rls_final %>%
 # Data exploration ------
 
 # abundant across all surveys
-all_rls <- (rls %>% select(phylum, class, order, family, species_name, total, weight_per_indiv_g)) %>%
-  rbind(kelp_rls %>% select(phylum, class, order, family, species_name, total, weight_per_indiv_g))
+all_rls <- (rls %>% select(phylum, class, order, family, species_name, survey_den, weight_size_class_sum)) %>%
+  rbind(kelp_rls %>% select(phylum, class, order, family, species_name, survey_den, weight_size_class_sum))
 
-d <- all_rls %>% count(phylum, class, order, family, species_name, weight_per_indiv_g)
+d <- all_rls %>% count(phylum, class, order, family, species_name, weight_size_class_sum)
 #write_csv(d %>% filter(phylum != "Chordata"), "Output/Output_data/species_list.csv")
 
 e <- all_rls %>% filter(weight_per_indiv_g == 0.5) %>% count(species_name)
@@ -867,6 +866,14 @@ a <- all_rls %>% filter(species_name == "Cryptolithodes sitchensis")
 all_abund <- all_rls %>%
   group_by(family) %>%
   summarise(total = sum(total))
+
+all_abund <- all_rls %>%
+  group_by(species_name) %>%
+  summarise(total_den = sum(survey_den),
+            total_weight = sum(weight_size_class_sum)
+            )
+  
+
 
 # can I save a species list from this?
 
