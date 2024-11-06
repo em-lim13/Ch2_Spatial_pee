@@ -94,17 +94,6 @@ tubs_nh4_added1 <- tubs_nh4 %>%
   select(cukes_num, flow_s, mean_flow, total_mass, NH4_conc, nh4_added, date)
 
 
-##Making a graph -----
-pee_box <- ggplot(tubs_nh4, aes(flow_s, NH4_conc, colour = cukes_num)) +
-  geom_point() +
-  stat_summary(fun = "mean", geom = "point", size = 3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 0.5)
-pee_box
-
-pee_line <- ggplot(tubs_nh4, aes(flow_ave, NH4_conc, colour = cukes_num)) +
-  geom_point()
-pee_line
-
 # FLOW CODE TAKE 2 -----------
 # The fluorometry is split into am and pm because Emily had to go to the nurse part way through fluorometry and by the time Em got back to the lab to finish the OPA had sat for long enough that the standards had to be rerun
 # Therefore there are two sets of standards and matrix calculations
@@ -131,7 +120,6 @@ standard_am <- read.csv("Data/Emily_flow/2021_06_30_emily_flow_epx2_standard_am.
 standard_pm <- read.csv("Data/Emily_flow/2021_06_30_emily_flow_epx2_standard_pm.csv")
 
 ##Making the standard curve FOR AM DATA -----
-
 standard_am_f <- standard_am %>% 
   mutate(nh4_added_umol = nh4_vol_uL/1e6 * nh4_conc_og_umol, #amount of NH4
          total_vol_L = nh4_vol_uL/1e6 + og_vol_L, #new volume of sample + NH4
@@ -260,16 +248,10 @@ tubs_nh4_added2 <- tubs_nh4_2 %>%
 
 # smoosh the two dfs together (week 1 + week 2) -----
 tubs_nh4_added_final <- rbind(tubs_nh4_added1, tubs_nh4_added2) %>%
-  filter(!(date == "one" & flow_s == 15)) %>%
+  filter(!(date == "one" & flow_s == 15)) %>% # something weird happened in that tub
   mutate(flow2 = ifelse(cukes_num == 0, "Control", as.character(flow_s)),
          flow2 = factor(flow2, levels = c("Control", 10, 15, 20, 25)),
          cukes = as.factor(ifelse(cukes_num == "0", "Zero", "Four")))
-        
-# attempted flow vs real flow
-ggplot(tubs_nh4_added_final, aes(flow_s, mean_flow))+
-  geom_point()
-
-
 
 # stats ----
 model <- lm(nh4_added ~ flow2 + date, data = tubs_nh4_added_final)
@@ -311,22 +293,22 @@ plot_pred(raw_data = tubs_nh4_added_final,
 # ggsave("Output/Pub_figs/Supp2Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 # use ggpredict to get estimates
-sum_stats <- ggpredict(model, terms = c("flow_s")) %>% 
-  dplyr::rename(flow_s = x,
+sum_stats <- ggpredict(model, terms = c("flow2")) %>% 
+  dplyr::rename(flow2 = x,
                 nh4_added = predicted) %>% 
   as_tibble()
 
 # now make dot whisker plots
 ggplot() +
   geom_point(data = sum_stats,
-             aes(x = flow_s, y = nh4_added, colour = flow_s),
+             aes(x = flow2, y = nh4_added, colour = flow2),
              size = 6) +
   geom_errorbar(data = sum_stats,
-                aes(x = flow_s,
+                aes(x = flow2,
                     y = nh4_added,
                     ymin = conf.low,
                     ymax = conf.high, 
-                    colour = flow_s),
+                    colour = flow2),
                 width = 0.4,
                 linewidth = 1.5) +
   geom_jitter(data = tubs_nh4_added_final, 
@@ -340,26 +322,6 @@ ggplot() +
 #ggsave("Output/Figures/Flow_rates.png", device = "png",
 #       height = 9, width = 16, dpi = 400)
 
-
-# Old boxplot
-ggplot(tubs_nh4_added_final, 
-       aes(flow_s, nh4_added, fill = flow_s)) + 
-  geom_boxplot(colour = "white", alpha = 0.9) + 
-  geom_point(aes(colour = flow_s)) +
-  theme_black() + 
-  labs(x = "Flow rate (cm/s)", y = "Change in Ammonium (umol/L)") +
-  theme(legend.position = "none") +
-  scale_fill_manual(values = rev(csee_pal)) +
-  scale_colour_manual(values = rev(csee_pal))
-
-#ggsave("Output/Figures/Flow_rates.png", device = "png",
-#       height = 9, width = 16, dpi = 400)
-  
-
-ggplot(tubs_nh4, aes(flow_s, NH4_conc, colour = cukes_num)) + geom_boxplot() + theme_classic() 
-
-# what was the ammonium like between the weeks
-ggplot(tubs_nh4_added_final, aes(Week, NH4_conc)) + geom_boxplot()
 
 # ? ------
 
