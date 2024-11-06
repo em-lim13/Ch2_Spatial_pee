@@ -8,9 +8,10 @@
 library(tidyverse)
 library(visreg)
 library(ggplot2)
-# library(lme4)
-# library(lmerTest)
+library(TMB)
+library(glmmTMB)
 library(PNWColors)
+library(viridis)
 library(patchwork)
 library(ggeffects)
 source("Code/Functions.R")
@@ -18,7 +19,6 @@ source("Code/Functions.R")
 theme_set(theme_bw())
 
 ##Code to analyze The Experiment of Many Tubs June 21, 2021----
-  
 tubs <- read_csv("Data/Emily_flow/2021_06_21_emily_flow_exp.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(flu_1, flu_2, flu_3)),
          flow_s = as.factor(flow_s), 
@@ -29,7 +29,6 @@ tubs <- read_csv("Data/Emily_flow/2021_06_21_emily_flow_exp.csv") %>%
 standard <- read_csv("Data/Emily_flow/2021_06_23_standard_curve_data.csv") 
 
 ##Making the standard curve -----
-
 standard_f <- standard %>% 
   mutate(nh4_added_umol = nh4_vol_uL/1e6 * nh4_conc_og_umol, #amount of NH4
          total_vol_L = nh4_vol_uL/1e6 + og_vol_L, #new volume of sample + NH4
@@ -53,11 +52,9 @@ ggplot(standard_f, aes(mean_FLU, nh4_conc_final_umol_L)) +
 int <- coef(sc_mod1)[1]
 slope <- coef(sc_mod1)[2]
 
-
 ##Calculating the matrix effects -----
 Fst_zero <- standard_f$mean_FLU[standard_f$nh4_vol_uL == "0"]
 Fst_spike <- standard_f$mean_FLU[standard_f$nh4_vol_uL == "200"]
-
 
 matrix <- tubs %>%
   filter(sample_matrix == "matrix") %>%
@@ -94,13 +91,14 @@ tubs_nh4_added1 <- tubs_nh4 %>%
   left_join(tubs_controls, by = "sample_matrix") %>%
   mutate(nh4_added = NH4_conc - NH4_conc_control,
          date = "one") %>%
-  select(cukes_num, flow_s, total_mass, NH4_conc, nh4_added, date)
+  select(cukes_num, flow_s, mean_flow, total_mass, NH4_conc, nh4_added, date)
 
 
 ##Making a graph -----
-
-pee_box <- ggplot(tubs_nh4, aes(flow_s, NH4_conc, fill = cukes_num)) +
-  geom_boxplot()
+pee_box <- ggplot(tubs_nh4, aes(flow_s, NH4_conc, colour = cukes_num)) +
+  geom_point() +
+  stat_summary(fun = "mean", geom = "point", size = 3) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 0.5)
 pee_box
 
 pee_line <- ggplot(tubs_nh4, aes(flow_ave, NH4_conc, colour = cukes_num)) +
@@ -116,13 +114,15 @@ tubs_am <- read.csv("Data/Emily_flow/2021_06_30_emily_flow_exp2_am.csv")%>%
   mutate(mean_FLU = rowMeans(cbind(flu_1, flu_2, flu_3)),
          flow_s = as.factor(flow_s), 
          cukes_num = as.factor(cukes_num),
-         flow_e = (((500/flow_e_sec) - 13.594)/3.56))
+         flow_e = (((500/flow_e_sec) - 13.594)/3.56),
+         mean_flow = rowMeans(cbind(flow_s, flow_e)))
 
 tubs_pm <- read.csv("Data/Emily_flow/2021_06_30_emily_flow_exp2_pm.csv")%>%
   mutate(mean_FLU = rowMeans(cbind(flu_1, flu_2, flu_3)),
          flow_s = as.factor(flow_s), 
          cukes_num = as.factor(cukes_num),
-         flow_e = (((500/flow_e_sec) - 13.594)/3.56))
+         flow_e = (((500/flow_e_sec) - 13.594)/3.56),
+         mean_flow = rowMeans(cbind(flow_s, flow_e)))
 
 
 #Load standard curve data for am and pm fluoro
@@ -255,29 +255,60 @@ tubs_nh4_added2 <- tubs_nh4_2 %>%
   left_join(tubs_controls2, by = "sample_matrix") %>%
   mutate(nh4_added = NH4_conc - NH4_conc_control,
          date = "two") %>%
-  select(cukes_num, flow_s, total_mass, NH4_conc, nh4_added, date)
+  select(cukes_num, flow_s, mean_flow, total_mass, NH4_conc, nh4_added, date)
 
 
 # smoosh the two dfs together (week 1 + week 2) -----
 tubs_nh4_added_final <- rbind(tubs_nh4_added1, tubs_nh4_added2) %>%
-  mutate(Week = date) %>%
-  filter(!(Week == "one" & flow_s == 15)) %>%
-  mutate(flow_s = flow_s,
-         flow_s = ifelse(cukes_num == 0, "Control", flow_s)) %>%
-  mutate(flow_s = ifelse(flow_s == 1, 10,
-                         ifelse(flow_s == 2, 15,
-                                ifelse(flow_s == 3, 20,
-                                       ifelse(flow_s == 4, 25, "Control"))))) %>%
-  mutate(flow_s = factor(flow_s, levels = c("Control", 10, 15, 20, 25)))
+  filter(!(date == "one" & flow_s == 15)) %>%
+  mutate(flow2 = ifelse(cukes_num == 0, "Control", as.character(flow_s)),
+         flow2 = factor(flow2, levels = c("Control", 10, 15, 20, 25)),
+         cukes = as.factor(ifelse(cukes_num == "0", "Zero", "Four")))
         
+# attempted flow vs real flow
+ggplot(tubs_nh4_added_final, aes(flow_s, mean_flow))+
+  geom_point()
+
+
 
 # stats ----
-model <- lm(nh4_added ~ flow_s + Week, data = tubs_nh4_added_final)
+model <- lm(nh4_added ~ flow2 + date, data = tubs_nh4_added_final)
 summary(model)
 visreg(model)
 
+# model with flow as a continuous
+model2 <- glmmTMB(nh4_added ~ mean_flow*cukes + (1|date), data = tubs_nh4_added_final)
+summary(model2)
+visreg(model2, "mean_flow", by = "cukes")
+
+
 # Plot ------
 csee_pal <- pnw_palette("Starfish")
+
+# palette
+pal_flow <- viridis::viridis(10)[1:5]
+
+pal <- viridis::viridis(10)
+pal_flow2 <- c(pal[5], pal[8])
+
+# continuous plot
+predict_flow <- ggpredict(model2, terms = c("mean_flow", "cukes")) %>% 
+  dplyr::rename(mean_flow = x,
+                cukes = group)
+
+# use plot pred function
+plot_pred(raw_data = tubs_nh4_added_final, 
+          predict_data = predict_flow, 
+          plot_type = "flow",
+          x_var = mean_flow, 
+          y_var = nh4_added, 
+          lty_var = cukes,
+          pch_var = NULL,
+          x_axis_lab = NULL,
+          pal = pal_flow2,
+          theme = "white")
+
+# ggsave("Output/Pub_figs/Supp2Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 # use ggpredict to get estimates
 sum_stats <- ggpredict(model, terms = c("flow_s")) %>% 
@@ -285,7 +316,7 @@ sum_stats <- ggpredict(model, terms = c("flow_s")) %>%
                 nh4_added = predicted) %>% 
   as_tibble()
 
-# now make dot whisker plots\
+# now make dot whisker plots
 ggplot() +
   geom_point(data = sum_stats,
              aes(x = flow_s, y = nh4_added, colour = flow_s),
@@ -297,17 +328,18 @@ ggplot() +
                     ymax = conf.high, 
                     colour = flow_s),
                 width = 0.4,
-                size = 1.5) +
+                linewidth = 1.5) +
   geom_jitter(data = tubs_nh4_added_final, 
-              aes(x = flow_s, y = nh4_added, colour = flow_s), 
+              aes(x = flow2, y = nh4_added, colour = flow2), 
               size = 3, alpha = 0.5, height=0) +
-  theme_black() + 
+  theme_white() + 
   labs(x = "Flow rate (cm/s)", y = "Change in Ammonium (umol/L)") +
   theme(legend.position = "none") +
-  scale_colour_manual(values = rev(csee_pal))
+  scale_colour_manual(values = (pal_flow))
 
 #ggsave("Output/Figures/Flow_rates.png", device = "png",
 #       height = 9, width = 16, dpi = 400)
+
 
 # Old boxplot
 ggplot(tubs_nh4_added_final, 

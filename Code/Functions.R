@@ -1035,6 +1035,15 @@ plot_pred <- function(raw_data, predict_data,
       scale_colour_manual(values = (pal), drop = FALSE) +
       theme(legend.position = c(0.85, 0.89))
   }
+    
+    if(plot_type == "flow"){
+      new_plot <- base_pred_plot +
+        labs(x = "Flow rate (m/s)", 
+             y = expression(paste(Delta, " Ammonium ", (mu*M)))) +
+        labs(colour = "Cukes", fill = "Cukes")
+    }
+    
+
   
   print(new_plot)
 }
