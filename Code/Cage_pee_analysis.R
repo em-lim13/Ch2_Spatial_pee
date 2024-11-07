@@ -172,10 +172,12 @@ max_diff <- sum_crab %>%
 # Load my other cuke excretion data
 # This csv is written in the CH0_Pilot project in the Excretion_Rate.R file
 cuke_exc <- read_csv("Data/Cage_experiment/all_cuke_excretion.csv") %>%
-  mutate(exp = "amodel")
+  mutate(exp = "amodel",
+         log_pee = log(nh4_rate),
+         log_size = log(size_index))
 
 # fit a size index model
-mod_index <- lm(nh4_rate ~ size_index, cuke_exc)
+mod_index <- lm(log_pee ~ size_index, cuke_exc)
 plot(DHARMa::simulateResiduals(mod_index))  
 
 summary(mod_index)  # Adjusted R2 is only 0.3666 but the weight model is even worse
@@ -197,9 +199,10 @@ cuke2 <- read_csv("Data/Cage_experiment/2021_05_28_cage_samples.csv") %>%
   rename(length_cm = cuke_len2, 
          girth_cm = cuke_width2) 
 
-cage_cuke_sizes <- rbind(cuke1, cuke2) %>%
+cage_cuke_sizes2 <- rbind(cuke1, cuke2) %>%
   mutate(size_index = sqrt(length_cm*girth_cm),
-         nh4_rate = size_index*slope + int,
+         log_nh4_rate = int + slope*size_index,
+         nh4_rate = exp(log_nh4_rate),
          exp = "cage")
 
 cuke_nh4_rates <- cage_cuke_sizes %>%
@@ -230,7 +233,7 @@ red <- read_csv("Data/Cage_experiment/red_crab_excretion.csv")
 mod_red <- lm(log_pee ~ carapace_mm, 
               data = red)
 summary(mod_red)
-plot(simulateResiduals(mod_red))
+plot(DHARMa::simulateResiduals(mod_red))
 
 # save coefficients
 int <- coef(mod_red) [1]
