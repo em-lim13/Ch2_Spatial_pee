@@ -19,6 +19,7 @@ kelp_map_data <- read_csv("Output/Output_data/kelp_map_data.csv")
 rls_final <- read_csv("Output/Output_data/rls_final.csv")
 
 # load all rls pee data
+# this includes the June and July samples, which were excluded from the main RLS analysis
 rls_nh4_all <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
                      read_csv("Output/Output_data/RLS_nh4_2022.csv"),
                      read_csv("Output/Output_data/RLS_nh4_2023.csv")) %>%
@@ -44,6 +45,7 @@ blue <- paste("#b9d1df", sep="")
 # RLS coords ------
 rls_coords <- rls_final %>%
   group_by(site_code) %>%
+  # this is the mean of the May samples
   mutate(nh4_avg = mean(nh4_avg)) %>%
   ungroup() %>%
   select(site_code, nh4_avg) %>%
@@ -90,7 +92,7 @@ all_coords <- rbind(rls_coords, kelp_coords) %>%
                                TRUE ~ as.numeric(longitude))) %>%
   st_as_sf(coords = c("longitude", "latitude")) %>%
   st_set_crs(4326) %>%
-  # shrink the two sites over 1 uM to 2 uM so the scale is nicer
+  # shrink the one site over 2 uM to 2 uM so the scale is nicer
   mutate(Habitat = factor(as.factor(Habitat), levels = c("Reef", "Kelp")),
          nh4_avg = ifelse(nh4_avg > 2, 2, nh4_avg),
          nh4_overall_avg_all = ifelse(nh4_overall_avg_all > 2, 2, nh4_overall_avg_all),
@@ -114,7 +116,7 @@ map_daddy(lat_min = -125.375,
           white_background = TRUE)
 
 # size adjusted
-# ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1.png", device = "png", height = 9, width = 12.606299, dpi = 400)
+# ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1d.png", device = "png", height = 9, width = 12.606299, dpi = 400)
 
 # old size
 # ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1.png", device = "png", height = 9, width = 16, dpi = 400)

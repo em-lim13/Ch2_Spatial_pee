@@ -840,7 +840,7 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
       # Specify plot options
       plot.background = element_rect(color = background, fill = background),  
     ) +
-    annotation_scale(location = "br", width_hint = 0.4) +
+    annotation_scale(location = "br", width_hint = 0.4, text_cex = 1.75) +
     annotation_north_arrow(location = "br", which_north = "true", 
                            pad_x = unit(0.0, "in"), pad_y = unit(0.2, "in"),
                            style = north_arrow_fancy_orienteering)
