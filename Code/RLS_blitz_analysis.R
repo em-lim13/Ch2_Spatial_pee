@@ -132,7 +132,7 @@ rls_wide <- rls_wider %>%
   select(survey_id, shannon, simpson)
 
 
-# NH+ data: Load + manipulate  ----
+# NH4+ data: Load + manipulate  ----
 
 # RLS nh4 from 2021
 # This is the spring blitz, the june samples, and the July samples
