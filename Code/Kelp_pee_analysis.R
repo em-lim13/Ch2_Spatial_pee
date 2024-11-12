@@ -1194,26 +1194,39 @@ ggplot(data = data_s,
 
 # messing around -----
 
+# pivot longer to plot kelp biomass of each species on same plot
+long <- data %>%
+  pivot_longer(cols = Macro:Nereo, values_to = "kelp_sp_density", names_to = "kelp_sp_sp")
+
+# look at kelp biomass at each site
+ggplot(long, aes(kelp_sp_density, site_name, colour = kelp_sp_sp)) +
+  geom_point() 
+
+# look at this another way 
+short <- data %>% select(site_name, kelp_sp, Macro, Nereo)
+# all Nereo sites are true Nereo, the Macro sites have very little Nereo
+# Ed King East Inside is the only site I'd call truely mixed
+
+ggplot(data %>% mutate(mixed = ifelse(site_name == "Ed King East Inside", "mixed", kelp_sp)), aes(kelp_bio_scale, in_minus_out, colour = mixed)) +
+  geom_point() # ok so the one "mixed site" is also the highest kelp biomass.... idk i think I'm gonna have to just accept this
+
+
 # looks like there's a positive relationship between shannon and delta nh4+
-ggplot(data, aes(species_richness, shannon, colour = kelp_sp)) +
+ggplot(data, aes(in_minus_out, shannon, colour = kelp_sp)) +
   geom_point() +
   geom_smooth(method = lm)
 
-# but there's a positive relationship between kelp biomass and shannon?
+# and there's a positive relationship between kelp biomass and shannon?
 ggplot(data, aes(kelp_bio_scale, shannon_scale, colour = kelp_sp)) +
   geom_point() +
   geom_smooth(method = lm)
-
 
 # what about weight? positive weight relationship
 ggplot(data, aes(weight_sum_scale, shannon_scale, colour = kelp_sp)) +
   geom_point() +
   geom_smooth(method = lm)
 
-# 
-ggplot(data, aes(weight_sum_scale, shannon_scale, colour = kelp_sp)) +
-  geom_point() +
-  geom_smooth(method = lm)
+# SO WHY IS SHANNON NEGATIVE I DON'T UNDERSTAND
 
 # try dropping not scaling the variables
 mod_div <- glmmTMB(in_minus_out ~ kelp_sp + 
