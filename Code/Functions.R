@@ -998,7 +998,7 @@ plot_pred <- function(raw_data, predict_data,
                    pch = {{pch_var}}), 
                alpha = 0.8, size = 4) +
     geom_line(data = predict_data,
-              aes(x = {{x_var}}, y = predicted, 
+              aes(x = {{x_var}}, y = predicted,
                   colour = {{lty_var}}),
               linewidth = 2) +
     geom_ribbon(data = predict_data,
@@ -1040,7 +1040,7 @@ plot_pred <- function(raw_data, predict_data,
       new_plot <- base_pred_plot +
         labs(x = "Flow rate (m/s)", 
              y = expression(paste(Delta, " Ammonium ", (mu*M)))) +
-        labs(colour = "Cukes", fill = "Cukes")
+        labs(colour = "Cukes", fill = "Cukes", pch = "Cukes", lty = "Cukes")
     }
     
 
