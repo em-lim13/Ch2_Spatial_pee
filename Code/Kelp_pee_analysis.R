@@ -47,8 +47,9 @@ kcca_surveys <- pee %>%
 # transect level kelp biomass + density data from Claire
 kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   as.data.frame() %>%
+  select(-Biomassm2kg) %>%
   # Add the averaged site level variables from Claire!
-  left_join(read_csv("Data/Team_kelp/Output_data/kelpmetrics_2022.csv"), by = "SiteName") %>% 
+  left_join(read_csv("Data/Team_kelp/Output_data/kelp_metrics_2022_update.csv"), by = "SiteName") %>% 
   # add the side codes to this data via site names
   left_join((read_csv("Data/Team_kelp/Output_data/site_names.csv")), by = "SiteName") %>%
   # rename vars now that all the data is linked up
@@ -67,8 +68,10 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
            TRUE ~ as.character("macro")))) %>% # everything else = macro
   replace(is.na(.), 0)  %>%
   group_by(site_code) %>%
-  mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(Biomassm2kg)),
-         Area_m2 = ifelse(kelp_sp == "none", 0, Area_m2)) %>%
+  # site level summaries
+  mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(BiomassTkg)),
+         Area_m2 = ifelse(kelp_sp == "none", 0, Area_m2),
+         DensityM = mean(kelp_den)) %>%
   ungroup()  %>%
   filter(Transect != "15") # this means the fourth transect contributes to the kelp density metrics but is cut bc there's no pee sample on that tran
 
@@ -560,8 +563,8 @@ predict_kelp <- ggpredict(mod_in_out3, terms = c("BiomassM [v_kelp]", "avg_excha
          tide_cat = factor(as.factor(ifelse(
            group == as.character(tide_means_kelp[1,2]), "Slack", "Flood")),
            levels = c("Ebb", "Slack", "Flood"))) %>%
-  filter(tide_cat != "Flood" | BiomassM < 0.75) %>%
-  filter(tide_cat != "Flood" | BiomassM > 0.36)
+  filter(tide_cat != "Flood" | BiomassM < 3.8) %>%
+  filter(tide_cat != "Flood" | BiomassM > 1.8)
 
 
 # now plot these predictions
@@ -1212,7 +1215,7 @@ ggplot(data %>% mutate(mixed = ifelse(site_name == "Ed King East Inside", "mixed
 
 
 # looks like there's a positive relationship between shannon and delta nh4+
-ggplot(data, aes(in_minus_out, shannon, colour = kelp_sp)) +
+ggplot(data, aes(y = in_minus_out, x=shannon, colour = kelp_sp)) +
   geom_point() +
   geom_smooth(method = lm)
 
@@ -1222,7 +1225,7 @@ ggplot(data, aes(kelp_bio_scale, shannon_scale, colour = kelp_sp)) +
   geom_smooth(method = lm)
 
 # what about weight? positive weight relationship
-ggplot(data, aes(weight_sum_scale, shannon_scale, colour = kelp_sp)) +
+ggplot(data, aes(abundance_scale, shannon_scale, colour = kelp_sp)) +
   geom_point() +
   geom_smooth(method = lm)
 
