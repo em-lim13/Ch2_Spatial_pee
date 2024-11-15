@@ -290,7 +290,7 @@ plot_pred(raw_data = tubs_nh4_added_final,
           pal = pal_flow2,
           theme = "white")
 
-# ggsave("Output/Pub_figs/Supp1Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Supp1Fig3.png", device = "png", height = 9, width = 16, dpi = 400)
 
 # use ggpredict to get estimates
 sum_stats <- ggpredict(model, terms = c("flow2")) %>% 
