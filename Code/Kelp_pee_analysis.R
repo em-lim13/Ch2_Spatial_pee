@@ -877,7 +877,7 @@ all_fam <- data_fam_no0s %>%
                     total_den = sum(fam_den),
                     total_weight = sum(weight_fam_sum_g)))
 
-# Supplement 2 Fig 2: Family plots ----
+# Fig S2.2: Family plots ----
 pal_k <- viridis::viridis(10)
 pal1 <- pal_k[4]
 
@@ -904,8 +904,45 @@ fam_plot <- ggplot() +
 
 fam_plot
 
-# ggsave("Output/Pub_figs/Supp1Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Supp2Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
+# Fig S1.2 shannon vs biomass plots -----
+pal10 <- viridis::viridis(10)
+pal_sp2 <- c(pal10[8], pal10[6], pal10[4])
+
+# and there's a positive relationship between kelp biomass and shannon?
+kelp_shannon <- ggplot(data, aes(BiomassM, shannon, colour = kelp_sp, pch = kelp_sp, fill = kelp_sp)) +
+  geom_point(alpha = 0.8, size = 4) +
+  geom_smooth(method = lm, linewidth = 2, alpha = 0.18) +
+  theme_white() +
+  ylim(c(1.2, 2.8)) +
+  theme(legend.position = "none") +
+  scale_colour_manual(labels = sp_labs, values = (pal_sp2)) +
+  scale_fill_manual(labels = sp_labs, values = (pal_sp2)) +
+  labs(x = expression(paste("Kelp biomass (kg/m"^2,")")), y = "Shannon diversity") +
+  place_label("(a)")
+
+
+# what about weight? positive weight relationship
+animal_shannon <- ggplot(data, aes(weight_sum, shannon, colour = kelp_sp, pch = kelp_sp, fill = kelp_sp)) +
+  geom_point(alpha = 0.8, size = 4) +
+  geom_smooth(method = lm, linewidth = 2, alpha = 0.18) +
+  theme_white() +
+  ylim(c(1.2, 2.8)) +
+  labs(x = expression(paste("Animal biomass (kg/m"^2,")")), y = "Shannon diversity",
+       colour = "Kelp species", pch = "Kelp species", fill = "Kelp species") +
+  scale_colour_manual(labels = sp_labs, values = (pal_sp2)) +
+  scale_shape_discrete(labels = sp_labs) +
+  scale_fill_manual(labels = sp_labs, values = (pal_sp2)) +
+  guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
+         size = guide_legend(override.aes = list(colour = "black")),
+         colour = guide_legend(override.aes = list(size = 3, linewidth = 1)))+
+  place_label("(b)")
+
+
+kelp_shannon + animal_shannon
+
+# ggsave("Output/Pub_figs/Supp1Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
 # Community stuff -----
 # make wide for families
@@ -1219,17 +1256,6 @@ ggplot(data, aes(y = in_minus_out, x=shannon, colour = kelp_sp)) +
   geom_point() +
   geom_smooth(method = lm)
 
-# and there's a positive relationship between kelp biomass and shannon?
-ggplot(data, aes(kelp_bio_scale, shannon_scale, colour = kelp_sp)) +
-  geom_point() +
-  geom_smooth(method = lm)
-
-# what about weight? positive weight relationship
-ggplot(data, aes(abundance_scale, shannon_scale, colour = kelp_sp)) +
-  geom_point() +
-  geom_smooth(method = lm)
-
-# SO WHY IS SHANNON NEGATIVE I DON'T UNDERSTAND
 
 # try dropping not scaling the variables
 mod_div <- glmmTMB(in_minus_out ~ kelp_sp + 
