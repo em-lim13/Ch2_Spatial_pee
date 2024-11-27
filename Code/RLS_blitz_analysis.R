@@ -753,6 +753,9 @@ rls_coeff_plot + rls_pred_plot  &
   theme(plot.tag.position = c(0, 1),
         plot.tag = element_text(hjust = -1, vjust = 0))
 
+# correct size
+# ggsave("Output/Pub_figs/Fig2s.png", device = "png", height = 3.9375, width = 7, units = "in", dpi = 400)
+
 # ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
 # Supplement 2 Fig 1: Family plots -----

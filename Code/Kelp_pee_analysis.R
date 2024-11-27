@@ -501,6 +501,7 @@ kelp_coeff_plot <- coeff_plot(coeff_df = df,
   place_label("(a)") # this is a function I create in the Functions.R file
 
 
+
 # Fig 3b: Kelp species predictions ----
 # make predictions for macro and nereo at mean kelp bio, make prediction for the no kelp at the mean of the no kelp sites
 kelp_means <- data %>%
@@ -695,13 +696,15 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
                     (kelp_tide_int_plot + squish) +
                     abund_tide_int_plot ) & theme(legend.justification = "left")
 
+# correct size
+# ggsave("Output/Pub_figs/Fig3s.png", device = "png", height = 7, width = 7, units = "in", dpi = 400)
 
+# old size
 # ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
 
+
+
 # comparing the coeff plots, making depth a random effect doesn't really change anything REAL. It just makes the no kelp coeff LOOK like its not signif diff from 0, but when you estimate the delta at the mean no kelp biomass (0) it's basically the same estimate as the model with depth
-
-# makes me wonder if we just forgo the coeff plot and just show the four prediction plots: kelp sp, kelp bio, animals, depth??
-
 
 
 
@@ -715,6 +718,7 @@ data_fam_no0_a <- data %>%
                summarise(fam_den = sum(survey_den),
                          weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
             by = "site_code") 
+
 
 # what are the top families?
 

@@ -113,6 +113,36 @@ theme_white = function(base_size = 12, base_family = "") {
   
 }
 
+# Publication figure theme ------
+pub_theme <- function() {
+  theme_classic() +
+    theme(
+          # axis
+          axis.text = element_text(size = 12, colour = "black"),
+          axis.title = element_text(size = 12, colour = "black"),
+          axis.line = element_line(colour = "black", linewidth = 0.1),
+          axis.ticks = element_line(color = "black", linewidth = 0.2),
+          axis.ticks.length = unit(0.1, "lines"),
+          # legend
+          legend.background = element_rect(color = NA, fill = "white"),  
+          legend.key = element_rect(color = "white",  fill = "white"),  
+          legend.key.size = unit(1.2, "lines"),  
+          legend.key.height = NULL,  
+          legend.key.width = NULL,      
+          legend.position = "right",  
+          legend.text.align = NULL,  
+          legend.title.align = NULL,  
+          legend.direction = "vertical",  
+          legend.box = NULL, 
+          legend.title = element_text(size = 12, colour = "black"),
+          legend.text = element_text(size = 12, colour = "black"),
+          # panel border
+          panel.background = element_rect(fill = "white", color  =  NA),  
+          panel.border = element_rect(fill = NA, color = "black", linewidth = 0.5),
+          panel.spacing = unit(0.1, "lines"),
+    )
+}
+
 # Calculate nh4+ -----
 # function Nikola built for me!!!
 pee_calc <- function(data_path) {
@@ -907,7 +937,7 @@ map_daddy_np <- function(lat_min, lat_max, long_min, long_max,
 # Plotting -----
 
 # Annotation -----
-place_label <- function(label, size = 10, ...) {
+place_label <- function(label, size = 5, ...) {
   annotate("text", label = label, x = -Inf, y = Inf, 
            vjust = 1.4, hjust = -0.15, size = size, ...)
 }
@@ -917,17 +947,23 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL,
                         labels, pal, theme ="white"){
   
   if(theme == "white"){
-    theme <- theme_white()
+    theme <- pub_theme()
     features <- "black"
+    dot_var = 3
+    jitter_var = 2
+    line_var = 0.75
   } else {
     theme <- theme_black()
     features <- "white"
+    dot_var = 8
+    jitter_var = 5
+    line_var = 1.5
   }
   
   ggplot() +
     geom_point(data = {{sum_data}},
                aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}),
-               size = 8) +
+               size = dot_var) +
     geom_errorbar(data = {{sum_data}},
                   aes(x = {{x_var}},
                       y = {{y_var}},
@@ -935,10 +971,10 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL,
                       ymax = conf.high, 
                       colour = {{x_var}}),
                   width = 0.4,
-                  linewidth = 1.5) +
+                  linewidth = line_var) +
     geom_jitter(data = {{all_data}}, 
                 aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}), 
-                size = 5, alpha = 0.5, height=0, width = 0.2) +
+                size = jitter_var, alpha = 0.5, height=0, width = 0.2) +
     theme + 
     theme(legend.position = "none",
           plot.title = element_text(size = 30)) +
@@ -953,19 +989,23 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL,
 coeff_plot <- function(coeff_df, pal, theme = "white"){
   
   if(theme == "white"){
-    theme <- theme_white()
+    theme <- pub_theme()
     features <- "black"
+    size_var = 5
+    line_var = 1
   } else {
     theme <- theme_black()
     features <- "white"
+    size_var = 10
+    line_var = 3
   }
   
   ggplot(coeff_df, aes(x = estimate, y = variable, 
                        xmin = lower_CI, xmax = upper_CI, 
                        colour = variable)) +
-    geom_point(size = 10) +
-    geom_errorbar(width = 0, linewidth = 3) +
-    geom_vline(xintercept = 0, color = features, linetype = "dashed") +
+    geom_point(size = size_var) +
+    geom_errorbar(width = 0, linewidth = line_var) +
+    geom_vline(xintercept = 0, color = features, linetype = "dashed", linewidth = line_var*0.5) +
     labs(x = "Coefficient", y = " ") +
     scale_y_discrete(limits = rev(levels(coeff_df$variable))) +
     theme +
@@ -984,11 +1024,15 @@ plot_pred <- function(raw_data, predict_data,
                       pal,
                       theme = "white"){
   if(theme == "white"){
-    theme <- theme_white()
+    theme <- pub_theme()
     features <- "black"
+    size_var = 2
+    line_var = 1
   } else {
     theme <- theme_black()
     features <- "white"
+    size_var = 4
+    line_var = 2
   }
   
   base_pred_plot <-  ggplot() + 
@@ -996,11 +1040,11 @@ plot_pred <- function(raw_data, predict_data,
                aes(x = {{x_var}}, y = {{y_var}}, 
                    colour = {{lty_var}}, fill = {{lty_var}},
                    pch = {{pch_var}}), 
-               alpha = 0.8, size = 4) +
+               alpha = 0.8, size = size_var) +
     geom_line(data = predict_data,
               aes(x = {{x_var}}, y = predicted,
                   colour = {{lty_var}}),
-              linewidth = 2) +
+              linewidth = line_var) +
     geom_ribbon(data = predict_data,
                 aes(x = {{x_var}}, y = predicted, fill = {{lty_var}},
                     ymin = conf.low, ymax = conf.high), 
@@ -1009,14 +1053,14 @@ plot_pred <- function(raw_data, predict_data,
     theme +
     scale_colour_manual(values = (pal)) +
     scale_fill_manual(values = (pal)) +
-    guides(lty = guide_legend(override.aes = list(linewidth = 0.5)),
+    guides(lty = guide_legend(override.aes = list(linewidth = line_var/3)),
            size = guide_legend(override.aes = list(colour = features)),
-           colour = guide_legend(override.aes = list(size = 3, linewidth = 1)))
+           colour = guide_legend(override.aes = list(size = size_var*0.75, linewidth = line_var/3)))
   
   # then add bells and whistles for new kelp plot
   if(plot_type == "new_kelp"){
     new_plot <- base_pred_plot +
-      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = 0.5) +
+      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = line_var*0.5) +
       labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
            x = x_axis_lab) 
     #      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
