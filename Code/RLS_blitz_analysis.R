@@ -155,7 +155,7 @@ rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   mutate(year = as.factor(year)) %>%
   rename(site_code = site_ID) %>%
   filter(month == "May") %>%
-  left_join(rls_survey_info, by = c("site_code", "year")) %>%
+  left_join(rls_survey_info, by = c("site_code", "year", "date")) %>%
   depth_function() # only keep the RLS survey from the transect where the pee is from
 
 
@@ -755,7 +755,18 @@ rls_coeff_plot + rls_pred_plot  &
 
 # correct size
 # ggsave("Output/Pub_figs/Fig2s.png", device = "png", height = 3.9375, width = 7, units = "in", dpi = 400)
+ 
+# try plotting panels horizontally
+# squish the y axis over
+squish <- theme(axis.title.y = element_text(margin = margin(r = -150, unit = "pt")))
 
+rls_coeff_plot / (rls_pred_plot + squish)  &
+  theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(hjust = -1, vjust = 0))
+
+# ggsave("Output/Pub_figs/Fig2h.png", device = "png", height = 7.875, width = 3.5, units = "in", dpi = 400)
+
+# old size
 # ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
 # Supplement 2 Fig 1: Family plots -----
@@ -851,6 +862,13 @@ sum_pee <- rls_final %>%
   group_by(year) %>%
   summarise(min = min(nh4_avg),
             max = max(nh4_avg),
+            percent_diff = max/min)
+
+sum_pee2 <- rls_nh4 %>%
+  filter(nh4_conc > 0) %>%
+  group_by(year) %>%
+  summarise(min = min(nh4_conc),
+            max = max(nh4_conc),
             percent_diff = max/min)
 
 # Data exploration ------
