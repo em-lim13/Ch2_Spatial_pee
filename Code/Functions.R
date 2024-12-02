@@ -140,6 +140,8 @@ pub_theme = function(base_size = 12, base_family = "") {
       legend.title.align = NULL,  
       legend.direction = "vertical",  
       legend.box = NULL, 
+      legend.margin=margin(0,0,0,0),
+      legend.box.margin=margin(-10,-10,-10,-10),
       # Specify panel options
       panel.background = element_rect(fill = "white", color  =  NA),  
       panel.border = element_rect(fill = NA, color = "black", linewidth = 0.5),  
@@ -992,7 +994,7 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL,
                   linewidth = line_var) +
     geom_jitter(data = {{all_data}}, 
                 aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}), 
-                size = jitter_var, alpha = 0.5, height=0, width = 0.2) +
+                size = jitter_var, alpha = 0.4, height=0, width = 0.2) +
     theme + 
     theme(legend.position = "none",
           plot.title = element_text(size = 30)) +
@@ -1058,7 +1060,7 @@ plot_pred <- function(raw_data, predict_data,
                aes(x = {{x_var}}, y = {{y_var}}, 
                    colour = {{lty_var}}, fill = {{lty_var}},
                    pch = {{pch_var}}), 
-               alpha = 0.8, size = size_var) +
+               alpha = 0.5, size = size_var) +
     geom_line(data = predict_data,
               aes(x = {{x_var}}, y = predicted,
                   colour = {{lty_var}}),
@@ -1080,7 +1082,8 @@ plot_pred <- function(raw_data, predict_data,
     new_plot <- base_pred_plot +
       geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = line_var*0.25) +
       labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-           x = x_axis_lab) 
+           x = x_axis_lab) +
+      theme(plot.margin = unit(rep(0.1, 4), "lines"))
     #      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
     #                         labels = c("0", "0.6", "1.2", "1.8"))
   }

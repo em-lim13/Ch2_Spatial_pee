@@ -537,7 +537,7 @@ kelp_sp_plot <-
               pal = pal_spc) +
   labs(y = expression(paste(Delta, " Ammonium ", (mu*M))),
        x = "Kelp species") +
-  geom_hline(yintercept = 0, lty = "dashed") +
+  geom_hline(yintercept = 0, lty = "dashed", linewidth = 0.25) +
   place_label("(b)") +
   ylim(c(-0.79, 1.05))
 
@@ -689,7 +689,8 @@ abund_tide_int_plot <-
 
 # Fig 3 panels ----
 # plot coeffs + interactions
-squish <- theme(axis.title.y = element_text(margin = margin(r = -200, unit = "pt")))
+squish <- theme(axis.title.y = element_text(margin = margin(r = -90, unit = "pt")))
+# -200 for theme black
 
 kelp_coeff_plot/ ((kelp_sp_plot + squish) +
                     abund_kelp_int_plot + 
@@ -697,7 +698,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
                     abund_tide_int_plot ) & theme(legend.justification = "left")
 
 # correct size
-# ggsave("Output/Pub_figs/Fig3s.png", device = "png", height = 7, width = 7, units = "in", dpi = 400)
+# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 7, width = 7, units = "in", dpi = 400)
 
 # old size
 # ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
