@@ -209,21 +209,18 @@ map_daddy(lat_min = -125.3,
 
 
 # calcs -----
-# calculate distance between each RLS point
-dist <- read_csv("Data/RLS/RLS_data/true_coords.csv") %>%
-  mutate(k = 1) %>%
-  rename(x = longitude,
-         y = latitude)
 
-dist2 <- dist %>%
-  full_join(dist, by = "k") %>%
-  mutate(distance = sqrt((x.x - x.y)^2 + (y.x - y.y)^2)) 
+# distance between coords
+library(geodist)
+distance_matrix <- geodist(rls_coords, measure = 'geodesic' )/1000 #converting it to km
+colnames(distance_matrix) <- rls_coords$site_name
+rownames(distance_matrix) <- rls_coords$site_name
 
-# greatest distance is between Hosie and Wouwer = 24.18 km
-# smallest distance is Baeria Rocks North Island Southside to Baeria Rocks North Island Northside = 65.65 m
-# next smallest is Dodger to Taylor = 194.05 m 
+distance_matrix_lon <- as.data.frame.table(distance_matrix, responseName = "value") %>%
+  filter(value != 0)
 
-
+max(distance_matrix_lon$value) # greatest distance is between Hosie and Wouwer = 24.24 km
+min(distance_matrix_lon$value) # smallest distance is Baeria Rocks North Island Southside to Baeria Rocks North Island Northside = 65.55 m
 
 # play with making a kml -----
 ggplot() +
