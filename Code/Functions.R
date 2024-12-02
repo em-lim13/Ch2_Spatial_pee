@@ -114,33 +114,51 @@ theme_white = function(base_size = 12, base_family = "") {
 }
 
 # Publication figure theme ------
-pub_theme <- function() {
-  theme_classic() +
+pub_theme = function(base_size = 12, base_family = "") {
+  
+  theme_grey(base_size = base_size, base_family = base_family) %+replace%
+    
     theme(
-          # axis
-          axis.text = element_text(size = 12, colour = "black"),
-          axis.title = element_text(size = 12, colour = "black"),
-          axis.line = element_line(colour = "black", linewidth = 0.1),
-          axis.ticks = element_line(color = "black", linewidth = 0.2),
-          axis.ticks.length = unit(0.1, "lines"),
-          # legend
-          legend.background = element_rect(color = NA, fill = "white"),  
-          legend.key = element_rect(color = "white",  fill = "white"),  
-          legend.key.size = unit(1.2, "lines"),  
-          legend.key.height = NULL,  
-          legend.key.width = NULL,      
-          legend.position = "right",  
-          legend.text.align = NULL,  
-          legend.title.align = NULL,  
-          legend.direction = "vertical",  
-          legend.box = NULL, 
-          legend.title = element_text(size = 12, colour = "black"),
-          legend.text = element_text(size = 12, colour = "black"),
-          # panel border
-          panel.background = element_rect(fill = "white", color  =  NA),  
-          panel.border = element_rect(fill = NA, color = "black", linewidth = 0.5),
-          panel.spacing = unit(0.1, "lines"),
+      # Specify axis options
+      axis.line = element_line(colour = "black", linewidth = 0.1),  
+      axis.text.x = element_text(size = base_size*0.9, color = "black", lineheight = 0.2),  
+      axis.text.y = element_text(size = base_size*0.9, color = "black", lineheight = 0.2),  
+      axis.ticks = element_line(color = "black", linewidth  =  0.2),  
+      axis.title.x = element_text(size = base_size*1, color = "black", margin = ggplot2::margin(0, 1, 0, 0)),  
+      axis.title.y = element_text(size = base_size*1, color = "black", angle = 90, margin = ggplot2::margin(0, 1, 0, 0)),  
+      axis.ticks.length = unit(0.1, "lines"),   
+      # Specify legend options
+      legend.background = element_rect(color = NA, fill = "white"),  
+      legend.key = element_rect(color = "white",  fill = "white"),  
+      legend.key.size = unit(0.6, "lines"),  
+      legend.key.height = NULL,  
+      legend.key.width = NULL,      
+      legend.text = element_text(size = base_size*0.8, color = "black"),  
+      legend.title = element_text(size = base_size*1, face = "bold", hjust = 0, color = "black"),  
+      legend.position = "right",  
+      legend.text.align = NULL,  
+      legend.title.align = NULL,  
+      legend.direction = "vertical",  
+      legend.box = NULL, 
+      # Specify panel options
+      panel.background = element_rect(fill = "white", color  =  NA),  
+      panel.border = element_rect(fill = NA, color = "black", linewidth = 0.5),  
+      panel.grid.major = element_line(color = "white"),  
+      panel.grid.minor = element_line(color = "white"),  
+      panel.spacing = unit(0.1, "lines"),   
+      # Specify facetting options
+      strip.background = element_rect(fill = "grey30", color = "grey10"),  
+      strip.text.x = element_text(size = base_size*1, color = "black"),  
+      strip.text.y = element_text(size = base_size*1, color = "black",angle = -90),  
+      # Specify plot options
+      plot.background = element_rect(color = "white", fill = "white"),  
+      plot.title = element_text(size = base_size*1, color = "black"),  
+      plot.margin = unit(rep(0.5, 4), "lines"),
+      # changes the size of the patchwork annotations
+      plot.tag = element_text(size = 13)
+      
     )
+  
 }
 
 # Calculate nh4+ -----
@@ -937,7 +955,7 @@ map_daddy_np <- function(lat_min, lat_max, long_min, long_max,
 # Plotting -----
 
 # Annotation -----
-place_label <- function(label, size = 5, ...) {
+place_label <- function(label, size = 4.5, ...) {
   annotate("text", label = label, x = -Inf, y = Inf, 
            vjust = 1.4, hjust = -0.15, size = size, ...)
 }
@@ -1005,7 +1023,7 @@ coeff_plot <- function(coeff_df, pal, theme = "white"){
                        colour = variable)) +
     geom_point(size = size_var) +
     geom_errorbar(width = 0, linewidth = line_var) +
-    geom_vline(xintercept = 0, color = features, linetype = "dashed", linewidth = line_var*0.5) +
+    geom_vline(xintercept = 0, color = features, linetype = "dashed", linewidth = line_var*0.25) +
     labs(x = "Coefficient", y = " ") +
     scale_y_discrete(limits = rev(levels(coeff_df$variable))) +
     theme +
@@ -1060,7 +1078,7 @@ plot_pred <- function(raw_data, predict_data,
   # then add bells and whistles for new kelp plot
   if(plot_type == "new_kelp"){
     new_plot <- base_pred_plot +
-      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = line_var*0.5) +
+      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = line_var*0.25) +
       labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
            x = x_axis_lab) 
     #      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
@@ -1077,7 +1095,7 @@ plot_pred <- function(raw_data, predict_data,
            x = expression(paste("Animal abundance/m"^2))) +
       scale_fill_manual(values = pal, drop = FALSE) +
       scale_colour_manual(values = (pal), drop = FALSE) +
-      theme(legend.position = c(0.85, 0.89))
+      theme(legend.position = c(0.83, 0.865))
   }
     
     if(plot_type == "flow"){
