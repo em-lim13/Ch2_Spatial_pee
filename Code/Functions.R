@@ -133,7 +133,7 @@ pub_theme = function(base_size = 12, base_family = "") {
       legend.key.size = unit(0.6, "lines"),  
       legend.key.height = NULL,  
       legend.key.width = NULL,      
-      legend.text = element_text(size = base_size*0.8, color = "black"),  
+      legend.text = element_text(size = base_size*1, color = "black"),  
       legend.title = element_text(size = base_size*1, face = "bold", hjust = 0, color = "black"),  
       legend.position = "right",  
       legend.text.align = NULL,  
