@@ -43,17 +43,19 @@ cuke_two <- readPNG("Images/cuke_KC2.png")
 
 # label them
 cuke_labels <- c(Control = "Control",
-                 Medium = "<img src='Images/cuke_KC1.png' width='250' />",
-                 Large = "<img src='Images/cuke_KC2.png' width='250' />")
+                 Medium = "<img src='Images/cuke_KC1.png' width='109.375' />",
+                 Large = "<img src='Images/cuke_KC2.png' width='109.375' />")
+
+# width = 250 for theme black
 
 # crab image
 crab <- readPNG("Images/Red_rock_crab_KC.png")
 
 # label it
 crab_labels <- c(Control = "Control",
-                 Medium = "<img src='Images/Red_rock_crab_KC.png' width='101' />",
-                 Large = "<img src='Images/Red_rock_crab_KC.png' width='156' />")
-
+                 Medium = "<img src='Images/Red_rock_crab_KC.png' width='44.1875' />",
+                 Large = "<img src='Images/Red_rock_crab_KC.png' width='68.25' />")
+# medium was width = 101, large was width = 156 for theme black
 
 # Cuke stats -----
 # start with regular gaussian, gamma is worse!
@@ -142,12 +144,15 @@ crab_plot <- dot_whisker(sum_data = sum_crabs,
 
 
 # plot together
-cuke_plot + crab_plot & 
+cuke_plot / crab_plot & 
   plot_annotation(theme = theme(plot.background = 
       element_rect(color = "white", fill = "white")))
 
 # Fig 5 white background for pub
-# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 3.9375, width = 7, dpi = 400)
+ 
+# vertical
+ ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 7.875, width = 3.5, dpi = 400)
 
 # ggsave("Output/Pres_figs/Fig4.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
