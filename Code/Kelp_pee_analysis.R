@@ -580,7 +580,9 @@ kelp_tide_int_plot <-
     pal = rev(pal2c),
     x_axis_lab = expression(paste("Kelp biomass (kg/m"^2,")"))) +
   theme(legend.position = "none") +
-  place_label("(c)")
+  place_label("(c)") +
+  ylim(c(-0.79, 1.05))
+
 
 
 # Fig 3d: Kelp biomass x abundance interaction -----
@@ -685,7 +687,8 @@ abund_tide_int_plot <-
   theme(axis.text.y = element_blank(),
         axis.title.y = element_blank())+
   place_label("(e)") +
-  guides(size = "none")
+  guides(size = "none") + 
+  ylim(c(-0.79, 1.05))
 
 # Fig 3 panels ----
 # plot coeffs + interactions
