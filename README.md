@@ -10,7 +10,7 @@ Analyses for each of the three main sections of this paper:
 
 Preliminary calculations:
 
-Preliminary_calculations folder contains an .R script for each of the above sections where I calculate ammonium concentrations from the seawater samples which we analysed using fluorometry. The final dataframes from these scripts are saved to the Output/Output_data folder. I also have an .R script to calculate kelp forest metrics for use in the Kelp_pee_analysis.R script.
+Prelim_calculations folder contains an .R script for each of the above sections where I calculate ammonium concentrations from the seawater samples which we analysed using fluorometry. The final dataframes from these scripts are saved to the Output/Output_data folder. I also have an .R script to calculate kelp forest metrics for use in the Kelp_pee_analysis.R script.
 
 Functions.R stores all of the functions I've written, this file is called at the beginning of most other scripts
 
