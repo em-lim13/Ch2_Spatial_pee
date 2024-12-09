@@ -8,9 +8,9 @@ Analyses for each of the three main sections of this paper:
 3) Cage_pee_analysis.R contains code for the within-meters, smallest-scale experiment
 
 
-Ammonium calculations:
+Preliminary calculations:
 
-Pee_calculations folder contains an .R script for each of the above sections where I calculate ammonium concentrations from the seawater samples which we analysed using fluorometry. The final dataframes from these scripts are saved to the Output/Output_data folder
+Preliminary_calculations folder contains an .R script for each of the above sections where I calculate ammonium concentrations from the seawater samples which we analysed using fluorometry. The final dataframes from these scripts are saved to the Output/Output_data folder. I also have an .R script to calculate kelp forest metrics for use in the Kelp_pee_analysis.R script.
 
 Functions.R stores all of the functions I've written, this file is called at the beginning of most other scripts
 
@@ -18,12 +18,12 @@ Maps.R contains code to generate the map in Figure 1 and additional maps for pre
 
 ## Data
 Data is subsectioned into logical folders
-1) Cage_experiment contains the raw cage data and fluorometry data from the cuke cage experiments, and the unpublished cage data from the crab caging experiment which was initually cleaned in the repo for my crab chapter. This folder also contains the two excretion data .csvs (all_cuke_excretion.csv and red_crab_excretion.csv) generated in other projects which I use here to calculate nh4+ supply rates from the cages
-2) Emily_flow contains all the raw data from Emily's flow rate experiments, which didn't make it into the final manuscript
+1) Cage_experiment contains the raw cage data and fluorometry data from the cuke cage experiments, and the unpublished cage data from the crab caging experiment which was initially cleaned in the repo for my crab chapter. This folder also contains the two excretion data .csv's (all_cuke_excretion.csv and red_crab_excretion.csv) generated in other projects which I use here to calculate nh4+ supply rates from the cages
+2) Emily_flow contains all the raw data from Emily's flow rate experiments, which didn't make it into the final manuscript but is shown in the Supplement
 3) Hakai_coast contains the shapefiles needed to make the map in Fig. 1a
 4) RLS contains three folders (2021, 2022, 2023) which each contain all of the raw nh4 data from each sampling year. RLS_data contains the data for the biological communities surveyed, the true site coordinates (true_coords.csv), and a folder of outdated RLS data which I don't use. Tides_1_min.csv is the downloaded tide data used to calculate tide height rate of change
 5) Size_data is a folder of published size data for invertebrates that I used to calculate mean wet weights for certain taxa
-6) Team_kelp contains all of the raw ammonium data (one .csv per site, labelled with the date and site code), downloaded tide height data, the RLS survey data, and a folder (Output_data) that contains slightly processed kelp forest metric data from Claire
+6) Team_kelp contains all of the raw ammonium data (one .csv per site, labelled with the date and site code), downloaded tide height data, the RLS survey data, the kelp forest metric data, and a folder (Output_data) that contains slightly processed kelp forest metric data.
 
 
 ## Datasheets
