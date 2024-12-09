@@ -6,7 +6,7 @@
 
 # Loading base packages
 library(tidyverse)
-library(ggpubr)
+#library(ggpubr)
 library(gridExtra)
 library(MetBrewer)
 
@@ -147,9 +147,72 @@ check <- merge(claire, em, by = c("SiteName", "Transect"), all=TRUE) %>%
   mutate(compare = ifelse(Biomass_recalc == Biomass_original, "same", "diff"))
 
 
+# Average to site level right away -----
+# Averaging to site from individual kelp samples (i.e., averages of the 5 sampled individuals / transect)
+kelptrans3 <- kelp5 %>%
+  mutate(SiteName = as.factor(SiteName), 
+         Height_m = as.numeric(Height_m)) %>%
+  group_by(SiteName, Species) %>% # Averaging to transect 
+  summarise(HeightT = mean(Height_m, na.rm=TRUE),
+            BiomassTind_g = mean(Biomass_g, na.rm=TRUE)) %>% # Ave individual biomass (g) / transect
+  ungroup() %>%
+  mutate(HeightT == ifelse(SiteName == "Less Dangerous Bay", 0, HeightT),
+         BiomassTind_g == ifelse(SiteName == "Less Dangerous Bay", 0, BiomassTind_g))
 
 
-# Grouping/averaging from transect to site level
+# make df with column for macro biomass and column for nereo biomass
+nereo <- kelptrans3 %>%
+  filter(Species == "Nereo") %>%
+  transmute(SiteName = SiteName,
+            nereo_biomass_ind = BiomassTind_g,
+            nereo_height_ind = HeightT)
+
+macro <- kelptrans3 %>%
+  filter(Species == "Macro") %>%
+  transmute(SiteName = SiteName,
+            macro_biomass_ind = BiomassTind_g,
+            macro_height_ind = HeightT)
+
+ind <- merge(nereo, macro, by = c("SiteName"), all=TRUE)
+
+# Bringing in the kelp density (transect level) data my way
+kelpjoin3 <- dens2 %>%
+  group_by(SiteName) %>%
+  summarise(macro_den_sum = sum(Macro_5m2),
+            nereo_den_sum = sum(Nereo_5m2)) %>%
+  left_join(ind, by = "SiteName") %>%
+  rowwise() %>%
+  mutate(total_macro_biomass = macro_den_sum*macro_biomass_ind,
+         total_nereo_biomass = nereo_den_sum*nereo_biomass_ind,
+         total_biomass_kg = sum(total_macro_biomass, total_nereo_biomass, na.rm=TRUE)/1000,
+         Biomass_kieran = total_biomass_kg/20)
+
+# ok now compare those estimates
+em2 <- em %>%
+  group_by(SiteName) %>%
+  summarise(mean_bio_recalc = mean(Biomass_recalc)) %>%
+  mutate(mean_bio_recalc = round(mean_bio_recalc, digits = 5))
+
+claire2 <- claire %>%
+  group_by(SiteName) %>%
+  summarise(mean_bio_og = mean(Biomass_original))%>%
+  mutate(mean_bio_og = round(mean_bio_og, digits = 5))
+
+kieran <- kelpjoin3 %>%
+  select(SiteName, Biomass_kieran)%>%
+  mutate(Biomass_kieran = round(Biomass_kieran, digits = 5))
+
+check2 <- claire2 %>%
+  left_join(em2, by = "SiteName") %>%
+  left_join(kieran, by = "SiteName")
+
+#  mutate(claire_em = mean_bio_recalc == mean_bio_og,
+#         em_kieran = mean_bio_recalc == Biomass_kieran)
+
+# write to csv
+write_csv(check2, "Output/Output_data/recalc_biomass.csv")
+
+# Grouping/averaging from transect to site level old way -----
 kelpgrp <- kelptog %>%
   mutate(SiteName = as.factor(SiteName)) %>%
   group_by(SiteName, Depth_datum_m) %>% # Averaging to site & keeping depth (m)
