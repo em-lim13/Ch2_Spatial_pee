@@ -1105,7 +1105,7 @@ plot_pred <- function(raw_data, predict_data,
       new_plot <- base_pred_plot +
         labs(x = "Flow rate (m/s)", 
              y = expression(paste(Delta, " Ammonium ", (mu*M)))) +
-        labs(colour = "Cukes", fill = "Cukes", pch = "Cukes", lty = "Cukes")
+        labs(colour = "Cucumbers", fill = "Cucumbers", pch = "Cucumbers", lty = "Cucumbers")
     }
     
 
