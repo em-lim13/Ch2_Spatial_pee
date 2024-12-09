@@ -874,8 +874,8 @@ sum_pee2 <- rls_nh4 %>%
 # Data exploration ------
 
 # abundant across all surveys
-all_rls <- (rls %>% select(phylum, class, order, family, species_name, survey_den, weight_size_class_sum)) %>%
-  rbind(kelp_rls %>% select(phylum, class, order, family, species_name, survey_den, weight_size_class_sum))
+all_rls <- (rls %>% select(phylum, class, order, family, species_name, survey_den, weight_size_class_sum) %>% mutate(type = "rls")) %>%
+  rbind(kelp_rls %>% select(phylum, class, order, family, species_name, survey_den, weight_size_class_sum) %>% mutate(type = "kelp"))
 
 d <- all_rls %>% count(phylum, class, order, family, species_name, weight_size_class_sum)
 #write_csv(d %>% filter(phylum != "Chordata"), "Output/Output_data/species_list.csv")
