@@ -208,9 +208,7 @@ map_daddy(lat_min = -125.3,
 #ggsave("Output/Figures/kelp_nh4_map2.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
-# calcs -----
-
-# distance between coords
+# distance between coords  -----
 library(geodist)
 distance_matrix <- geodist(rls_coords, measure = 'geodesic' )/1000 #converting it to km
 colnames(distance_matrix) <- rls_coords$site_name
