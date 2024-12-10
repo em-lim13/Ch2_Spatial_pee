@@ -340,7 +340,7 @@ summary(mod_best)
 
 
 # use my stupid brain to think of a good model
-mod_in_out <- glmmTMB(in_minus_out ~ kelp_sp + 
+mod_in_out <- glmmTMB(in_minus_out ~ -1 +kelp_sp + 
                         kelp_bio_scale*tide_scale +
                         kelp_bio_scale*weight_sum_scale +
                         weight_sum_scale*tide_scale +
@@ -915,7 +915,7 @@ pal_sp2 <- c(pal10[8], pal10[6], pal10[4])
 # and there's a positive relationship between kelp biomass and shannon?
 kelp_shannon <- ggplot(data, aes(BiomassM, shannon, colour = kelp_sp, pch = kelp_sp, fill = kelp_sp)) +
   geom_point(alpha = 0.8, size = 4) +
-  geom_smooth(method = lm, linewidth = 2, alpha = 0.18) +
+  geom_smooth(method = lm, linewidth = 2, alpha = 0.2) +
   theme_white() +
   ylim(c(1.2, 2.8)) +
   theme(legend.position = "none") +
@@ -928,7 +928,7 @@ kelp_shannon <- ggplot(data, aes(BiomassM, shannon, colour = kelp_sp, pch = kelp
 # what about weight? positive weight relationship
 animal_shannon <- ggplot(data, aes(weight_sum, shannon, colour = kelp_sp, pch = kelp_sp, fill = kelp_sp)) +
   geom_point(alpha = 0.8, size = 4) +
-  geom_smooth(method = lm, linewidth = 2, alpha = 0.18) +
+  geom_smooth(method = lm, linewidth = 2, alpha = 0.2) +
   theme_white() +
   ylim(c(1.2, 2.8)) +
   labs(x = expression(paste("Animal biomass (kg/m"^2,")")), y = "Shannon diversity",
