@@ -28,7 +28,7 @@ source("Code/Functions.R")
 # kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
 pee <- read_csv("Output/Output_data/kelp_pee.csv") %>%
   as.data.frame() %>%
-  filter(site_code != "KCCA13") %>% # remove second beach south
+  filter(site_code != "KCCA13") %>% # remove second beach south outlier
   left_join(
     read_csv("Data/Team_kelp/Output_data/site_names.csv") %>%
                rename(site_name = SiteName), by = "site_code") %>%
@@ -48,6 +48,7 @@ kcca_surveys <- pee %>%
 kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   as.data.frame() %>%
   select(-Biomassm2kg) %>%
+  left_join(read_csv("Output/Output_data/recalc_biomass.csv")) %>%
   # Add the averaged site level variables from Claire!
   left_join(read_csv("Data/Team_kelp/Output_data/kelp_metrics_2022_update.csv"), by = "SiteName") %>% 
   # add the side codes to this data via site names
@@ -69,17 +70,13 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   replace(is.na(.), 0)  %>%
   group_by(site_code) %>%
   # site level summaries
-  mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(BiomassTkg)),
+  mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(BiomassM)),
          Area_m2 = ifelse(kelp_sp == "none", 0, Area_m2),
          DensityM = mean(kelp_den)) %>%
   ungroup()  %>%
   filter(Transect != "15") # this means the fourth transect contributes to the kelp density metrics but is cut bc there's no pee sample on that tran
 
-#select(site_code, SiteName, HeightT, BiomassTkg, Biomassm2kg, sample) 
-
-# Less dangerous bay was the "real" no kelp control!!!!
-# Sand town was a super weird outlier, I think that was the site we messed up the samples from, that's AOKAY!!! phew
-# both dropped from Claire's stuff because she's not looking at no kelp sites
+# Less dangerous bay was the "real" no kelp control
 
 
 # Transect level variables:
@@ -147,7 +144,7 @@ kcca_survey_info <- kcca_surveys %>%
   left_join(kelp_rls %>%
               select(site_code, site_name, Date, date_time_survey) %>%
               unique() %>%
-              mutate(survey_id = 101:117), by = c("Date", "site_code")) %>%
+              mutate(survey_id = 1:n()), by = c("Date", "site_code")) %>%
   left_join((kelp %>%
                select(c(site_code, Time_start)) %>%
                unique()), by = "site_code") %>%
@@ -371,6 +368,7 @@ mod_xchange <- glmmTMB(x_change ~ -1 + kelp_sp +
                       family = 'gaussian',
                       data = data) 
 # when I remove no kelp sites the coeffs hardly change
+# This tells me what x increase of nh4+ we had in each forest
 
 plot(simulateResiduals(mod_xchange)) # looks ok!
 summary(mod_xchange)
@@ -495,6 +493,7 @@ df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all",
   mutate(variable = factor(variable, unique(variable)))
 
 
+
 # plot just cont vars
 kelp_coeff_plot <- coeff_plot(coeff_df = df,
                               pal = rev(pal8c)) +
@@ -581,7 +580,7 @@ kelp_tide_int_plot <-
     x_axis_lab = expression(paste("Kelp biomass (kg/m"^2,")"))) +
   theme(legend.position = "none") +
   place_label("(c)") +
-  ylim(c(-0.79, 1.05))
+  ylim(c(-0.79, 1.05)) 
 
 
 
@@ -701,7 +700,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
                     abund_tide_int_plot ) & theme(legend.justification = "left")
 
 # correct size
-# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 7, width = 7, units = "in", dpi = 400)
+# ggsave("Output/Pub_figs/Fig3_newbiomass.png", device = "png", height = 7, width = 7, units = "in", dpi = 400)
 
 # old size
 # ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
@@ -1079,7 +1078,12 @@ x_ch <- sum_kelp_pee %>%
 
 # Stats: site to site variation ----
 
-# This is not complete!!!!
+# This was mostly exploratory, we didn't design the kelp study to ask questions about among-site differences
+
+data_site <- data %>%
+  select(site_code, site_name, nh4_avg, nh4_in_avg, nh4_out_avg, in_out_avg, Depth_m, mean_bio_og, mean_bio_recalc, BiomassM, DensityM, Area_m2, kelp_sp, weight_sum, abundance, shannon, simpson, avg_exchange_rate, forest_biomass, den_scale, kelp_bio_scale, forest_bio_scale, area_scale, weight_sum_scale, abundance_scale, shannon_scale, simpson_scale, depth_scale, tide_scale, tide_cat) %>%
+  mutate(depth_scale = c(scale(Depth_m))) %>%
+  unique()
 
 # Step 0: Ask my question
 # Is there a link between biodiversity or biomass and ammonium concentration? 
@@ -1127,22 +1131,31 @@ ggplot(data, aes(x = nh4_out_avg)) +
 
 # And Step 3: Model residuals 
 
-mod_site <- glmmTMB(nh4_outside ~ kelp_sp + 
+mod_site <- glmmTMB(nh4_out_avg ~ kelp_sp + 
                         kelp_bio_scale*tide_scale +
                         kelp_bio_scale*weight_sum_scale +
                         weight_sum_scale*tide_scale +
-                        shannon_scale + depth_scale + 
-                        (1|site_code),
+                        shannon_scale + depth_scale,
                       family = 'gaussian',
-                      data = data) 
+                      data = data_site) 
+summary(mod_site)
+plot(simulateResiduals(mod_site))
+visreg(mod_site, "kelp_bio_scale", by = "tide_scale")
+
+# try fewer interactions, idk i have the data for that
+mod_site <- glmmTMB(nh4_out_avg ~ kelp_sp + 
+                      kelp_bio_scale +
+                      weight_sum_scale*tide_scale +
+                      shannon_scale + depth_scale,
+                    family = 'gaussian',
+                    data = data_site) 
 summary(mod_site)
 plot(simulateResiduals(mod_site))
 
 # Build full model with gamma distribution
-mod_kelp_site <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale + shannon_scale + kelp_sp + depth_scale - weight_sum_scale:tide_scale:kelp_bio_scale +
-                           (1|site_code), 
+mod_kelp_site <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio_scale + shannon_scale + kelp_sp + depth_scale - weight_sum_scale:tide_scale:kelp_bio_scale, 
                          family = Gamma(link = 'log'),
-                         data = data,
+                         data = data_site,
                          na.action = na.fail)
 summary(mod_kelp_site)
 plot(simulateResiduals(mod_kelp_site))
@@ -1157,7 +1170,7 @@ mod_kelp_site_ints <- glmmTMB(nh4_out_avg ~ weight_sum_scale*tide_scale*kelp_bio
                               family = Gamma(link = 'log'),
                               data = data_s)
 summary(mod_kelp_site_ints) 
-plot(simulateResiduals(mod_kelp_site_ints)) # when I put Second beach south back in, the residuals look fine. Why is that. why. 
+plot(simulateResiduals(mod_kelp_site_ints))
 
 AIC(mod_kelp_site, mod_kelp_site_ints) # mod_kelp_site is better
 
@@ -1167,7 +1180,7 @@ AIC(mod_kelp_site, mod_kelp_site_ints) # mod_kelp_site is better
 
 mod_top <- glmmTMB(nh4_out_avg ~ kelp_sp + tide_scale, 
                    family = Gamma(link = 'log'),
-                   data = data_s)
+                   data = data_site)
 summary(mod_top)
 plot(simulateResiduals(mod_top)) # looks good.....
 
