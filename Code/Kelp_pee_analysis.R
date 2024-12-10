@@ -330,7 +330,8 @@ summary(mod_tran)
 # best = kelp_bio_scale*tide_scale + weight_sum_scale + shannon_scale + kelp_sp 
 # new best = abundance_scale + depth_scale + kelp_bio_scale + kelp_sp + tide_scale + abundance_scale:kelp_bio_scale + abundance_scale:tide_scale + kelp_bio_scale:tide_scale
 
-mod_best <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + abundance_scale + depth_scale + tide_scale + abundance_scale:kelp_bio_scale + abundance_scale:tide_scale + kelp_bio_scale:tide_scale + (1|site_code), 
+mod_best <- glmmTMB(in_minus_out ~ kelp_sp + kelp_bio_scale + abundance_scale + depth_scale + tide_scale + 
+                      abundance_scale:kelp_bio_scale + abundance_scale:tide_scale + kelp_bio_scale:tide_scale + (1|site_code), 
                     family = 'gaussian',
                     data = data )
 
@@ -885,17 +886,17 @@ pal1 <- pal_k[4]
 fam_plot <- ggplot() + 
   geom_point(data = kelp_fam, 
              aes(x = weight_fam_sum_g, y = in_out_avg), colour = pal1,
-             alpha = 0.8) +
+             alpha = 0.8, size = 3) +
   labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
        x = expression(paste("Biomass (g/m"^2,")"))) +
   facet_wrap(~family, scales = 'free_x', ncol = 3) +
   geom_line(data = top_fam_kelp_predict,
             aes(x = weight_fam_sum_g, y = predicted), colour = pal1,
-            linewidth = 1) +
+            linewidth = 1.5) +
   geom_ribbon(data = top_fam_kelp_predict,
               aes(x = weight_fam_sum_g, y = predicted, 
                   ymin = conf.low, ymax = conf.high), fill = pal1,
-              alpha = 0.15) +
+              alpha = 0.2) +
   theme_white() +
   theme(strip.background = element_rect(fill = "grey", color = "grey"),
         axis.text = element_text(size = 18, color = "black", lineheight = 0.9)) + 
