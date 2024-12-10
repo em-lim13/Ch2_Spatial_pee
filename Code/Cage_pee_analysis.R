@@ -152,7 +152,7 @@ cuke_plot / crab_plot &
 # ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 3.9375, width = 7, dpi = 400)
  
 # vertical
- ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 7.875, width = 3.5, dpi = 400)
+# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 7.875, width = 3.5, dpi = 400)
 
 # ggsave("Output/Pres_figs/Fig4.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
