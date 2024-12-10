@@ -47,10 +47,6 @@ kcca_surveys <- pee %>%
 # transect level kelp biomass + density data from Claire
 kelp <- read_csv("Data/Team_kelp/Output_data/kelp_metrics2024.csv") %>%
   as.data.frame() %>%
-  # Add the averaged site level variables from Claire!
-   left_join(read_csv("Data/Team_kelp/Output_data/kelp_metrics_2022_update.csv") %>% select(SiteName, Area_m2), by = "SiteName") %>% 
-  # add the side codes to this data via site names
-  left_join((read_csv("Data/Team_kelp/Output_data/site_names.csv")), by = "SiteName") %>%
   # rename vars now that all the data is linked up
   rename(kelp_den = Kelp,
          site_name = SiteName) %>%
