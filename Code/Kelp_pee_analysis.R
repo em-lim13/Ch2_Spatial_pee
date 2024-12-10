@@ -695,7 +695,7 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
                     abund_tide_int_plot ) & theme(legend.justification = "left")
 
 # correct size
-# ggsave("Output/Pub_figs/Fig3_newbiomass.png", device = "png", height = 7, width = 7, units = "in", dpi = 400)
+# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 7, width = 6.5, units = "in", dpi = 400)
 
 # old size
 # ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
