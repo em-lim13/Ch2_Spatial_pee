@@ -762,7 +762,7 @@ squish <- theme(axis.title.y = element_text(margin = margin(r = -150, unit = "pt
 
 rls_coeff_plot / (rls_pred_plot + squish)  &
   theme(plot.tag.position = c(0, 1),
-        plot.tag = element_text(hjust = -1, vjust = 0))
+        plot.tag = element_text(hjust = -1, vjust = 0)) # I don't like this
 
 # ggsave("Output/Pub_figs/Fig2h.png", device = "png", height = 7.875, width = 3.5, units = "in", dpi = 400)
 
