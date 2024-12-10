@@ -340,7 +340,7 @@ summary(mod_best)
 
 
 # use my stupid brain to think of a good model
-mod_in_out <- glmmTMB(in_minus_out ~ -1 +kelp_sp + 
+mod_in_out <- glmmTMB(in_minus_out ~ kelp_sp + 
                         kelp_bio_scale*tide_scale +
                         kelp_bio_scale*weight_sum_scale +
                         weight_sum_scale*tide_scale +
