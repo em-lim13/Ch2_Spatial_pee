@@ -1128,8 +1128,8 @@ scale_vars <- function(datafile){
       forest_bio_scale = c(scale(forest_biomass)),
       area_scale = c(scale(Area_m2)),
       # transect level variables
-      bio_tran_scale = c(scale(BiomassTkg)),
-      log_kelp_tran = log(BiomassTkg + 0.001),
+      bio_tran_scale = c(scale(biomass_trans_mean)),
+      log_kelp_tran = log(biomass_trans_mean + 0.001),
       den_tran_scale = c(scale(kelp_den)), # make sure density is right
       # log the pee diff?
       log_pee_diff = log(in_minus_out + 1),
