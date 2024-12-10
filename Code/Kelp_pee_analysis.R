@@ -50,7 +50,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   select(-Biomassm2kg) %>%
   left_join(read_csv("Output/Output_data/recalc_biomass.csv")) %>%
   # Add the averaged site level variables from Claire!
-  left_join(read_csv("Data/Team_kelp/Output_data/kelp_metrics_2022_update.csv"), by = "SiteName") %>% 
+   left_join(read_csv("Data/Team_kelp/Output_data/kelp_metrics_2022_update.csv") %>% select(SiteName, Area_m2), by = "SiteName") %>% 
   # add the side codes to this data via site names
   left_join((read_csv("Data/Team_kelp/Output_data/site_names.csv")), by = "SiteName") %>%
   # rename vars now that all the data is linked up
@@ -70,7 +70,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   replace(is.na(.), 0)  %>%
   group_by(site_code) %>%
   # site level summaries
-  mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(BiomassM)),
+  mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(BiomassTkg)),
          Area_m2 = ifelse(kelp_sp == "none", 0, Area_m2),
          DensityM = mean(kelp_den)) %>%
   ungroup()  %>%
