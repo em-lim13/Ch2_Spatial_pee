@@ -124,10 +124,17 @@ kelptog <- kelpjoin %>%
 # try to get more accurate biomass per transect
 kelptog2 <- kelpjoin2 %>%
   rowwise() %>% # To sum across rows
-  mutate(macro_biomass_trans = Macro*macro_biomass_ind,
-         nereo_biomass_trans = Nereo*nereo_biomass_ind,
-         total_biomass_trans = sum(macro_biomass_trans, nereo_biomass_trans, na.rm=TRUE),
-         total_biomass_trans_kg = total_biomass_trans/1000)
+  mutate(macro_biomass_trans = Macro*macro_biomass_ind/1000,
+         nereo_biomass_trans = Nereo*nereo_biomass_ind/1000,
+         biomass_trans_mean = sum(macro_biomass_trans, nereo_biomass_trans, na.rm=TRUE),
+         height_mean = mean(c(macro_height_ind, nereo_height_ind), na.rm=TRUE))
+
+# make df to use in kelp_pee_analysis
+# height mean isn't how I'd personally do it, but leave it for now
+kelp_metrics <- kelptog2 %>%
+  select(SiteName, Transect, Date, Time_start, Depth_m, RLS_dist, Macro_5m2, Nereo_5m2, Macro, Nereo, Kelp, macro_biomass_trans, nereo_biomass_trans, biomass_trans_mean, height_mean)
+
+# write_csv(kelp_metrics, "Data/Team_kelp/Output_data/kelp_metrics2024.csv")
 
 
 # ok now compare those estimates
