@@ -786,20 +786,20 @@ position_scales <- list(
 )
 
 # now make plot
-fam_plot <- ggplot() + 
+fam_plot_rls <- ggplot() + 
   geom_point(data = rls_top_fam, 
              aes(x = fam_den, y = nh4_avg), colour = pal1,
-             alpha = 0.8) +
+             alpha = 0.8, size = 3) +
   labs(y = expression(paste("Ammonium ", (mu*M))), 
        x = expression(paste("Animal abundance/m"^2))) +
   facet_wrap(~family, scales = 'free_x', ncol = 3) +
   geom_line(data = rls_top_fam_predict,
             aes(x = fam_den, y = predicted), colour = pal1,
-            linewidth = 1) +
+            linewidth = 1.5) +
   geom_ribbon(data = rls_top_fam_predict,
               aes(x = fam_den, y = predicted, 
                   ymin = conf.low, ymax = conf.high), fill = pal1,
-              alpha = 0.15) +
+              alpha = 0.2) +
   theme_white() +
   theme(strip.background = element_rect(fill = "grey", color = "grey"),
         axis.text = element_text(size = 18, color = "black", lineheight = 0.9)) + 
@@ -807,9 +807,9 @@ fam_plot <- ggplot() +
  facetted_pos_scales(x = position_scales)
 
 
-fam_plot
+fam_plot_rls
 
-# ggsave("Output/Pub_figs/Supp1Fig1.png", device = "png", height = 9, width = 16, dpi = 400)
+ ggsave("Output/Pub_figs/Supp2Fig1.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # Alt Fig 3 tri-panel -----
