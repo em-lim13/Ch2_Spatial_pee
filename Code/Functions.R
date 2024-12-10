@@ -994,7 +994,7 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL,
                   linewidth = line_var) +
     geom_jitter(data = {{all_data}}, 
                 aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}), 
-                size = jitter_var, alpha = 0.4, height=0, width = 0.2) +
+                size = jitter_var, alpha = 0.5, height=0, width = 0.2) +
     theme + 
     theme(legend.position = "none",
           plot.title = element_text(size = 30)) +
@@ -1068,7 +1068,7 @@ plot_pred <- function(raw_data, predict_data,
     geom_ribbon(data = predict_data,
                 aes(x = {{x_var}}, y = predicted, fill = {{lty_var}},
                     ymin = conf.low, ymax = conf.high), 
-                alpha = 0.15) +
+                alpha = 0.25) +
     labs(colour = "Tide", fill = "Tide", pch = "Tide") +
     theme +
     scale_colour_manual(values = (pal)) +
