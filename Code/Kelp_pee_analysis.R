@@ -45,10 +45,8 @@ kcca_surveys <- pee %>%
 # Kelp data ----
 
 # transect level kelp biomass + density data from Claire
-kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
+kelp <- read_csv("Data/Team_kelp/Output_data/kelp_metrics2024.csv") %>%
   as.data.frame() %>%
-  select(-Biomassm2kg) %>%
-  left_join(read_csv("Output/Output_data/recalc_biomass.csv")) %>%
   # Add the averaged site level variables from Claire!
    left_join(read_csv("Data/Team_kelp/Output_data/kelp_metrics_2022_update.csv") %>% select(SiteName, Area_m2), by = "SiteName") %>% 
   # add the side codes to this data via site names
@@ -70,7 +68,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/transect_biomass.csv") %>%
   replace(is.na(.), 0)  %>%
   group_by(site_code) %>%
   # site level summaries
-  mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(BiomassTkg)),
+  mutate(BiomassM = ifelse(kelp_sp == "none", 0, mean(biomass_trans_mean)), # used to be BiomassTkg
          Area_m2 = ifelse(kelp_sp == "none", 0, Area_m2),
          DensityM = mean(kelp_den)) %>%
   ungroup()  %>%
