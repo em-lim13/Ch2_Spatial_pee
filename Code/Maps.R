@@ -10,7 +10,7 @@ library(sf)
 library(viridis)
 
 # Load functions ----
-source("Code/Functions.R") # Length to weight function here!
+source("Code/Functions.R") 
 
 # Load data ----
 # these are csv files created by the rls and kelp analysis files
@@ -102,6 +102,7 @@ all_coords <- rbind(rls_coords, kelp_coords) %>%
 
 # Make maps! ------
 
+# Fig. 1d -----
 # All sites
 map_daddy(lat_min = -125.375,
           lat_max = -125.025, 
@@ -123,6 +124,7 @@ map_daddy(lat_min = -125.375,
 
 #  5 inches in width and 6 inches in height
 
+# Other maps ----
 # Barkley Sound map
 map_daddy_np(lat_min = -127,
           lat_max = -123, 
@@ -136,8 +138,6 @@ map_daddy_np(lat_min = -127,
 
 # ggsave("Output/Figures/barkley_sound_map.png", device = "png", height = 9, width = 16, units = "cm", dpi = 400)
 
-
-# Making RLS maps -----
 
 # RLS site map
 map_daddy(lat_min = -125.4,
@@ -172,7 +172,6 @@ map_daddy(lat_min = -125.4,
 # ggsave("Output/Figures/rls_nh4_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
-# Kelp maps! ----
 # Kelp site map
 map_daddy(lat_min = -125.4,
           lat_max = -125.0, 
@@ -219,7 +218,3 @@ distance_matrix_lon <- as.data.frame.table(distance_matrix, responseName = "valu
 
 max(distance_matrix_lon$value) # greatest distance is between Hosie and Wouwer = 24.24 km
 min(distance_matrix_lon$value) # smallest distance is Baeria Rocks North Island Southside to Baeria Rocks North Island Northside = 65.55 m
-
-# play with making a kml -----
-ggplot() +
-  geom_sf(data = hakai_map, fill = "white", colour = blue)
