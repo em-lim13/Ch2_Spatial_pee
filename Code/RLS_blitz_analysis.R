@@ -156,7 +156,7 @@ rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   rename(site_code = site_ID) %>%
   filter(month == "May") %>%
   left_join(rls_survey_info, by = c("site_code", "year", "date")) %>%
-  depth_function() # only keep the RLS survey from the transect where the pee is from
+  keep_correct_survey_depth_function() # only keep the RLS survey from the transect where the pee is from
 
 
 # Tide exchange: Load + manipulate data ----
