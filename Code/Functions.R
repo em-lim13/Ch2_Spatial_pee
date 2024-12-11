@@ -1,169 +1,15 @@
 # Code for functions
 # Em Lim 
+# Updated Dec 2024
 
-
-# Code to create functions to calculate concentration of ammonium via fluorometric methods
-# Using the Taylor protocol 1 + 2 methods
-
-# First load packages
+# Load packages ----
 library(tidyverse)
 library(patchwork)
-library(renv)
 
-# First let's get our packages sorted out using renv
-
-# renv::init()
-# this adds three new files and directories:
-# renv/library = the project library
-# renv.lock = lockfile
-# .Rprofile 
-
-# Theme black ----
-theme_black = function(base_size = 12, base_family = "") {
-  
-  theme_grey(base_size = base_size, base_family = base_family) %+replace%
-    
-    theme(
-      # Specify axis options
-      axis.line = element_line(colour = "white"),  
-      axis.text.x = element_text(size = base_size*2, color = "white", lineheight = 0.9),  
-      axis.text.y = element_text(size = base_size*2, color = "white", lineheight = 0.9),  
-      axis.ticks = element_line(color = "white", linewidth  =  0.2),  
-      axis.title.x = element_text(size = base_size*2.5, color = "white", margin = ggplot2::margin(0, 10, 0, 0)),  
-      axis.title.y = element_text(size = base_size*2.5, color = "white", angle = 90, margin = ggplot2::margin(0, 10, 0, 0)),  
-      axis.ticks.length = unit(0.3, "lines"),   
-      # Specify legend options
-      legend.background = element_rect(color = NA, fill = "black"),  
-      legend.key = element_rect(color = "black",  fill = "black"),  
-      legend.key.size = unit(1.2, "lines"),  
-      legend.key.height = NULL,  
-      legend.key.width = NULL,      
-      legend.text = element_text(size = base_size*2, color = "white"),  
-      legend.title = element_text(size = base_size*2.5, face = "bold", hjust = 0, color = "white"),  
-      legend.position = "right",  
-      legend.text.align = NULL,  
-      legend.title.align = NULL,  
-      legend.direction = "vertical",  
-      legend.box = NULL, 
-      # Specify panel options
-      panel.background = element_rect(fill = "black", color  =  NA),  
-      panel.border = element_rect(fill = NA, color = "white"),  
-      panel.grid.major = element_line(color = "black"),  
-      panel.grid.minor = element_line(color = "black"),  
-      panel.spacing = unit(0.5, "lines"),   
-      # Specify facetting options
-      strip.background = element_rect(fill = "grey30", color = "grey10"),  
-      strip.text.x = element_text(size = base_size*2.5, color = "white"),  
-      strip.text.y = element_text(size = base_size*2.5, color = "white",angle = -90),  
-      # Specify plot options
-      plot.background = element_rect(color = "black", fill = "black"),  
-      plot.title = element_text(size = base_size*1.2, color = "white"),  
-      plot.margin = unit(rep(1, 4), "lines"),
-      plot.tag = element_text(size = 30)
-      
-    )
-  
-}
-
-
-theme_white = function(base_size = 12, base_family = "") {
-  
-  theme_grey(base_size = base_size, base_family = base_family) %+replace%
-    
-    theme(
-      # Specify axis options
-      axis.line = element_line(colour = "black"),  
-      axis.text.x = element_text(size = base_size*2, color = "black", lineheight = 0.9),  
-      axis.text.y = element_text(size = base_size*2, color = "black", lineheight = 0.9),  
-      axis.ticks = element_line(color = "black", linewidth  =  0.2),  
-      axis.title.x = element_text(size = base_size*2.5, color = "black", margin = ggplot2::margin(0, 10, 0, 0)),  
-      axis.title.y = element_text(size = base_size*2.5, color = "black", angle = 90, margin = ggplot2::margin(0, 10, 0, 0)),  
-      axis.ticks.length = unit(0.3, "lines"),   
-      # Specify legend options
-      legend.background = element_rect(color = NA, fill = "white"),  
-      legend.key = element_rect(color = "white",  fill = "white"),  
-      legend.key.size = unit(1.2, "lines"),  
-      legend.key.height = NULL,  
-      legend.key.width = NULL,      
-      legend.text = element_text(size = base_size*1.8, color = "black"),  
-      legend.title = element_text(size = base_size*2, face = "bold", hjust = 0, color = "black"),  
-      legend.position = "right",  
-      legend.text.align = NULL,  
-      legend.title.align = NULL,  
-      legend.direction = "vertical",  
-      legend.box = NULL, 
-      # Specify panel options
-      panel.background = element_rect(fill = "white", color  =  NA),  
-      panel.border = element_rect(fill = NA, color = "black"),  
-      panel.grid.major = element_line(color = "white"),  
-      panel.grid.minor = element_line(color = "white"),  
-      panel.spacing = unit(0.5, "lines"),   
-      # Specify facetting options
-      strip.background = element_rect(fill = "grey30", color = "grey10"),  
-      strip.text.x = element_text(size = base_size*2.5, color = "black"),  
-      strip.text.y = element_text(size = base_size*2.5, color = "black",angle = -90),  
-      # Specify plot options
-      plot.background = element_rect(color = "white", fill = "white"),  
-      plot.title = element_text(size = base_size*1.2, color = "black"),  
-      plot.margin = unit(rep(1, 4), "lines"),
-      # changes the size of the patchwork annotations
-      plot.tag = element_text(size = 30)
-      
-    )
-  
-}
-
-# Publication figure theme ------
-pub_theme = function(base_size = 12, base_family = "") {
-  
-  theme_grey(base_size = base_size, base_family = base_family) %+replace%
-    
-    theme(
-      # Specify axis options
-      axis.line = element_line(colour = "black", linewidth = 0.1),  
-      axis.text.x = element_text(size = base_size*0.9, color = "black", lineheight = 0.2),  
-      axis.text.y = element_text(size = base_size*0.9, color = "black", lineheight = 0.2),  
-      axis.ticks = element_line(color = "black", linewidth  =  0.2),  
-      axis.title.x = element_text(size = base_size*1, color = "black", margin = ggplot2::margin(0, 1, 0, 0)),  
-      axis.title.y = element_text(size = base_size*1, color = "black", angle = 90, margin = ggplot2::margin(0, 1, 0, 0)),  
-      axis.ticks.length = unit(0.1, "lines"),   
-      # Specify legend options
-      legend.background = element_rect(color = NA, fill = "white"),  
-      legend.key = element_rect(color = "white",  fill = "white"),  
-      legend.key.size = unit(0.6, "lines"),  
-      legend.key.height = NULL,  
-      legend.key.width = NULL,      
-      legend.text = element_text(size = base_size*1, color = "black"),  
-      legend.title = element_text(size = base_size*1, face = "bold", hjust = 0, color = "black"),  
-      legend.position = "right",  
-      legend.text.align = NULL,  
-      legend.title.align = NULL,  
-      legend.direction = "vertical",  
-      legend.box = NULL, 
-      legend.margin=margin(0,0,0,0),
-      legend.box.margin=margin(-10,-10,-10,-10),
-      # Specify panel options
-      panel.background = element_rect(fill = "white", color  =  NA),  
-      panel.border = element_rect(fill = NA, color = "black", linewidth = 0.5),  
-      panel.grid.major = element_line(color = "white"),  
-      panel.grid.minor = element_line(color = "white"),  
-      panel.spacing = unit(0.1, "lines"),   
-      # Specify facetting options
-      strip.background = element_rect(fill = "grey30", color = "grey10"),  
-      strip.text.x = element_text(size = base_size*1, color = "black"),  
-      strip.text.y = element_text(size = base_size*1, color = "black",angle = -90),  
-      # Specify plot options
-      plot.background = element_rect(color = "white", fill = "white"),  
-      plot.title = element_text(size = base_size*1, color = "black"),  
-      plot.margin = unit(rep(0.5, 4), "lines"),
-      # changes the size of the patchwork annotations
-      plot.tag = element_text(size = 13)
-      
-    )
-  
-}
 
 # Calculate nh4+ -----
+
+# Using the Taylor protocol 1 + 2 methods
 # function Nikola built for me!!!
 pee_calc <- function(data_path) {
   
@@ -311,7 +157,7 @@ pee_calc2 <- function(data_path) {
     mutate(nh4_conc = (mean_FLU - int2)/slope2)
 }
 
-# Clean up messy taxonomy -----
+# RLS data cleaning -----
 clean_sp_names <- function(datafile) {
   new_data <- datafile %>%
     mutate(
@@ -425,7 +271,7 @@ clean_phylo_names <- function(datafile){
     filter(species_name != "Debris - zero")  
 }
 
-# Length to weight ----
+# Length to weight calculation
 # all coeffs for fish are from fishbase!
 # I confirmed the formula and the units (cm and g)
 
@@ -599,10 +445,7 @@ length_to_weight <- function(datafile) {
       weight_size_class_sum = (weight_per_indiv_kg*survey_den)) 
 }
 
-
-
-# Invert length to weight ------
-
+# Calculations for some mean biomass estimates from above
 # Mean cuke wet weight = 829 g
 # Mean cuke dry weight = 39
 
@@ -661,7 +504,7 @@ length_to_weight <- function(datafile) {
 
 
 
-# Fish home ranges ----
+# Fish home ranges 
 home_range <- function(datafile){
   new_data <- datafile %>%
     mutate(range = case_when(
@@ -735,9 +578,7 @@ home_range <- function(datafile){
   
 }
 
-
-
-# Joining surveys up by depth -----
+# Joining surveys up by depth
 
 # this is a function to only keep RLS data that corresponds to the survey that I took a nh4 measurement on!
 
@@ -776,7 +617,7 @@ home_range <- function(datafile){
 
 # For simplicity I think I just want to keep the RLS survey from the transect where the pee is from
 
-depth_function <- function(datafile){
+keep_correct_survey_depth_function <- function(datafile){
   new_data <- datafile %>%
     mutate(correct = case_when(
       site_code== "BMSC6" &year =="2022" &depth == "8.5" &survey_depth== "6.5" ~ "no",
@@ -803,6 +644,360 @@ depth_function <- function(datafile){
     filter(correct == "yes") %>%
     select(-c(correct, hour))
 }
+
+# Scale variables ------
+scale_vars <- function(datafile){
+  {{datafile}} %>%
+    mutate(
+      # kelp forest level variables
+      forest_biomass = BiomassM*Area_m2,
+      den_scale = c(scale(DensityM)), # make sure density is right
+      kelp_bio_scale = c(scale(BiomassM)),
+      log_kelp = log(BiomassM + 0.001),
+      log_kelp_scale = c(scale(log_kelp)),
+      forest_bio_scale = c(scale(forest_biomass)),
+      area_scale = c(scale(Area_m2)),
+      # transect level variables
+      bio_tran_scale = c(scale(biomass_trans_mean)),
+      log_kelp_tran = log(biomass_trans_mean + 0.001),
+      den_tran_scale = c(scale(kelp_den)), # make sure density is right
+      # log the pee diff?
+      log_pee_diff = log(in_minus_out + 1),
+      # the biomass + abundance variables
+      weight_sum_scale = c(scale(weight_sum)),
+      all_weighted_scale = c(scale(all_weight_weighted)),
+      abundance_scale = c(scale(abundance)),
+      # biodiversity variables
+      rich_scale = c(scale(species_richness)),
+      shannon_scale = c(scale(shannon)),
+      simpson_scale = c(scale(simpson)),
+      # abiotic variables I should control for
+      depth_scale = c(scale(depth_avg)),
+      tide_scale = c(scale(avg_exchange_rate)),
+      tide_cat = factor(as.factor(ifelse(avg_exchange_rate < -0.1897325, "Ebb",
+                                         ifelse(avg_exchange_rate < 0.1897325, "Slack", "Flood"))),
+                        levels = c("Ebb", "Slack", "Flood")),
+      # only slack and flood
+      
+      # try to center instead of scaling
+      kelp_bio_center = c(scale(BiomassM, scale = FALSE)),
+      tide_center = c(scale(avg_exchange_rate, scale = FALSE)),
+      weight_sum_center = c(scale(weight_sum, scale = FALSE)),
+      abundance_center = c(scale(abundance, scale = FALSE)),
+      shannon_center = c(scale(shannon, scale = FALSE)),
+      simpson_center = c(scale(simpson, scale = FALSE)),
+      depth_center = c(scale(depth_avg, scale = FALSE))
+    ) 
+}
+
+
+# Plotting theme functions -----
+
+### Theme black
+theme_black = function(base_size = 12, base_family = "") {
+  
+  theme_grey(base_size = base_size, base_family = base_family) %+replace%
+    
+    theme(
+      # Specify axis options
+      axis.line = element_line(colour = "white"),  
+      axis.text.x = element_text(size = base_size*2, color = "white", lineheight = 0.9),  
+      axis.text.y = element_text(size = base_size*2, color = "white", lineheight = 0.9),  
+      axis.ticks = element_line(color = "white", linewidth  =  0.2),  
+      axis.title.x = element_text(size = base_size*2.5, color = "white", margin = ggplot2::margin(0, 10, 0, 0)),  
+      axis.title.y = element_text(size = base_size*2.5, color = "white", angle = 90, margin = ggplot2::margin(0, 10, 0, 0)),  
+      axis.ticks.length = unit(0.3, "lines"),   
+      # Specify legend options
+      legend.background = element_rect(color = NA, fill = "black"),  
+      legend.key = element_rect(color = "black",  fill = "black"),  
+      legend.key.size = unit(1.2, "lines"),  
+      legend.key.height = NULL,  
+      legend.key.width = NULL,      
+      legend.text = element_text(size = base_size*2, color = "white"),  
+      legend.title = element_text(size = base_size*2.5, face = "bold", hjust = 0, color = "white"),  
+      legend.position = "right",  
+      legend.text.align = NULL,  
+      legend.title.align = NULL,  
+      legend.direction = "vertical",  
+      legend.box = NULL, 
+      # Specify panel options
+      panel.background = element_rect(fill = "black", color  =  NA),  
+      panel.border = element_rect(fill = NA, color = "white"),  
+      panel.grid.major = element_line(color = "black"),  
+      panel.grid.minor = element_line(color = "black"),  
+      panel.spacing = unit(0.5, "lines"),   
+      # Specify facetting options
+      strip.background = element_rect(fill = "grey30", color = "grey10"),  
+      strip.text.x = element_text(size = base_size*2.5, color = "white"),  
+      strip.text.y = element_text(size = base_size*2.5, color = "white",angle = -90),  
+      # Specify plot options
+      plot.background = element_rect(color = "black", fill = "black"),  
+      plot.title = element_text(size = base_size*1.2, color = "white"),  
+      plot.margin = unit(rep(1, 4), "lines"),
+      plot.tag = element_text(size = 30)
+      
+    )
+  
+}
+
+
+theme_white = function(base_size = 12, base_family = "") {
+  
+  theme_grey(base_size = base_size, base_family = base_family) %+replace%
+    
+    theme(
+      # Specify axis options
+      axis.line = element_line(colour = "black"),  
+      axis.text.x = element_text(size = base_size*2, color = "black", lineheight = 0.9),  
+      axis.text.y = element_text(size = base_size*2, color = "black", lineheight = 0.9),  
+      axis.ticks = element_line(color = "black", linewidth  =  0.2),  
+      axis.title.x = element_text(size = base_size*2.5, color = "black", margin = ggplot2::margin(0, 10, 0, 0)),  
+      axis.title.y = element_text(size = base_size*2.5, color = "black", angle = 90, margin = ggplot2::margin(0, 10, 0, 0)),  
+      axis.ticks.length = unit(0.3, "lines"),   
+      # Specify legend options
+      legend.background = element_rect(color = NA, fill = "white"),  
+      legend.key = element_rect(color = "white",  fill = "white"),  
+      legend.key.size = unit(1.2, "lines"),  
+      legend.key.height = NULL,  
+      legend.key.width = NULL,      
+      legend.text = element_text(size = base_size*1.8, color = "black"),  
+      legend.title = element_text(size = base_size*2, face = "bold", hjust = 0, color = "black"),  
+      legend.position = "right",  
+      legend.text.align = NULL,  
+      legend.title.align = NULL,  
+      legend.direction = "vertical",  
+      legend.box = NULL, 
+      # Specify panel options
+      panel.background = element_rect(fill = "white", color  =  NA),  
+      panel.border = element_rect(fill = NA, color = "black"),  
+      panel.grid.major = element_line(color = "white"),  
+      panel.grid.minor = element_line(color = "white"),  
+      panel.spacing = unit(0.5, "lines"),   
+      # Specify facetting options
+      strip.background = element_rect(fill = "grey30", color = "grey10"),  
+      strip.text.x = element_text(size = base_size*2.5, color = "black"),  
+      strip.text.y = element_text(size = base_size*2.5, color = "black",angle = -90),  
+      # Specify plot options
+      plot.background = element_rect(color = "white", fill = "white"),  
+      plot.title = element_text(size = base_size*1.2, color = "black"),  
+      plot.margin = unit(rep(1, 4), "lines"),
+      # changes the size of the patchwork annotations
+      plot.tag = element_text(size = 30)
+      
+    )
+  
+}
+
+# Publication figure theme 
+pub_theme = function(base_size = 12, base_family = "") {
+  
+  theme_grey(base_size = base_size, base_family = base_family) %+replace%
+    
+    theme(
+      # Specify axis options
+      axis.line = element_line(colour = "black", linewidth = 0.1),  
+      axis.text.x = element_text(size = base_size*0.9, color = "black", lineheight = 0.2),  
+      axis.text.y = element_text(size = base_size*0.9, color = "black", lineheight = 0.2),  
+      axis.ticks = element_line(color = "black", linewidth  =  0.2),  
+      axis.title.x = element_text(size = base_size*1, color = "black", margin = ggplot2::margin(0, 1, 0, 0)),  
+      axis.title.y = element_text(size = base_size*1, color = "black", angle = 90, margin = ggplot2::margin(0, 1, 0, 0)),  
+      axis.ticks.length = unit(0.1, "lines"),   
+      # Specify legend options
+      legend.background = element_rect(color = NA, fill = "white"),  
+      legend.key = element_rect(color = "white",  fill = "white"),  
+      legend.key.size = unit(0.6, "lines"),  
+      legend.key.height = NULL,  
+      legend.key.width = NULL,      
+      legend.text = element_text(size = base_size*1, color = "black"),  
+      legend.title = element_text(size = base_size*1, face = "bold", hjust = 0, color = "black"),  
+      legend.position = "right",  
+      legend.text.align = NULL,  
+      legend.title.align = NULL,  
+      legend.direction = "vertical",  
+      legend.box = NULL, 
+      legend.margin=margin(0,0,0,0),
+      legend.box.margin=margin(-10,-10,-10,-10),
+      # Specify panel options
+      panel.background = element_rect(fill = "white", color  =  NA),  
+      panel.border = element_rect(fill = NA, color = "black", linewidth = 0.5),  
+      panel.grid.major = element_line(color = "white"),  
+      panel.grid.minor = element_line(color = "white"),  
+      panel.spacing = unit(0.1, "lines"),   
+      # Specify facetting options
+      strip.background = element_rect(fill = "grey30", color = "grey10"),  
+      strip.text.x = element_text(size = base_size*1, color = "black"),  
+      strip.text.y = element_text(size = base_size*1, color = "black",angle = -90),  
+      # Specify plot options
+      plot.background = element_rect(color = "white", fill = "white"),  
+      plot.title = element_text(size = base_size*1, color = "black"),  
+      plot.margin = unit(rep(0.5, 4), "lines"),
+      # changes the size of the patchwork annotations
+      plot.tag = element_text(size = 13)
+      
+    )
+  
+}
+
+# Plot functions -----
+
+# add annotation label (a, b, c)
+place_label <- function(label, size = 4.5, ...) {
+  annotate("text", label = label, x = -Inf, y = Inf, 
+           vjust = 1.4, hjust = -0.15, size = size, ...)
+}
+
+# Dot Whisker Plot 
+dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL, 
+                        labels, pal, theme ="white"){
+  
+  if(theme == "white"){
+    theme <- pub_theme()
+    features <- "black"
+    dot_var = 3
+    jitter_var = 2
+    line_var = 0.75
+  } else {
+    theme <- theme_black()
+    features <- "white"
+    dot_var = 8
+    jitter_var = 5
+    line_var = 1.5
+  }
+  
+  ggplot() +
+    geom_point(data = {{sum_data}},
+               aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}),
+               size = dot_var) +
+    geom_errorbar(data = {{sum_data}},
+                  aes(x = {{x_var}},
+                      y = {{y_var}},
+                      ymin = conf.low,
+                      ymax = conf.high, 
+                      colour = {{x_var}}),
+                  width = 0.4,
+                  linewidth = line_var) +
+    geom_jitter(data = {{all_data}}, 
+                aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}), 
+                size = jitter_var, alpha = 0.5, height=0, width = 0.2) +
+    theme + 
+    theme(legend.position = "none",
+          plot.title = element_text(size = 30)) +
+    scale_colour_manual(values = rev(pal)) +
+    labs(y = expression(paste("Ammonium"~(mu*M))), x = " ") +
+    scale_x_discrete(labels = {{labels}}) +
+    theme(axis.text.x = ggtext::element_markdown())
+}
+
+
+# Coeff plots
+coeff_plot <- function(coeff_df, pal, theme = "white"){
+  
+  if(theme == "white"){
+    theme <- pub_theme()
+    features <- "black"
+    size_var = 5
+    line_var = 1
+  } else {
+    theme <- theme_black()
+    features <- "white"
+    size_var = 10
+    line_var = 3
+  }
+  
+  ggplot(coeff_df, aes(x = estimate, y = variable, 
+                       xmin = lower_CI, xmax = upper_CI, 
+                       colour = variable)) +
+    geom_point(size = size_var) +
+    geom_errorbar(width = 0, linewidth = line_var) +
+    geom_vline(xintercept = 0, color = features, linetype = "dashed", linewidth = line_var*0.25) +
+    labs(x = "Coefficient", y = " ") +
+    scale_y_discrete(limits = rev(levels(coeff_df$variable))) +
+    theme +
+    theme(legend.position = "none") + 
+    scale_colour_manual(values = pal)
+}
+
+
+# Plot model predictions 
+plot_pred <- function(raw_data, predict_data, 
+                      plot_type,
+                      x_var, y_var, 
+                      lty_var = NULL,
+                      pch_var = NULL,
+                      x_axis_lab = NULL,
+                      pal,
+                      theme = "white"){
+  if(theme == "white"){
+    theme <- pub_theme()
+    features <- "black"
+    size_var = 2
+    line_var = 1
+  } else {
+    theme <- theme_black()
+    features <- "white"
+    size_var = 4
+    line_var = 2
+  }
+  
+  base_pred_plot <-  ggplot() + 
+    geom_point(data = raw_data, 
+               aes(x = {{x_var}}, y = {{y_var}}, 
+                   colour = {{lty_var}}, fill = {{lty_var}},
+                   pch = {{pch_var}}), 
+               alpha = 0.5, size = size_var) +
+    geom_line(data = predict_data,
+              aes(x = {{x_var}}, y = predicted,
+                  colour = {{lty_var}}),
+              linewidth = line_var) +
+    geom_ribbon(data = predict_data,
+                aes(x = {{x_var}}, y = predicted, fill = {{lty_var}},
+                    ymin = conf.low, ymax = conf.high), 
+                alpha = 0.25) +
+    labs(colour = "Tide", fill = "Tide", pch = "Tide") +
+    theme +
+    scale_colour_manual(values = (pal)) +
+    scale_fill_manual(values = (pal)) +
+    guides(lty = guide_legend(override.aes = list(linewidth = line_var/3)),
+           size = guide_legend(override.aes = list(colour = features)),
+           colour = guide_legend(override.aes = list(size = size_var*0.75, linewidth = line_var/3)))
+  
+  # then add bells and whistles for new kelp plot
+  if(plot_type == "new_kelp"){
+    new_plot <- base_pred_plot +
+      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = line_var*0.25) +
+      labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
+           x = x_axis_lab) +
+      theme(plot.margin = unit(rep(0.1, 4), "lines"))
+    #      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
+    #                         labels = c("0", "0.6", "1.2", "1.8"))
+  }
+  
+  # extras for rls plot
+  if(plot_type == "rls"){
+    new_plot <- base_pred_plot +
+      #      scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
+      #                         labels = c("300", "600", "900", "1200", "1500")) +
+      #      ylim(0, 3.671) +
+      labs(y = expression(paste("Ammonium ", (mu*M))), 
+           x = expression(paste("Animal abundance/m"^2))) +
+      scale_fill_manual(values = pal, drop = FALSE) +
+      scale_colour_manual(values = (pal), drop = FALSE) +
+      theme(legend.position = c(0.83, 0.865))
+  }
+  
+  if(plot_type == "flow"){
+    new_plot <- base_pred_plot +
+      labs(x = "Flow rate (m/s)", 
+           y = expression(paste(Delta, " Ammonium ", (mu*M)))) +
+      labs(colour = "Cucumbers", fill = "Cucumbers", pch = "Cucumbers", lty = "Cucumbers")
+  }
+  
+  
+  
+  print(new_plot)
+}
+
+
 
 
 # Mapping -----
@@ -954,214 +1149,7 @@ map_daddy_np <- function(lat_min, lat_max, long_min, long_max,
 
 
 
-# Plotting -----
-
-# Annotation -----
-place_label <- function(label, size = 4.5, ...) {
-  annotate("text", label = label, x = -Inf, y = Inf, 
-           vjust = 1.4, hjust = -0.15, size = size, ...)
-}
-
-# Dot Whisker Plot -----
-dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL, 
-                        labels, pal, theme ="white"){
-  
-  if(theme == "white"){
-    theme <- pub_theme()
-    features <- "black"
-    dot_var = 3
-    jitter_var = 2
-    line_var = 0.75
-  } else {
-    theme <- theme_black()
-    features <- "white"
-    dot_var = 8
-    jitter_var = 5
-    line_var = 1.5
-  }
-  
-  ggplot() +
-    geom_point(data = {{sum_data}},
-               aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}),
-               size = dot_var) +
-    geom_errorbar(data = {{sum_data}},
-                  aes(x = {{x_var}},
-                      y = {{y_var}},
-                      ymin = conf.low,
-                      ymax = conf.high, 
-                      colour = {{x_var}}),
-                  width = 0.4,
-                  linewidth = line_var) +
-    geom_jitter(data = {{all_data}}, 
-                aes(x = {{x_var}}, y = {{y_var}}, colour = {{x_var}}, pch = {{pch_var}}), 
-                size = jitter_var, alpha = 0.5, height=0, width = 0.2) +
-    theme + 
-    theme(legend.position = "none",
-          plot.title = element_text(size = 30)) +
-    scale_colour_manual(values = rev(pal)) +
-    labs(y = expression(paste("Ammonium"~(mu*M))), x = " ") +
-    scale_x_discrete(labels = {{labels}}) +
-    theme(axis.text.x = ggtext::element_markdown())
-}
-
-
-# Coeff plots -----
-coeff_plot <- function(coeff_df, pal, theme = "white"){
-  
-  if(theme == "white"){
-    theme <- pub_theme()
-    features <- "black"
-    size_var = 5
-    line_var = 1
-  } else {
-    theme <- theme_black()
-    features <- "white"
-    size_var = 10
-    line_var = 3
-  }
-  
-  ggplot(coeff_df, aes(x = estimate, y = variable, 
-                       xmin = lower_CI, xmax = upper_CI, 
-                       colour = variable)) +
-    geom_point(size = size_var) +
-    geom_errorbar(width = 0, linewidth = line_var) +
-    geom_vline(xintercept = 0, color = features, linetype = "dashed", linewidth = line_var*0.25) +
-    labs(x = "Coefficient", y = " ") +
-    scale_y_discrete(limits = rev(levels(coeff_df$variable))) +
-    theme +
-    theme(legend.position = "none") + 
-    scale_colour_manual(values = pal)
-}
-
-# Plot model predictions ----
-
-plot_pred <- function(raw_data, predict_data, 
-                      plot_type,
-                      x_var, y_var, 
-                      lty_var = NULL,
-                      pch_var = NULL,
-                      x_axis_lab = NULL,
-                      pal,
-                      theme = "white"){
-  if(theme == "white"){
-    theme <- pub_theme()
-    features <- "black"
-    size_var = 2
-    line_var = 1
-  } else {
-    theme <- theme_black()
-    features <- "white"
-    size_var = 4
-    line_var = 2
-  }
-  
-  base_pred_plot <-  ggplot() + 
-    geom_point(data = raw_data, 
-               aes(x = {{x_var}}, y = {{y_var}}, 
-                   colour = {{lty_var}}, fill = {{lty_var}},
-                   pch = {{pch_var}}), 
-               alpha = 0.5, size = size_var) +
-    geom_line(data = predict_data,
-              aes(x = {{x_var}}, y = predicted,
-                  colour = {{lty_var}}),
-              linewidth = line_var) +
-    geom_ribbon(data = predict_data,
-                aes(x = {{x_var}}, y = predicted, fill = {{lty_var}},
-                    ymin = conf.low, ymax = conf.high), 
-                alpha = 0.25) +
-    labs(colour = "Tide", fill = "Tide", pch = "Tide") +
-    theme +
-    scale_colour_manual(values = (pal)) +
-    scale_fill_manual(values = (pal)) +
-    guides(lty = guide_legend(override.aes = list(linewidth = line_var/3)),
-           size = guide_legend(override.aes = list(colour = features)),
-           colour = guide_legend(override.aes = list(size = size_var*0.75, linewidth = line_var/3)))
-  
-  # then add bells and whistles for new kelp plot
-  if(plot_type == "new_kelp"){
-    new_plot <- base_pred_plot +
-      geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = line_var*0.25) +
-      labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
-           x = x_axis_lab) +
-      theme(plot.margin = unit(rep(0.1, 4), "lines"))
-    #      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
-    #                         labels = c("0", "0.6", "1.2", "1.8"))
-  }
-  
-  # extras for rls plot
-  if(plot_type == "rls"){
-    new_plot <- base_pred_plot +
-      #      scale_x_continuous(breaks = c(-1.85, -0.9, 0.05, 1, 1.95),
-      #                         labels = c("300", "600", "900", "1200", "1500")) +
-      #      ylim(0, 3.671) +
-      labs(y = expression(paste("Ammonium ", (mu*M))), 
-           x = expression(paste("Animal abundance/m"^2))) +
-      scale_fill_manual(values = pal, drop = FALSE) +
-      scale_colour_manual(values = (pal), drop = FALSE) +
-      theme(legend.position = c(0.83, 0.865))
-  }
-    
-    if(plot_type == "flow"){
-      new_plot <- base_pred_plot +
-        labs(x = "Flow rate (m/s)", 
-             y = expression(paste(Delta, " Ammonium ", (mu*M)))) +
-        labs(colour = "Cucumbers", fill = "Cucumbers", pch = "Cucumbers", lty = "Cucumbers")
-    }
-    
-
-  
-  print(new_plot)
-}
-
-
-# Standardize variables -----
-
-scale_vars <- function(datafile){
-  {{datafile}} %>%
-    mutate(
-      # kelp forest level variables
-      forest_biomass = BiomassM*Area_m2,
-      den_scale = c(scale(DensityM)), # make sure density is right
-      kelp_bio_scale = c(scale(BiomassM)),
-      log_kelp = log(BiomassM + 0.001),
-      log_kelp_scale = c(scale(log_kelp)),
-      forest_bio_scale = c(scale(forest_biomass)),
-      area_scale = c(scale(Area_m2)),
-      # transect level variables
-      bio_tran_scale = c(scale(biomass_trans_mean)),
-      log_kelp_tran = log(biomass_trans_mean + 0.001),
-      den_tran_scale = c(scale(kelp_den)), # make sure density is right
-      # log the pee diff?
-      log_pee_diff = log(in_minus_out + 1),
-      # the biomass + abundance variables
-      weight_sum_scale = c(scale(weight_sum)),
-      all_weighted_scale = c(scale(all_weight_weighted)),
-      abundance_scale = c(scale(abundance)),
-      # biodiversity variables
-      rich_scale = c(scale(species_richness)),
-      shannon_scale = c(scale(shannon)),
-      simpson_scale = c(scale(simpson)),
-      # abiotic variables I should control for
-      depth_scale = c(scale(depth_avg)),
-      tide_scale = c(scale(avg_exchange_rate)),
-      tide_cat = factor(as.factor(ifelse(avg_exchange_rate < -0.1897325, "Ebb",
-                                         ifelse(avg_exchange_rate < 0.1897325, "Slack", "Flood"))),
-                        levels = c("Ebb", "Slack", "Flood")),
-      # only slack and flood
-      
-      # try to center instead of scaling
-      kelp_bio_center = c(scale(BiomassM, scale = FALSE)),
-      tide_center = c(scale(avg_exchange_rate, scale = FALSE)),
-      weight_sum_center = c(scale(weight_sum, scale = FALSE)),
-      abundance_center = c(scale(abundance, scale = FALSE)),
-      shannon_center = c(scale(shannon, scale = FALSE)),
-      simpson_center = c(scale(simpson, scale = FALSE)),
-      depth_center = c(scale(depth_avg, scale = FALSE))
-    ) 
-}
-
-
-# Family function for RLS Blitz ------
+# Family functions  ------
 # Family function to get predictions for RLS Blitz
 fam_fun_combo <- function(df, family) {
   
