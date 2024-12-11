@@ -1,5 +1,5 @@
 # Code to look at all the spatial data together
-# June 2, 2023
+# June 2, 2023, last updated Dec 2024
 # Em Lim
 
 # Load packages and functions ----
