@@ -74,8 +74,7 @@ kelp <- read_csv("Data/Team_kelp/Output_data/kelp_metrics2024.csv") %>%
 
 
 # Transect level variables:
-# BiomassTkg is kelp density x average biomass for each transect
-# Biomassm2kg is just that number / 5 bc the transect was 5 m2
+# biomass_trans_mean is kelp density x average biomass for each transect
 
 # Site level variables
 # BiomassM is the average biomass/m2 at each site across all 4 transects
@@ -354,6 +353,7 @@ plot(simulateResiduals(mod_in_out)) # looks ok!
 summary(mod_in_out)
 
 # what about looking at % change
+# This tells me what x increase of nh4+ we had in each forest
 mod_xchange <- glmmTMB(x_change ~ -1 + kelp_sp + 
                         kelp_bio_scale*tide_scale +
                         kelp_bio_scale*weight_sum_scale +
@@ -363,7 +363,6 @@ mod_xchange <- glmmTMB(x_change ~ -1 + kelp_sp +
                       family = 'gaussian',
                       data = data) 
 # when I remove no kelp sites the coeffs hardly change
-# This tells me what x increase of nh4+ we had in each forest
 
 plot(simulateResiduals(mod_xchange)) # looks ok!
 summary(mod_xchange)
@@ -422,7 +421,7 @@ mod_in_out3 <- glmmTMB(in_minus_out ~ -1 + kelp_sp +
 # I want to know if the tide:kelp interaction is the same for nereo and macro
 # there is no tide:nereo interaction bc nereo only measured at slack tide
 # and there's no kelp:tide interaction for no kelp bc there's no kelp biomass
-# basically the model is guessing at what's happening with nereo based on what's happening with macro and that's find
+# basically the model is guessing at what's happening with nereo based on what's happening with macro and that's fine
 
 
 # Step 4: Check for collinearity of predictors
@@ -433,7 +432,6 @@ car::vif(lm(in_minus_out ~ kelp_sp + kelp_bio_scale + tide_scale + weight_sum_sc
 
 
 # Notes from stats beers!
-#  Double check that the negative in – out sites aren’t the places where the transect was on the other side of the forest.
 # Maybe try to PCA????? see if there's clustering?
 
 # is there a kelp ~ animal relationship?
@@ -455,18 +453,6 @@ pal_spc <- c(pal30[19], pal30[20], pal30[21]) # kelp sp colours
 pal3c <- c(pal30[7], pal30[12], pal30[17]) # kelp biomass colours 
 pal2c <- c(pal30[1], pal30[9]) # tide colours
 
-# More recent but also old palette
-# pal8c <- viridis::viridis(30)[1:8] # coeff plot
-# pal_spc <- c(pal30[11], pal30[10], pal30[9]) # kelp sp colours
-# pal3c <- c(pal30[13], pal30[17], pal30[22]) # kelp biomass colours 
-# pal2c <- c(pal30[25], pal30[29]) # tide colours
-
-# Old Palette
-#pal12 <- viridis::viridis(11)
-#pal8 <- viridis::viridis(8)
-#pal2 <- c(pal_k[8], pal_k[5])
-#pal <- viridis::viridis(10)
-#pal3 <- c(pal[10], pal[8], pal[5])
 
 # Fig 3a: model coefficients ----
 # Save model coefficients 
@@ -597,11 +583,6 @@ kelp_sp_means <- data %>%
 # mean kelp bio for low, mid, and high help biomass
 v6 <- c(kelp_sp_means$mean[1], kelp_sp_means$mean[2], kelp_sp_means$mean[3])
 
-# old vectors
-#v3 <- c(-1.176, -0.47, 1.897)
-#v4 <- c(-0.822849, 0, 1.813896)
-#v4 <- c(-0.822849, 0, 1.5)
-#v5 <- c(-1, 0, 1.75) # based on eyeballed means of the three bins looking at the hist
 
 # now make predictions
 predict_abund_kelp <- ggpredict(mod_in_out3, terms = c("weight_sum", "BiomassM [v6]")) %>% 
@@ -631,7 +612,7 @@ abund_kelp_int_plot <-
             pal = rev(pal3c)) +
   guides(size = "none") +
   ylim(c(-0.79, 1.05)) +
-  theme(#legend.position = c(0.58, 0.95), legend.direction="horizontal",
+  theme(
     axis.text.y = element_blank(),
     axis.title.y = element_blank()) +
   labs(colour = "Kelp biomass", fill = "Kelp biomass", pch = "Kelp biomass") +
@@ -699,10 +680,6 @@ kelp_coeff_plot/ ((kelp_sp_plot + squish) +
 
 # old size
 # ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
-
-
-
-# comparing the coeff plots, making depth a random effect doesn't really change anything REAL. It just makes the no kelp coeff LOOK like its not signif diff from 0, but when you estimate the delta at the mean no kelp biomass (0) it's basically the same estimate as the model with depth
 
 
 
@@ -843,7 +820,7 @@ top_fam_kelp_r2 <- kelp_fam_predicts %>%
   unique() %>%
   arrange(desc(r2)) %>%
   head(6) 
-# Echinasteridae, Gobiidae, Cottidae, Strongylocentrotidae, Embiotocidae, Asteriidae top 6. Hexagrammidae, Sebastidae top 8
+# Echinasteridae, Gobiidae, Cottidae, Strongylocentrotidae, Hexagrammidae, Turbinidae top 6
 
 # make df of just the tops
 top_fam_kelp_predict <- kelp_fam_predicts %>%
@@ -861,7 +838,7 @@ top_fam_kelp_levels <- levels(top_fam_kelp_predict$family)
 lapply(top_fam_kelp_levels, function(family_name) {
   diagnose_kelp_fun(data_fam_no0s, family_name) 
 })
-# Asteriidae and Embiotocidae have ugly DHARMA plots
+# Turbinidae doesn't have the nicest DHARMA plots
 
 # now filter full family df to just include those top 6 families
 kelp_fam <- top_fam_kelp_r2 %>%
@@ -946,56 +923,6 @@ kelp_shannon + animal_shannon
 
 # ggsave("Output/Pub_figs/Supp1Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
-# Community stuff -----
-# make wide for families
-fam_kelp_wide <- data_fam_no0s %>% 
-  dplyr::select(site_code, family, weight_fam_sum_g) %>% 
-  group_by(site_code, family) %>%
-  summarise(total = sum(weight_fam_sum_g)) %>%
-  ungroup() %>%
-  spread(key = family, value = total) %>%
-  replace(is.na(.), 0) %>%
-  select(-17) # cut the last column, it's NA
-
-# first use the rls final to filter for included surveys and make sure the order of rows is the same  
-kelp_com <- data %>%
-  select(site_code) %>%
-  unique() %>%
-  left_join(fam_kelp_wide, by = "site_code") %>%
-  select(-1)
-
-# make env data
-kelp_env <- data %>%
-  select(in_out_avg, kelp_bio_scale, kelp_sp, depth_scale, tide_scale) %>%
-  unique() 
-
-#convert com to a matrix
-kelp_m_com = as.matrix(kelp_com)
-
-# Perform the NMDS ordination
-set.seed(123)
-kelp_nmds = metaMDS(kelp_m_com, distance = "bray")
-kelp_nmds # stress is fine
-
-# Now we run the envfit function with our environmental data frame, env
-kelp_en = envfit(kelp_nmds, kelp_env, permutations = 999, na.rm = TRUE)
-# The first parameter is the metaMDS object from the NMDS ordination we just performed. Next is env, our environmental data frame. Then we state we want 999 permutations, and to remove any rows with missing data.
-kelp_en
-
-plot(kelp_nmds)
-plot(kelp_en)
-
-plot(kelp_nmds, type = "t")
-plot(kelp_en)
-
-
-# try plotting in ggplot? this code doesn't work
-#save NMDS results into dataframe
-site_scrs <- as.data.frame(scores(kelp_nmds, display = "sites")) 
-
-spp_scrs <- as.data.frame(scores(spp_fit, display = "vectors")) #save species intrinsic values into dataframe
-spp_scrs <- cbind(spp_scrs, Species = rownames(spp_scrs))
-
 
 # Model selection checks------
 # biomass and abundance, shannon vs simpson checks
@@ -1069,6 +996,60 @@ sum_kelp_pee <- data %>%
 x_ch <- sum_kelp_pee %>%
   group_by(kelp_sp) %>% 
   summarise(mean_x_change = mean(x_change))
+
+
+# Graveyard ------
+# old analyses and scraps of code
+
+# Community stuff -----
+# make wide for families
+fam_kelp_wide <- data_fam_no0s %>% 
+  dplyr::select(site_code, family, weight_fam_sum_g) %>% 
+  group_by(site_code, family) %>%
+  summarise(total = sum(weight_fam_sum_g)) %>%
+  ungroup() %>%
+  spread(key = family, value = total) %>%
+  replace(is.na(.), 0) %>%
+  select(-17) # cut the last column, it's NA
+
+# first use the rls final to filter for included surveys and make sure the order of rows is the same  
+kelp_com <- data %>%
+  select(site_code) %>%
+  unique() %>%
+  left_join(fam_kelp_wide, by = "site_code") %>%
+  select(-1)
+
+# make env data
+kelp_env <- data %>%
+  select(in_out_avg, kelp_bio_scale, kelp_sp, depth_scale, tide_scale) %>%
+  unique() 
+
+#convert com to a matrix
+kelp_m_com = as.matrix(kelp_com)
+
+# Perform the NMDS ordination
+set.seed(123)
+kelp_nmds = metaMDS(kelp_m_com, distance = "bray")
+kelp_nmds # stress is fine
+
+# Now we run the envfit function with our environmental data frame, env
+kelp_en = envfit(kelp_nmds, kelp_env, permutations = 999, na.rm = TRUE)
+# The first parameter is the metaMDS object from the NMDS ordination we just performed. Next is env, our environmental data frame. Then we state we want 999 permutations, and to remove any rows with missing data.
+kelp_en
+
+plot(kelp_nmds)
+plot(kelp_en)
+
+plot(kelp_nmds, type = "t")
+plot(kelp_en)
+
+
+# try plotting in ggplot? this code doesn't work
+#save NMDS results into dataframe
+site_scrs <- as.data.frame(scores(kelp_nmds, display = "sites")) 
+
+spp_scrs <- as.data.frame(scores(spp_fit, display = "vectors")) #save species intrinsic values into dataframe
+spp_scrs <- cbind(spp_scrs, Species = rownames(spp_scrs))
 
 
 # Stats: site to site variation ----
@@ -1360,8 +1341,6 @@ ggplot(data, aes(BiomassM, in_minus_out)) +
   geom_point() +
   geom_smooth()
 
-
-# Graveyard ------
 
 # IDK if this is useful anymore Plot kelp species vs kelp biomass vs nh4 ------
 data_kelp <- data %>%
