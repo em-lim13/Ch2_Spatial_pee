@@ -10,7 +10,7 @@ library(ggeffects)
 library(lubridate)
 library(vegan) # for diversity indexes
 library(MuMIn) # for dredge?
-library(glmmTMB) # better for random effects?
+library(glmmTMB) # better for random effects
 library(patchwork)
 library(ggh4x) # customizing axes for facet wrap panels
 library(emmeans)
@@ -23,7 +23,7 @@ library(performance)
 library(renv)
 
 # Source pretty functions
-source("Code/Functions.R") # Length to weight function here!
+source("Code/Functions.R")
 
 # Set default plotting
 theme_set(theme_bw())
@@ -75,7 +75,6 @@ fish_invert <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
 # W = a*L^b
 # Cite Froese R, Thorson JT, Reyes Jr RB. A Bayesian approach for estimating length‐weight relationships in fishes. Journal of Applied Ichthyology. 2014 Feb;30(1):78-85.
 
-# Black rockfish in a paper ranged from 35.4 to 92.5 mm standard length (SL) and 1.10 to 17.78 g wet weight
 
 # Use WL relationships from fishbase to estimate weight of fish in RLS surveys
 rls <- fish_invert %>%
@@ -83,19 +82,12 @@ rls <- fish_invert %>%
   # careful, the function shrinks the big wolf eel
   home_range() %>% # calculate each fish's home range function
   mutate(biomass_per_indiv = biomass/survey_den) # see how the RLS biomass calc estimated each fish size
-#  mutate(size_class_sum_g = weight_size_class_sum*1000)
-
 
 # That one huge wolf eel can't be right
 # Fishbase: max size = 240 cm, max weight = 18.4 kg
 # Ours is apparently 187 cm and 63 kg
 # That formula must be off
-# I also have size data for inverts "Haliotis kamtschatkana", "Crassadoma gigantea", "Pycnopodia helianthoides", "Polyorchis penicillatus", "Bolinopsis infundibulum", Pleurobrachia bachei, Pleuronichthys coenosus
 
-# Some people counted M2 fishes on M1, but not always so I don't actually want goby and sculpin counts from M1
-# Figure out what to do here
-
-# Megathura crenulata probably isn't found here????
 
 #write_csv(rls, "Output/Output_data/rls_species.csv")
 
@@ -141,8 +133,6 @@ rls_wide <- rls_wider %>%
 
 # RLS from 2022
 # These had a own matrix spike from each site but were still compared to DI
-# They came out quite negative maybe because of SFU DI, and maybe because of temperature difference between the standards and samples
-# I took the lowest nh4 reading and added it to everything else to "set" that sample to 0 and bump everything up
 # Maybe an underestimation
 
 # RLS from 2023
@@ -373,21 +363,10 @@ ggplot(rls_final, aes(x = nh4_avg)) +
 # 3) year = 2021, 2022, or 2023
 # 4) site_code = each unique site
 # should year and site be fixed or random effects?
-# interested trends across a broad spatial scale (and not site-specific trends) so site should be random
-# so year should also be random???
-
-# What if year is absent or fixed
-# Year = fixed no change, years are diff from 2021
-# Drop year = interaction still signif but species richness is now signif negative slope
-# What if site is absent or fixed
-# Site = fixed no change, some sites are diff from each other
-# Drop site no change
-# What if both are fixed or dropped?
-# Both fixed = no change.
-# Both dropped = interaction still there but species richness is now signif negative slope
+# interested trends across a broad spatial scale (and not site-specific trends) so site and year should be random
 
 # Interactions
-# I think abundance:tide will have an interaction
+# I think abundance:tide should have an interaction
 # I double checked, there's no triple interaction or abundance:richness interaction! Phewwww
 
 
@@ -412,11 +391,7 @@ mod_aic <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + (1|year) + (1|site_cod
 summary(mod_aic)
 plot(DHARMa::simulateResiduals(mod_aic))
 
-# I prefer biomass over abundance bc that's theoretically more linked to NH4
-# But abundance is a straight up recorded measure, no biomass proxy BS
-# And I prefer shannon diversity over richness bc it's a "better" biodiversity measure
-# And I want to drop depth bc it doesn't seem to matter...
-
+# Make a model based on my a priori hypotheses
 mod_brain <- glmmTMB(nh4_avg ~ abundance_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                      family = Gamma(link = 'log'),
                      data = rls_final)
@@ -502,7 +477,6 @@ family_df_no0_a <- rls_final %>%
                          weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
             by = "survey_id") 
 
-
 # what are the top families?
 
 # df for just the surveys I'm looking at
@@ -570,16 +544,10 @@ fam_list_cut <- fam_big_list %>%
   head(15) %>%
   select(family) 
 
-# OK and now I want to make a final df where the top 15 families are named, and everything else is "other"
-
 # make this final df for the df without 0's
 family_df_no0 <- family_df_no0_a %>%
   filter(family %in% fam_list_cut$family)
-# I no longer want to do this!!!!
-# now make all the other families "other"
-# rbind(family_df_no0_a %>%
-#         filter(!family %in% fam_list_cut$family) %>%
-#         mutate(family = "other"))
+
 
 # since I'm working with each family separately I want to change density back to abundance
 fam_df_no0 <- family_df_no0 %>%
@@ -676,11 +644,6 @@ pal5 <- c(pal30[16], pal30[18], pal30[20], pal30[22], pal30[24]) # coeff plot
 pal3 <- c(pal30[1], pal30[9], pal30[15]) # tide colours
 pal1 <- pal20[14] # fam plots
 
-# old palettes
-#pal3 <- c(pal20[20], pal20[15], pal20[11]) # pred plot
-#pal3 <- c(pal30[16], pal30[25], pal30[29]) # tide colours
-#pal5 <- c(pal20[1], pal20[3], pal20[5], pal20[7], pal20[9]) # coeff plot
-
 
 # Fig 2a: Coefficient plot ----
 
@@ -706,7 +669,6 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
 rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs, 
                              pal = rev(pal5)) +
   place_label("(a)")
-
 
 # ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
@@ -756,6 +718,7 @@ rls_coeff_plot + rls_pred_plot  &
 # correct size
 # ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 3.9375, width = 7, units = "in", dpi = 400)
  
+
 # try plotting panels horizontally
 # squish the y axis over
 squish <- theme(axis.title.y = element_text(margin = margin(r = -150, unit = "pt")))
@@ -768,6 +731,7 @@ rls_coeff_plot / (rls_pred_plot + squish)  &
 
 # old size
 # ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
+
 
 # Supplement 2 Fig 1: Family plots -----
 # set scales for each panel manually
@@ -988,7 +952,6 @@ rls_abundant <- fish %>%
   summarise(total = sum(total))
 
 
-
 # where are the most urchins???
 # Can swap for any species
 rls_urchins <- rls %>%
@@ -1102,7 +1065,7 @@ rls_auto <- rls_final %>%
 
 testSpatialAutocorrelation(new_resids, x = rls_auto$longitude, y = rls_auto$latitude)
 
-# Fuck around ----
+# Mess around ----
 
 rls_animals <- rls_final %>%
   select(site_code, year, weight_sum, abundance, species_richness, shannon) %>%
