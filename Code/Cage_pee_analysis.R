@@ -45,8 +45,7 @@ cuke_two <- readPNG("Images/cuke_KC2.png")
 cuke_labels <- c(Control = "Control",
                  Medium = "<img src='Images/cuke_KC1.png' width='109.375' />",
                  Large = "<img src='Images/cuke_KC2.png' width='109.375' />")
-
-# width = 250 for theme black
+# width was 250 for plotting with theme black
 
 # crab image
 crab <- readPNG("Images/Red_rock_crab_KC.png")
@@ -148,11 +147,12 @@ cuke_plot / crab_plot &
   plot_annotation(theme = theme(plot.background = 
       element_rect(color = "white", fill = "white")))
 
-# Fig 5 white background for pub
-# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 3.9375, width = 7, dpi = 400)
- 
-# vertical
+# Fig 5 vertical white background for pub
 # ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 7.875, width = 3.5, dpi = 400)
+
+
+# Old horizontal size
+# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 3.9375, width = 7, dpi = 400)
 
 # ggsave("Output/Pres_figs/Fig4.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
@@ -171,6 +171,7 @@ max_diff <- sum_crab %>%
   summarise(min = min(mean_nh4),
             max = max(mean_nh4),
             x_diff = max/min) # the max and min were from the same day!
+
 
 # Calculate excretion rate for cukes -----
 
@@ -268,18 +269,14 @@ ggplot() +
   geom_point(aes(carapace_mm, log_pee), colour = "blue", cage_crab_rates)
 
 
-# Map -----
+# Maps for presentations -----
 library(sf)
 library(ggimage) # for the pictures!
 
-# Load not great shapefile ----
-potato_map <- sf::st_read("Data/Potato_shapefiles/eez.shp") %>%
+# load shapefile
+hakai_map <- sf::st_read("Data/Hakai_coast/COAST_TEST2.shp") %>%
   st_sf() %>%
   st_set_crs(4326)
-
-# Load GREAT shapefile
-load("~/Documents/PhD/Ch2_Spatial_pee/Data/bc_map.Rdata")
-bc_map <- slice # rename
 
 # do this so i can trim the map margins
 sf_use_s2(FALSE)
@@ -300,7 +297,7 @@ coords <- data.frame(site, lat, long, image) %>%
 
 # Make new map
 ggplot() +
-  geom_sf(data = potato_map, fill = "white", colour = blue) +
+  geom_sf(data = hakai_map, fill = "white", colour = blue) +
   geom_sf(data = coords, 
           alpha = 0.9,
           size = 9,
@@ -318,7 +315,7 @@ ggplot() +
 
 # make the map!
 ggplot() +
-  geom_sf(data = bc_map, fill = "white", colour = blue) +
+  geom_sf(data = hakai_map, fill = "white", colour = blue) +
   geom_sf(data = coords, 
           alpha = 0.9,
           size = 9,
@@ -338,7 +335,7 @@ google_blue <- "#9bbff4"
 google_green <- "#bbdaa4"
 
 ggplot() +
-  geom_sf(data = bc_map, fill = "white", colour = google_blue) +
+  geom_sf(data = hakai_map, fill = "white", colour = google_blue) +
   coord_sf(xlim = c(-125.3, -125), ylim = c(48.75, 48.95), expand = FALSE)  +
   theme_black() +
   theme(panel.background = element_rect(fill = google_blue),
@@ -346,7 +343,7 @@ ggplot() +
         legend.position = "null") +
   scale_x_continuous(breaks = seq(-125.3, -125, by = 0.1))
 
-ggsave("Output/Figures/schematic_map.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Figures/schematic_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
 # try to replace points with images!
@@ -354,7 +351,7 @@ ggsave("Output/Figures/schematic_map.png", device = "png", height = 9, width = 1
 
 
 ggplot() +
-  geom_sf(data = coastline_data$osm_lines, fill = blue, colour = "black") +
+  geom_sf(data = hakai_map, fill = blue, colour = "black") +
   # new images
   ggimage::geom_image(data = coords %>%
                         mutate(
