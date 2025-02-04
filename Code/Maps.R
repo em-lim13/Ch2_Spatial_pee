@@ -104,10 +104,10 @@ all_coords <- rbind(rls_coords, kelp_coords) %>%
 
 # Fig. 1d -----
 # All sites
-map_daddy(lat_min = -125.375,
-          lat_max = -125.025, 
-          long_min = 48.801, 
-          long_max = 48.965, 
+map_daddy(long_min = -125.375,
+          long_max = -125.025, 
+          lat_min = 48.801, 
+          lat_max = 48.965, 
           coord_data = all_coords, 
           nh4_var = nh4_overall_avg_all, 
           kelp_var = Habitat,
@@ -126,12 +126,12 @@ map_daddy(lat_min = -125.375,
 
 # Other maps ----
 # Barkley Sound map
-map_daddy_np(lat_min = -127,
-          lat_max = -123, 
-          long_min = 48.5, 
-          long_max = 51, 
-          map_file = hakai_map,
-          invert = FALSE) +
+map_daddy_np(long_min= -127,
+             long_max= -123, 
+             lat_min  = 48.5, 
+             lat_max  = 51, 
+             map_file = hakai_map,
+             invert = FALSE) +
   # add rectangle for zoomed in part
   geom_rect(aes(xmin = -125.4, xmax = -125.0, ymin = 48.80, ymax = 49),
             color = "red", fill = NA, inherit.aes = FALSE) 
@@ -140,10 +140,10 @@ map_daddy_np(lat_min = -127,
 
 
 # RLS site map
-map_daddy(lat_min = -125.4,
-          lat_max = -125.0, 
-          long_min = 48.75, 
-          long_max = 49, 
+map_daddy(long_min= -125.4,
+          long_max= -125.0, 
+          lat_min  = 48.75, 
+          lat_max  = 49, 
           coord_data = all_coords %>% filter(Habitat == "Reef"), 
           nh4_var = dummy, 
           point_size = 4, 
@@ -156,10 +156,10 @@ map_daddy(lat_min = -125.4,
 
 
 # RLS nh4 data!
-map_daddy(lat_min = -125.4,
-          lat_max = -125.0, 
-          long_min = 48.80, 
-          long_max = 49, 
+map_daddy(long_min= -125.4,
+          long_max= -125.0, 
+          lat_min  = 48.80, 
+          lat_max  = 49, 
           coord_data = all_coords %>% filter(Habitat == "Reef"), 
           nh4_var = nh4_avg, 
           point_size = 9, 
@@ -173,10 +173,10 @@ map_daddy(lat_min = -125.4,
 
 
 # Kelp site map
-map_daddy(lat_min = -125.4,
-          lat_max = -125.0, 
-          long_min = 48.80, 
-          long_max = 49, 
+map_daddy(long_min= -125.4,
+          long_max= -125.0, 
+          lat_min  = 48.80, 
+          lat_max  = 49, 
           coord_data = all_coords %>% filter(Habitat == "Kelp"), 
           nh4_var = dummy, 
           point_size = 4, 
@@ -191,10 +191,10 @@ map_daddy(lat_min = -125.4,
 
 
 # Kelp nh4 data!
-map_daddy(lat_min = -125.3,
-          lat_max = -125.0, 
-          long_min = 48.78, 
-          long_max = 48.93, 
+map_daddy(long_min= -125.3,
+          long_max= -125.0, 
+          lat_min  = 48.78, 
+          lat_max  = 48.93, 
           coord_data = all_coords %>% filter(Habitat == "Kelp"), 
           nh4_var = nh4_avg, 
           point_size = 9, 

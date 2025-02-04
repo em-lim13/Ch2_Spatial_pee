@@ -1038,7 +1038,7 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
     viridis::scale_fill_viridis(option="magma", direction = -1,
                                 limits = c(0, 2),
                                 guide = guide_colorbar(frame.colour = features, ticks.colour = features)) +
-    coord_sf(xlim = c(lat_min, lat_max), ylim = c(long_min, long_max), expand = FALSE)  +
+    coord_sf(xlim = c(long_min, long_max), ylim = c(lat_min, lat_max), expand = FALSE)  +
     labs(fill = expression(paste("NH"[4]^" +",(mu*M)))) +
     scale_shape_manual(values = c(21, 25), drop = F) +
     guides(pch = guide_legend(override.aes = 
@@ -1106,7 +1106,7 @@ map_daddy_np <- function(lat_min, lat_max, long_min, long_max,
   
   ggplot() +
     geom_sf(data = map_file, fill = land, colour = sea) +
-    coord_sf(xlim = c(lat_min, lat_max), ylim = c(long_min, long_max), expand = FALSE)  +
+    coord_sf(xlim = c(long_min, long_max), ylim = c(lat_min, lat_max), expand = FALSE)  +
     # Themes
     theme_bw() +
     theme(
