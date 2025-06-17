@@ -11,6 +11,7 @@ library(viridis)
 
 # Load functions ----
 source("Code/Functions.R") 
+source("Code/Fig_theme_functions.R")
 
 # Load data ----
 # these are csv files created by the rls and kelp analysis files

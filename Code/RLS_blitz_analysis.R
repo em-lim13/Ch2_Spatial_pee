@@ -24,6 +24,7 @@ library(renv)
 
 # Source pretty functions
 source("Code/Functions.R")
+source("Code/Fig_theme_functions.R")
 
 # Set default plotting
 theme_set(theme_bw())

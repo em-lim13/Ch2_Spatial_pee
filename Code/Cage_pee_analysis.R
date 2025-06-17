@@ -16,6 +16,7 @@ library(ggtext)
 # renv::restore()
 # Load functions
 source("Code/Functions.R")
+source("Code/Fig_theme_functions.R")
 
 # Load cuke data ----
 cuke_pee <- read_csv("Output/Output_data/cuke_cages.csv") %>%
