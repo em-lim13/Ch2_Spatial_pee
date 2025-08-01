@@ -506,7 +506,7 @@ predict_sp <- ggpredict(mod_in_out3, terms = c("BiomassM[v]", "kelp_sp")) %>%
 data2 <- data %>%
   mutate(kelp_sp = factor(kelp_sp, levels = c("nereo", "macro", "none")))
 
-sp_labs <- c(macro = "Macro", nereo = "Nereo", none = "None")
+sp_labs <- c(macro = "Macro", nereo = "Nereo", none = "No kelp")
 
 set.seed(234444)
 kelp_sp_plot <- 
