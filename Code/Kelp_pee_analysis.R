@@ -469,7 +469,7 @@ df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all",
   head(- 1) %>%
   tail(-3) %>%
   mutate(variable = factor(as.factor(variable), 
-                           labels = c("Depth", "Kelp biomass", "Kelp:tide", "Kelp:animals", "Biodiversity", "Tide", "Tide:animals", "Animal biomass")),
+                           labels = c("Depth", "Kelp", "Kelp:tide", "Kelp:animals", "Diversity", "Tide", "Tide:animals", "Animals")),
          se = (upper_CI - estimate)/1.96
   )%>%
   arrange(desc(estimate)) %>%
@@ -480,6 +480,7 @@ df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all",
 # plot just cont vars
 kelp_coeff_plot <- coeff_plot(coeff_df = df,
                               pal = rev(pal8c)) +
+  theme(axis.title.y = element_blank())+
   place_label("(a)") # this is a function I create in the Functions.R file
 
 
@@ -517,7 +518,7 @@ kelp_sp_plot <-
               #pch_var = kelp_sp,
               labels = sp_labs,
               pal = pal_spc) +
-  labs(y = expression(paste(Delta, " Ammonium ", (mu*M))),
+  labs(y = expression(paste(Delta, " NH"[4]^" + ",(mu*M))),
        x = "Kelp species") +
   geom_hline(yintercept = 0, lty = "dashed", linewidth = 0.25) +
   place_label("(b)") +
@@ -617,7 +618,7 @@ abund_kelp_int_plot <-
   theme(
     axis.text.y = element_blank(),
     axis.title.y = element_blank()) +
-  labs(colour = "Kelp biomass", fill = "Kelp biomass", pch = "Kelp biomass") +
+  labs(colour = "Kelp", fill = "Kelp", pch = "Kelp") +
   place_label("(d)") 
 
 
@@ -669,20 +670,22 @@ abund_tide_int_plot <-
 
 # Fig 3 panels ----
 # plot coeffs + interactions
-squish <- theme(axis.title.y = element_text(margin = margin(r = -90, unit = "pt")))
+squish <- theme(axis.title.y = element_text(margin = margin(r = -60, unit = "pt")))
 # -200 for theme black
+# -90 for when i write out Ammonium for y-lab
 
 kelp_coeff_plot/ ((kelp_sp_plot + squish) +
                     abund_kelp_int_plot + 
                     (kelp_tide_int_plot + squish) +
-                    abund_tide_int_plot ) & theme(legend.justification = "left")
+                    abund_tide_int_plot ) +
+  plot_layout(heights = c(1.25, 2)) & 
+  theme(legend.justification = "left") 
 
 # correct size
-# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 7, width = 6.5, units = "in", dpi = 400)
+# ggsave("Output/Pub_figs/Fig3.tiff", device = "tiff", height = 5.5, width = 5.5, units = "in", dpi = 400)
 
 # old size
-# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 16, width = 16, dpi = 400)
-
+# ggsave("Output/Pub_figs/Fig3.png", device = "png", height = 7, width = 6.5, units = "in", dpi = 400)
 
 
 # Family manipulations ------
