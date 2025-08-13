@@ -8,6 +8,8 @@ library(ggplot2)
 library(ggspatial)
 library(sf)
 library(viridis)
+library(patchwork)
+library(cowplot)
 
 # Load functions ----
 source("Code/Functions.R") 
@@ -105,7 +107,7 @@ all_coords <- rbind(rls_coords, kelp_coords) %>%
 
 # Fig. 1d -----
 # All sites
-map_daddy(long_min = -125.375,
+fig1d<- map_daddy(long_min = -125.375,
           long_max = -125.025, 
           lat_min = 48.801, 
           lat_max = 48.965, 
@@ -116,14 +118,75 @@ map_daddy(long_min = -125.375,
           map_file = hakai_map,
           invert = FALSE,
           white_background = TRUE)
-
+#  place_label("(d)")
+fig1d
 # size adjusted
-# ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1d.png", device = "png", height = 9, width = 12.606299, dpi = 400)
+ ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1d.png", device = "png", height = 9, width = 12.606299, dpi = 400) # this saves it at the right size to put it in a ppt, add fig1a-c, and save that at 5x6"
 
 # old size
 # ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1.png", device = "png", height = 9, width = 16, dpi = 400)
 
 #  5 inches in width and 6 inches in height
+
+# try again ---------
+fig1d <- ggplot() +
+  geom_sf(data = hakai_map, fill = "grey", colour = "white") +
+  # add points
+  geom_sf(data = all_coords, 
+          alpha = 0.9,
+          size = 2,
+          aes(pch = Habitat, fill = nh4_overall_avg_all)) +
+  coord_sf(xlim = c(-125.375, -125.025), ylim = c(48.801, 48.965), expand = FALSE) +
+  # scale colour and pch
+  scale_shape_manual(values = c(21, 25), drop = F) +
+  viridis::scale_fill_viridis(option="magma", direction = -1,
+                              limits = c(0, 2),
+                              guide = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
+  labs(pch = "Habitat", 
+       fill = expression(paste("NH"[4]^" +",(mu*M))),
+       y = NULL, 
+       x = NULL) +
+  # add aesthetic elements
+  theme_bw() +
+  theme(panel.background = element_rect(fill = "white"),
+        panel.grid.major = element_line(color = "white"),
+        axis.text = element_text(size = 9, colour = "black"),
+        axis.title = element_text(size = 10, colour = "black"),
+        legend.title = element_text(size = 10, colour = "black"),
+        legend.text = element_text(size = 9, colour = "black"),
+        # try to get legend boxes inside plot
+        legend.position = "inside",
+        legend.position.inside = c(0.99, 0.15),
+        legend.justification.inside = c(0.99, 0.15),
+        legend.box.background = element_rect(color = "black", linewidth = 0)) +
+  # add scale bar and arrow
+  annotation_scale(location = "bl", 
+                   width_hint = 0.2,
+                   height = unit(0.1, "cm")  # vertical thickness of bar
+  ) +
+  annotation_north_arrow(location = "bl", 
+                         which_north = "true", 
+                         pad_x = unit(0.0, "in"), 
+                         pad_y = unit(0.1, "in"),
+                         height = unit(0.75, "cm"),   # arrow height
+                         width = unit(0.75, "cm"),     # arrow width
+                         style = north_arrow_fancy_orienteering)
+
+
+# Try adding images to map 
+fig1a <- ggdraw() + draw_image("Images/amoung_reefs.png") +
+  place_label("(a)")
+fig1b <- ggdraw() + draw_image("Images/within_reefs.png") +
+  place_label("(b)")
+fig1c <- ggdraw() + draw_image("Images/within_meters.png") +
+  place_label("(c)")
+
+# make panel fig
+(fig1a | fig1b | fig1c)/fig1d +
+  plot_layout(heights = c(1, 2))
+
+ ggsave("Output/Pub_figs/Fig.1alt.tiff", device = "tiff", height = 4, width = 5, dpi = 400)
+
 
 # Other maps ----
 # Barkley Sound map
