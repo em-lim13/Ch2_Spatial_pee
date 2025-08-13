@@ -661,15 +661,15 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
   tail(-1) %>% # remove intercept
   mutate(
     variable = factor(as.factor(variable), 
-                      labels = c("Abundance", "Abundance:tide", "Depth", "Biodiversity", "Tide" ))) %>%
+                      labels = c("Abund", "Abund:tide", "Depth", "Diversity", "Tide" ))) %>%
   arrange(desc(estimate)) %>%
   mutate(variable = factor(variable, unique(variable)))
 
 
 # Coefficient plot 
 rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs, 
-                             pal = rev(pal5)) +
-  place_label("(a)")
+                             pal = rev(pal5))
+#  place_label("(a)")
 
 # ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
@@ -707,28 +707,32 @@ rls_pred_plot <-
             lty_var = tide_cat,
             pch_var = tide_cat,
             pal = rev(pal3),
-            theme = "white") +
-  place_label("(b)")
+            theme = "white")
+#  place_label("(b)")
 
 
 # Fig 2 -----
-rls_coeff_plot + rls_pred_plot  &
+rls_coeff_plot + rls_pred_plot  + 
+  plot_annotation(tag_levels = 'a', tag_prefix = "(", tag_suffix = ")") &
   theme(plot.tag.position = c(0, 1),
-        plot.tag = element_text(hjust = -1, vjust = 0))
+        plot.tag = element_text(hjust = -0.5, vjust = 0))
 
-# correct size
+# ggsave("Output/Pub_figs/Fig2.tiff", device = "tiff", height = 3.5, width = 6, units = "in", dpi = 400)
+
+# old incorrect size
 # ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 3.9375, width = 7, units = "in", dpi = 400)
- 
 
-# try plotting panels horizontally
+
+ # try plotting panels horizontally
 # squish the y axis over
-squish <- theme(axis.title.y = element_text(margin = margin(r = -150, unit = "pt")))
+squish <- theme(axis.title.y = element_text(margin = margin(r = -75, unit = "pt")))
 
-rls_coeff_plot / (rls_pred_plot + squish)  &
+rls_coeff_plot / (rls_pred_plot + squish)   + 
+  plot_annotation(tag_levels = 'a', tag_prefix = "(", tag_suffix = ")") &
   theme(plot.tag.position = c(0, 1),
-        plot.tag = element_text(hjust = -1, vjust = 0)) # I don't like this
+        plot.tag = element_text(hjust = -0.5, vjust = 0))
 
-# ggsave("Output/Pub_figs/Fig2h.png", device = "png", height = 7.875, width = 3.5, units = "in", dpi = 400)
+# ggsave("Output/Pub_figs/Fig2h.tiff", device = "tiff", height = 5, width = 3.5, units = "in", dpi = 400)
 
 # old size
 # ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
