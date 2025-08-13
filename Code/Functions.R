@@ -757,7 +757,7 @@ coeff_plot <- function(coeff_df, pal, theme = "white"){
     geom_point(size = size_var) +
     geom_errorbar(width = 0, linewidth = line_var) +
     geom_vline(xintercept = 0, color = features, linetype = "dashed", linewidth = line_var*0.25) +
-    labs(x = "Coefficient", y = " ") +
+    labs(x = "Coefficient", y = "") +
     scale_y_discrete(limits = rev(levels(coeff_df$variable))) +
     theme +
     theme(legend.position = "none") + 
@@ -812,7 +812,7 @@ plot_pred <- function(raw_data, predict_data,
   if(plot_type == "new_kelp"){
     new_plot <- base_pred_plot +
       geom_hline(yintercept= 0, linetype = "dashed", color = features, linewidth = line_var*0.25) +
-      labs(y = expression(paste(Delta, " Ammonium ", (mu*M))), 
+      labs(y = expression(paste(Delta, " NH"[4]^" + ",(mu*M))),
            x = x_axis_lab) +
       theme(plot.margin = unit(rep(0.1, 4), "lines"))
     #      scale_x_continuous(breaks = c(-1.17905227, -0.1, 1, 2.05),
@@ -899,9 +899,13 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
       panel.border = element_rect(fill = NA, colour = features),
       # remove axis
       axis.title = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
       axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      axis.ticks.length = unit(0, "pt"),
+      axis.text.y = element_text(size = 16, color = "black", lineheight = 0.2),  
+      axis.text.x = element_text(size = 16, color = "black", lineheight = 0.2),  
+     # axis.ticks = element_blank(),
+     # axis.ticks.length = unit(0, "pt"),
       plot.title = NULL,
       plot.margin=grid::unit(c(0,0,0,0), "mm"),
       # Specify legend options
@@ -938,6 +942,76 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
                            style = north_arrow_fancy_orienteering)
 }
 
+# Mapping -----
+map_pub <- function(lat_min, lat_max, long_min, long_max, 
+                      coord_data, nh4_var, kelp_var, point_size, map_file, 
+                      white_background = TRUE, invert = FALSE) {
+  
+  # invert land and sea colours if I use the potato map
+  
+  if(invert == FALSE){
+    sea <- blue
+    land <- "white"
+  }
+  if(invert == TRUE){
+    sea <- "white"
+    land <- blue
+  }
+  
+  # specify black or white background
+  if(white_background == TRUE){
+    background <- "white"
+    features <- "black"
+  }
+  if(white_background == FALSE){
+    background <- "black"
+    features <- "white"
+  }
+  
+  ggplot() +
+    geom_sf(data = map_file, fill = land, colour = sea) +
+    # add points
+    geom_sf(data = coord_data, 
+            colour = "black",
+            alpha = 0.9,
+            size = point_size,
+            aes(fill = {{nh4_var}},
+                pch = {{kelp_var}})) +
+    viridis::scale_fill_viridis(option="magma", direction = -1,
+                                limits = c(0, 2),
+                                guide = guide_colorbar(frame.colour = features, ticks.colour = features)) +
+    coord_sf(xlim = c(long_min, long_max), ylim = c(lat_min, lat_max), expand = FALSE)  +
+    labs(fill = expression(paste("NH"[4]^" +",(mu*M)))) +
+    scale_shape_manual(values = c(21, 25), drop = F) +
+    guides(pch = guide_legend(override.aes = 
+                                list(colour = features))) +
+    # Themes
+    pub_theme() +
+    theme(
+      # panel stuff
+      panel.background = element_rect(fill = sea),
+      panel.grid.major = element_line(color = sea),
+      panel.border = element_rect(fill = NA, colour = features),
+      # remove axis
+      axis.title = element_blank(),
+      plot.title = NULL,
+      plot.margin=grid::unit(c(0,0,0,0), "mm"),
+      # Specify legend options
+      legend.background = element_rect(color = NA, fill = background),  
+      legend.key = element_rect(color = background,  fill = background),  
+      # try to get legend boxes inside plot
+      legend.position = "inside",
+      legend.position.inside = c(0.99, 0.15),
+      legend.justification.inside = c(0.99, 0.15),
+      legend.box.background = element_rect(color = features, linewidth = 0),
+      # Specify plot options
+      plot.background = element_rect(color = background, fill = background),  
+    ) +
+    annotation_scale(location = "br", width_hint = 0.4, text_cex = 1.75) +
+    annotation_north_arrow(location = "br", which_north = "true", 
+                           pad_x = unit(0.0, "in"), pad_y = unit(0.2, "in"),
+                           style = north_arrow_fancy_orienteering)
+}
 
 map_daddy_np <- function(lat_min, lat_max, long_min, long_max, 
                          map_file, invert) {
