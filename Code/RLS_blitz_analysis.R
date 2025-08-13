@@ -1111,13 +1111,12 @@ fam_wide <- family_df_no0 %>%
   summarise(total = sum(fam_den)) %>%
   ungroup() %>%
   spread(key = family, value = total) %>%
-  replace(is.na(.), 0) %>%
-  select(-17) # cut the last column, it's NA
+  replace(is.na(.), 0)
 
 # first use the rls final to filter for included surveys and make sure the order of rows is the same  
 com <- rls_final %>%
   left_join(fam_wide, by = "survey_id") %>%
-  select(34:48)
+  select(Acmaeidae:Turbinidae)
 
 # make env data
 env <- rls_final %>%
