@@ -116,7 +116,7 @@ sum_cukes <- ggpredict(mod_cu, terms = "cukes") %>%
 # use ggpredict to get estimates for crab model
 sum_crabs <- ggpredict(mod_cr_gamma, terms = "treatment") %>% 
   dplyr::rename(treatment = x,
-                nh4_avg = predicted) %>% 
+                nh4_conc = predicted) %>% 
   as_tibble()
 
 # Figure 4 ----
@@ -128,19 +128,22 @@ cuke_plot <- dot_whisker(sum_data = sum_cukes,
                          labels = cuke_labels,
                          pal = pal_c,
                          theme = "white") +
-  ylim(c(0, 3.8)) +
+#  ylim(c(0, 3.8)) +
+  theme(axis.title.x = element_blank()) +
   place_label("(a)") # this is a function I create in the Functions.R file
 
 # plot crabs
 crab_plot <- dot_whisker(sum_data = sum_crabs, 
-                         all_data = crab_pee %>% select(treatment, nh4_avg) %>% unique(),
+                         all_data = crab_pee,
                          x_var = treatment,
-                         y_var = nh4_avg,
+                         y_var = nh4_conc,
                          labels = crab_labels,
                          pal = pal_c,
                          theme = "white") +
-  ylim(c(0, 3.8)) +
-  place_label("(b)")
+#  ylim(c(0, 3.8)) +
+  place_label("(b)") +
+  theme(axis.title.x = element_blank())
+  
 
 
 # plot together
@@ -148,9 +151,11 @@ cuke_plot / crab_plot &
   plot_annotation(theme = theme(plot.background = 
       element_rect(color = "white", fill = "white")))
 
-# Fig 5 vertical white background for pub
-# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 7.875, width = 3.5, dpi = 400)
+# Fig 4 vertical white background for pub
+# ggsave("Output/Pub_figs/Fig4.tiff", device = "tiff", height = 5, width = 3.5, dpi = 400)
 
+# old vert size
+# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 7.875, width = 3.5, dpi = 400)
 
 # Old horizontal size
 # ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 3.9375, width = 7, dpi = 400)
