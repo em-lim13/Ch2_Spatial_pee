@@ -1,10 +1,11 @@
 ##Code to analyse Tubs 2 and 1: electric boogaloo
 ##July 2, 2021
 ##By: Emily Leedham and Em
+# Rewritten by Em Lim Aug 2025
 
 # Produces Figure S3
 
-##Load packages and data -----
+#Load packages --------------------------------------------------------
 
 #Load packages
 library(tidyverse)
@@ -12,7 +13,6 @@ library(visreg)
 library(ggplot2)
 library(TMB)
 library(glmmTMB)
-library(PNWColors)
 library(viridis)
 library(patchwork)
 library(ggeffects)
@@ -22,7 +22,9 @@ source("Code/Functions.R")
 
 theme_set(theme_bw())
 
-##Code to analyze The Experiment of Many Tubs June 21, 2021----
+# NH4 Calculations ------------------------------------------------------------
+
+## The Experiment of Many Tubs June 21, 2021 -----------------------
 tubs <- read_csv("Data/Emily_flow/2021_06_21_emily_flow_exp.csv") %>%
   mutate(mean_FLU = rowMeans(cbind(flu_1, flu_2, flu_3)),
          flow_s = as.factor(flow_s), 
@@ -32,7 +34,7 @@ tubs <- read_csv("Data/Emily_flow/2021_06_21_emily_flow_exp.csv") %>%
 #Load standard curve data
 standard <- read_csv("Data/Emily_flow/2021_06_23_standard_curve_data.csv") 
 
-##Making the standard curve -----
+### Making the standard curve --------------------------------------------------
 standard_f <- standard %>% 
   mutate(nh4_added_umol = nh4_vol_uL/1e6 * nh4_conc_og_umol, #amount of NH4
          total_vol_L = nh4_vol_uL/1e6 + og_vol_L, #new volume of sample + NH4
@@ -56,7 +58,7 @@ ggplot(standard_f, aes(mean_FLU, nh4_conc_final_umol_L)) +
 int <- coef(sc_mod1)[1]
 slope <- coef(sc_mod1)[2]
 
-##Calculating the matrix effects -----
+###Calculating the matrix effects -----
 Fst_zero <- standard_f$mean_FLU[standard_f$nh4_vol_uL == "0"]
 Fst_spike <- standard_f$mean_FLU[standard_f$nh4_vol_uL == "200"]
 
@@ -98,7 +100,7 @@ tubs_nh4_added1 <- tubs_nh4 %>%
   select(cukes_num, flow_s, mean_flow, total_mass, NH4_conc, nh4_added, date)
 
 
-# FLOW CODE TAKE 2 -----------
+## Flow experiment # 2 -----------
 # The fluorometry is split into am and pm because Emily had to go to the nurse part way through fluorometry and by the time Em got back to the lab to finish the OPA had sat for long enough that the standards had to be rerun
 # Therefore there are two sets of standards and matrix calculations
 
@@ -123,7 +125,7 @@ standard_am <- read.csv("Data/Emily_flow/2021_06_30_emily_flow_epx2_standard_am.
 
 standard_pm <- read.csv("Data/Emily_flow/2021_06_30_emily_flow_epx2_standard_pm.csv")
 
-##Making the standard curve FOR AM DATA -----
+###Making the standard curve FOR AM DATA -----
 standard_am_f <- standard_am %>% 
   mutate(nh4_added_umol = nh4_vol_uL/1e6 * nh4_conc_og_umol, #amount of NH4
          total_vol_L = nh4_vol_uL/1e6 + og_vol_L, #new volume of sample + NH4
@@ -147,7 +149,7 @@ int_am <- coef(sc_mod1_am)[1]
 slope_am <- coef(sc_mod1_am)[2]
 
 
-##Calculating the matrix effects FOR THE AM DATA-----
+###Calculating the matrix effects FOR THE AM DATA-----
 Fst_zero_am <- standard_am_f$mean_FLU[standard_am_f$nh4_vol_uL == "0"]
 Fst_spike_am <- standard_am_f$mean_FLU[standard_am_f$nh4_vol_uL == "200"]
 
@@ -176,7 +178,7 @@ tubs_nh4_am <- cbind(tubs_am, matrix_am) %>%
          time = "am") %>%
   select(- c(int_am, slope_am))
 
-##Making the standard curve FOR PM DATA -----
+###Making the standard curve FOR PM DATA -----
 
 standard_pm_f <- standard_pm %>% 
   mutate(nh4_added_umol = nh4_vol_uL/1e6 * nh4_conc_og_umol, #amount of NH4
@@ -201,7 +203,7 @@ int_pm <- coef(sc_mod1_pm)[1]
 slope_pm <- coef(sc_mod1_pm)[2]
 
 
-##Calculating the matrix effects FOR THE PM DATA-----
+###Calculating the matrix effects FOR THE PM DATA-----
 Fst_zero_pm <- standard_pm_f$mean_FLU[standard_pm_f$nh4_vol_uL == "0"]
 Fst_spike_pm <- standard_pm_f$mean_FLU[standard_pm_f$nh4_vol_uL == "200"]
 
@@ -232,7 +234,7 @@ tubs_nh4_pm <- cbind(tubs_pm, matrix_pm) %>%
   filter(bottle != "D01")
 
 
-# stick the am and pm dfs together ------
+### stick the am and pm dfs together ------
 tubs_nh4_2 <- rbind(tubs_nh4_am, tubs_nh4_pm)%>%
   mutate(date = "two")
 
@@ -250,14 +252,14 @@ tubs_nh4_added2 <- tubs_nh4_2 %>%
   select(cukes_num, flow_s, mean_flow, total_mass, NH4_conc, nh4_added, date)
 
 
-# smoosh the two dfs together (week 1 + week 2) -----
+## merge week 1 + week 2 -----
 tubs_nh4_added_final <- rbind(tubs_nh4_added1, tubs_nh4_added2) %>%
   filter(!(date == "one" & flow_s == 15)) %>% # something weird happened in that tub
   mutate(flow2 = ifelse(cukes_num == 0, "Control", as.character(flow_s)),
          flow2 = factor(flow2, levels = c("Control", 10, 15, 20, 25)),
          cukes = as.factor(ifelse(cukes_num == "0", "Zero", "Four")))
 
-# stats ----
+# Stats ------------------------------------------------------------------------
 model <- lm(nh4_added ~ flow2 + date, data = tubs_nh4_added_final)
 summary(model)
 visreg(model)
@@ -268,7 +270,7 @@ summary(model2)
 visreg(model2, "mean_flow", by = "cukes")
 
 
-# Plot ------
+# Graphing ---------------------------------------------------------------------
 csee_pal <- pnw_palette("Starfish")
 
 # palette
@@ -277,6 +279,8 @@ pal_flow <- viridis::viridis(10)[1:5]
 pal <- viridis::viridis(10)
 pal_flow2 <- c(pal[5], pal[8])
 
+
+## Figure S3 -------------------------------------------------------------------
 # continuous plot
 predict_flow <- ggpredict(model2, terms = c("mean_flow", "cukes")) %>% 
   dplyr::rename(mean_flow = x,
@@ -297,6 +301,7 @@ plot_pred(raw_data = tubs_nh4_added_final,
 # ggsave("Output/Pub_figs/Supp1Fig3.png", device = "png", height = 3.375, width = 6, dpi = 400)
 
 
+## Dot whisker plot --------------------------------------------------------
 # use ggpredict to get estimates
 sum_stats <- ggpredict(model, terms = c("flow2")) %>% 
   dplyr::rename(flow2 = x,
@@ -328,26 +333,17 @@ ggplot() +
 #       height = 9, width = 16, dpi = 400)
 
 
-# ? ------
-
-# Average for each treatment
-mean(tubs_f$nh4_conc[tubs_f$cukes_num == 0]) # 1.999316
-mean(tubs_f$nh4_conc[tubs_f$cukes_num == 4]) # 2.342993
-
-(2.342993-1.999316)/1.999316 * 100 # percent increase of 17.18973%
-2.342993/1.999316 # cuke tub is 1.171897 x higher
-
-##Code to make the flow conversion line
+# Flow conversion line --------------------------------------------------------
 ##June 8, 2021
 ##By: Emily Leedham
 
-flowline <- read.csv("Data/Emily_flow/2021_06_08_flowline.csv") %>%
+flowline <- read_csv("Data/Emily_flow/2021_06_08_flowline.csv") %>%
   mutate(mean_flow = rowMeans(cbind(mL_flow1, mL_flow2, mL_flow3)))
 
 flowline_2 <- flowline %>%
   mutate(period = as.factor(period))
 
-##Making a graph -----
+##Making a graph -------------------------------------------------------------
 
 flow_plot <- ggplot(flowline_2, aes(cm_flow, mean_flow)) +
   geom_point(aes(color = period)) +

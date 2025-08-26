@@ -1,5 +1,5 @@
 # Code to look at all the spatial data together
-# June 2, 2023, last updated Dec 2024
+# June 2, 2023, last updated Aug 2025
 # Em Lim
 
 # Produces Figure 2
@@ -11,7 +11,7 @@ library(ggplot2)
 library(ggeffects)
 library(lubridate)
 library(vegan) # for diversity indexes
-library(MuMIn) # for dredge?
+library(MuMIn) # for dredge
 library(glmmTMB) # better for random effects
 library(patchwork)
 library(ggh4x) # customizing axes for facet wrap panels
@@ -30,7 +30,9 @@ source("Code/Functions.R")
 # Set default plotting
 theme_set(theme_bw())
 
-# RLS data: Load data + manipulate  ------
+# Load and manipulate data -----------------------------------------------------
+
+## RLS data --------------------------------------------------------------------
 # RLS data from the website!
 fish_invert <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
                         show_col_types = FALSE) %>%
@@ -65,7 +67,7 @@ fish_invert <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
 # Jordania zonope avg 5
 
 
-# RLS Biomass calculations -------
+# RLS Biomass calculations
 
 # A note on length to weight relationships
 # The overall relationship is W = a*L^b
@@ -81,17 +83,14 @@ fish_invert <- read_csv("Data/RLS/RLS_data/reef_fish_abundance_and_biomass.csv",
 # Use WL relationships from fishbase to estimate weight of fish in RLS surveys
 rls <- fish_invert %>%
   length_to_weight() %>% # Use nice length to weight function!
-  # careful, the function shrinks the big wolf eel
   home_range() %>% # calculate each fish's home range function
   mutate(biomass_per_indiv = biomass/survey_den) # see how the RLS biomass calc estimated each fish size
 
-# That one huge wolf eel can't be right
+# careful, the length_to_weight function shrinks the big wolf eel
 # Fishbase: max size = 240 cm, max weight = 18.4 kg
 # Ours is apparently 187 cm and 63 kg
-# That formula must be off
+# That formula must be off for this species
 
-
-#write_csv(rls, "Output/Output_data/rls_species.csv")
 
 # extract just one row per survey to join with the pee data and tide data
 rls_survey_info <- rls %>%
@@ -100,11 +99,6 @@ rls_survey_info <- rls %>%
   unique() %>%
   mutate(date_time = ymd_hms(paste(survey_date, hour)),
          date = survey_date)
-
-# Extract phylo data! 
-# write_csv(rls %>% 
-#   select(phylum, class, order, family, species_name) %>% 
-#   unique(), "Output/Output_data/rls_phylo.csv")
 
 
 # Pivot the data wider for diversity metrics
@@ -126,7 +120,7 @@ rls_wide <- rls_wider %>%
   select(survey_id, shannon, simpson)
 
 
-# NH4+ data: Load + manipulate  ----
+## NH4+ data -------------------------------------------------------------------
 
 # RLS nh4 from 2021
 # This is the spring blitz, the june samples, and the July samples
@@ -151,7 +145,7 @@ rls_nh4 <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   keep_correct_survey_depth_function() # only keep the RLS survey from the transect where the pee is from
 
 
-# Tide exchange: Load + manipulate data ----
+## Tide exchange ---------------------------------------------------------------
 
 # Downloaded tide height data (m) from http://tbone.biol.sc.edu/tide/tideshow.cgi?site=Bamfield%2C+British+Columbia in 1 min intervals over the two week spanning each RLS spring blitz, in 24 hour time
 # 2021 April 26 start
@@ -210,7 +204,7 @@ tide_overall <- tide %>%
 # no diff in models between avg and max tide exchange, just use avg
 
 
-# Site level averaging -----
+## Site level averaging -------------------------------------------------------
 # One row per transect
 # Per site, per depth, per year
 # Same as grouping by survey_ID
@@ -296,14 +290,22 @@ rls_final <-
 # slack = 0.0160356 - 0.6195273
 # ebb = -0.5874561 - 0.0160356
 
-# but we know slack is actually centered around 0 soooo
+# but we know slack is actually centered around 0
 # what's the min value/3
 # that divides the min - 0 into three parts, two parts = ebb, one part on either side of 0 = slack
 # ebb = < -0.1958187 
 # slack = -0.1958187 - 0.1958187
 # ebb = > 0.1958187
 
-# Stats -------
+# Write files to use in other scripts
+# Extract phylo data! 
+# write_csv(rls %>% 
+#   select(phylum, class, order, family, species_name) %>% 
+#   unique(), "Output/Output_data/rls_phylo.csv")
+
+#write_csv(rls, "Output/Output_data/rls_species.csv")
+
+# Statistics -------------------------------------------------------------------
 
 # Step 0: Ask my question
 # Is there a link between biodiversity or biomass and ammonium concentration?
@@ -319,20 +321,20 @@ ggplot(rls_final, aes(x = nh4_avg)) +
 # Gamma is likely the best bet for this!
 
 # Build full model with gaussian distribution
-# mod_norm_full <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
-#                          family = 'gaussian',
-#                          data = rls_final)
-# plot(simulateResiduals(mod_norm_full)) 
+mod_norm_full <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
+                          family = 'gaussian',
+                          data = rls_final)
+ plot(simulateResiduals(mod_norm_full)) 
 
 
 # Build full model with gamma distribution
-# mod_gam_full <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
-#                         family = Gamma(link = 'log'),
-#                         data = rls_final)
-# plot(simulateResiduals(mod_gam_full)) 
-# 
+ mod_gam_full <- glmmTMB(nh4_avg ~ weight_sum_scale*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
+                         family = Gamma(link = 'log'),
+                         data = rls_final)
+plot(simulateResiduals(mod_gam_full)) 
+ 
 # compare via AIC
-# AIC(mod_norm_full, mod_gam_full) 
+AIC(mod_norm_full, mod_gam_full) 
 
 # Gamma residuals look better and that mod has a lower AIC!
 
@@ -465,176 +467,6 @@ car::vif(lm(nh4_avg ~ abundance_scale + tide_scale + shannon_scale + depth_avg_s
 # All good, shannon is a little high
 
 
-# Family data manipulation ------
-
-# Make a dataframe where each family we saw on a survey gets a row
-# If we didn't see a certain family on that survey, it doesn't get a row
-# No zeros for abundance!
-family_df_no0_a <- rls_final %>%
-  select(site, site_code, survey_id, year, nh4_avg, depth_avg_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
-  left_join((rls %>%
-               mutate(family = as.factor(family))%>%
-               group_by(survey_id, method, phylum, family) %>% # if i want methods split up, add it back here
-               summarise(fam_den = sum(survey_den),
-                         weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
-            by = "survey_id") 
-
-# what are the top families?
-
-# df for just the surveys I'm looking at
-rls_sm <- rls_final %>%
-  select(survey_id) %>%
-  unique() %>%
-  left_join(rls, by = "survey_id")
-
-# CHOOSE THE FAMILIES TO INCLUDE
-# rank of families by total abundance (density)
-fam_list_total <- rls_sm %>%
-  group_by(family) %>%
-  summarise(sum = sum(survey_den)) %>%
-  drop_na(family) %>%
-  arrange(desc(sum)) %>%
-  transmute(family = family, 
-            sum_total = sum,
-            rank_total = 1:58)
-
-# but which families show up on the most transects?
-fam_list_count <- rls_sm %>%
-  select(survey_id, family) %>%
-  unique() %>%
-  count(family) %>%
-  drop_na(family) %>%
-  arrange(desc(n)) %>%
-  transmute(family = family, 
-            sum_count = n,
-            rank_count = 1:58)
-
-# rank of families by biomass
-fam_list_bio <- rls_sm %>%
-  group_by(family) %>%
-  summarise(sum = sum(weight_size_class_sum)) %>%
-  drop_na(family) %>%
-  arrange(desc(sum)) %>%
-  transmute(family = family, 
-            sum_bio = sum,
-            rank_bio = 1:58)
-
-# join all that fam stuff together
-fam_big_list <- fam_list_total %>%
-  left_join(fam_list_count, by = "family") %>%
-  left_join(fam_list_bio, by = "family") %>%
-  mutate(rank_all = (rank_total + rank_count + rank_bio)/3)
-
-# OK so how do I make sense of this
-# plot all rankings together
-ggplot(fam_big_list) +
-  geom_point(aes(y = reorder(family, -rank_all), 
-                 x = rank_total, colour = "density"), alpha = 0.5) +
-  geom_point(aes(y = reorder(family, -rank_all), 
-                 x = rank_count, colour = "count"), alpha = 0.5) +
-  geom_point(aes(y = reorder(family, -rank_all), 
-                 x = rank_bio, colour = "biomass"), alpha = 0.5) +
-  geom_point(aes(y = reorder(family, -rank_all), 
-                 x = rank_all, colour = "all"), alpha = 0.5) +
-  geom_vline(xintercept = 15, lty = "dashed") +
-  geom_hline(yintercept = "Sebastidae", lty = "dashed") +
-  labs(y = "Family", x = "Rank", colour = "Rank Type")
-
-# just the families I want to keep
-fam_list_cut <- fam_big_list %>%
-  arrange(rank_all) %>%
-  head(15) %>%
-  select(family) 
-
-# make this final df for the df without 0's
-family_df_no0 <- family_df_no0_a %>%
-  filter(family %in% fam_list_cut$family)
-
-
-# since I'm working with each family separately I want to change density back to abundance
-fam_df_no0 <- family_df_no0 %>%
-  mutate(total_fam = case_when(method == 1 ~ fam_den*500,
-                               method == 2 ~ fam_den*100),
-         weight_abund_fam_sum_g = case_when(method == 1 ~ weight_fam_sum_g*500,
-                                            method == 2 ~ weight_fam_sum_g*100),
-         abund_fam_scale = c(scale(total_fam)),
-         weight_abund_fam_scale = c(scale(weight_abund_fam_sum_g)),
-         fam_den_scale = c(scale(fam_den)),
-         weight_den_fam_scale = c(scale(weight_fam_sum_g))) %>%
-  as.data.frame() %>%
-  droplevels()
-
-# mess around with orders next time!!!!!! 
-
-# rank of orders by abundance
-order_list_total <- rls_sm %>%
-  group_by(order) %>%
-  summarise(sum = sum(total)) %>%
-  drop_na(order) %>%
-  arrange(desc(sum))
-
-# rank orders by biomass
-order_list_bio <- rls_sm %>%
-  group_by(order) %>%
-  summarise(sum = sum(weight_size_class_sum)) %>%
-  drop_na(order) %>%
-  arrange(desc(sum))
-
-# Family stats ----
-
-# I want to run one model for each family
-# list family names
-fam_levels <- levels(fam_df_no0$family)
-
-# lapply fam_fun over each family name to create df of predictions for each fam mod
-fam_predictions <- lapply(fam_levels, function(family_name) {
-  fam_fun_combo(fam_df_no0, family_name)  
-})
-
-# join up those predictions
-rls_fam_predicts <- bind_rows(fam_predictions)
-
-
-# what are the top 6 inverts and fish?
-top_fam_r2 <- rls_fam_predicts %>%
-  select(c(family, r2)) %>%
-  unique() %>%
-  arrange(desc(r2)) %>%
-  head(7) %>% # only want top 3 inverts and 3 fish but urchins are above the 3rd fish fam
-  filter(family != "Strongylocentrotidae")
-
-# make df of just the tops
-rls_top_fam_predict <- rls_fam_predicts %>%
-  filter(family %in% top_fam_r2$family) %>%
-  # optional reorder of families
-  arrange(desc(r2)) %>%
-  mutate(family = factor(family, unique(family)))
-
-
-# Outputs for these families
-# list top 6 family names
-top_fam_levels <- levels(rls_top_fam_predict$family)
-
-# get model outputs for each family model
-lapply(top_fam_levels, function(family_name) {
-  diagnose_fun(fam_df_no0, family_name) 
-})
-
-# now filter full family df to just include those top 6 families
-rls_top_fam <- top_fam_r2 %>%
-  left_join(fam_df_no0, by = "family") %>%
-  arrange(desc(r2)) %>%
-  mutate(family = factor(family, unique(family)))
-
-# What % of the total abundance do these top 6 families make up?
-all_fam <- fam_df_no0 %>%
-  summarise(type = "all",
-            total_den = sum(fam_den),
-            total_weight = sum(weight_fam_sum_g)) %>%
-  rbind(rls_top_fam %>%
-          summarise(type = "top",
-                    total_den = sum(fam_den),
-                    total_weight = sum(weight_fam_sum_g)))
 
 
 # Graphing ----
@@ -647,7 +479,7 @@ pal3 <- c(pal30[1], pal30[9], pal30[15]) # tide colours
 pal1 <- pal20[14] # fam plots
 
 
-# Fig 2a: Coefficient plot ----
+## Fig 2a: Coefficient plot ---------------------------------------------------
 
 # generate coefficients
 # try using emtrends to generate standard error/ confidence intervals around slope estimates
@@ -675,7 +507,7 @@ rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs,
 # ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
-# Fig 2b: Abundance vs nh4 -----
+## Fig 2b: Abundance vs nh4 ----------------------------------------------------
 mod_pred_plot <- glmmTMB(nh4_avg ~ abundance*tide_scale + shannon_scale + depth_avg_scale + (1|year) + (1|site_code), 
                          family = Gamma(link = 'log'),
                          data = rls_final)
@@ -712,7 +544,7 @@ rls_pred_plot <-
   place_label("(b)")
 
 
-# Fig 2 -----
+## Fig 2 panel -----------------------------------------------------------------
 rls_coeff_plot + rls_pred_plot
 # add the following to put the tags outside the plots
 #  plot_annotation(tag_levels = 'a', tag_prefix = "(", tag_suffix = ")") &
@@ -722,6 +554,7 @@ rls_coeff_plot + rls_pred_plot
 # ggsave("Output/Pub_figs/Fig2.tiff", device = "tiff", height = 3.5, width = 6, units = "in", dpi = 600)
 
 # ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 3.5, width = 6, units = "in", dpi = 600)
+
 
  # try plotting panels horizontally
 # squish the y axis over
@@ -734,54 +567,10 @@ rls_coeff_plot / (rls_pred_plot + squish)   +
 
 # ggsave("Output/Pub_figs/Fig2h.tiff", device = "tiff", height = 5, width = 3.5, units = "in", dpi = 400)
 
-# old size
-# ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
-# Supplement 2 Fig 1: Family plots -----
-# set scales for each panel manually
-position_scales <- list(
-  scale_x_continuous(n.breaks = 3,
-                     label = c("0", "0.1", "0.2")), #seb
-  scale_x_continuous(breaks = c(0, 0.6, 1.2),
-                     label = c("0", "0.6", "1.2")), # muricid
-  scale_x_continuous(n.breaks = 3), # ast
-  scale_x_continuous(breaks = c(0, 0.04, 0.08),
-                     label = c("0", "0.04", "0.08")), # hexa
-  scale_x_continuous(n.breaks = 3,
-                     label = c("0", "0.3", "0.6")), # acmae
-  scale_x_continuous(breaks = c(0, 1.3, 2.6),
-                     label = c("0", "1.3", "2.6")) # gob
-)
 
-# now make plot
-fam_plot_rls <- ggplot() + 
-  geom_point(data = rls_top_fam, 
-             aes(x = fam_den, y = nh4_avg), colour = pal1,
-             alpha = 0.8, size = 3) +
-  labs(y = expression(paste("Ammonium ", (mu*M))), 
-       x = expression(paste("Animal abundance/m"^2))) +
-  facet_wrap(~family, scales = 'free_x', ncol = 3) +
-  geom_line(data = rls_top_fam_predict,
-            aes(x = fam_den, y = predicted), colour = pal1,
-            linewidth = 1.5) +
-  geom_ribbon(data = rls_top_fam_predict,
-              aes(x = fam_den, y = predicted, 
-                  ymin = conf.low, ymax = conf.high), fill = pal1,
-              alpha = 0.2) +
-  theme_white() +
-  theme(strip.background = element_rect(fill = "grey", color = "grey"),
-        axis.text = element_text(size = 18, color = "black", lineheight = 0.9)) + 
-  theme(panel.spacing = unit(1, "lines")) +
- facetted_pos_scales(x = position_scales)
-
-
-fam_plot_rls
-
-# ggsave("Output/Pub_figs/Supp2Fig1.png", device = "png", height = 9, width = 16, dpi = 400)
-
-
-# Alt Fig 3 tri-panel -----
+## Alt Fig 2 tri-panel ---------------------------------------------------------
 squish <- theme(axis.title.y = element_text(margin = margin(r = -120, unit = "pt")))
 
 (rls_coeff_plot + rls_pred_plot)/(fam_plot + squish) &
@@ -791,7 +580,7 @@ squish <- theme(axis.title.y = element_text(margin = margin(r = -120, unit = "pt
 # ggsave("Output/Pub_figs/Fig3_fam.png", device = "png", height = 18, width = 16, dpi = 400)
 
 
-# Figs for presentations -----
+## Figs for presentations ------------------------------------------------------
 # just plot each line one by one for the model prediction vs raw data plot
 # just ebb
 plot_pred(raw_data = rls_final %>% filter(tide_cat == "Ebb"),
@@ -825,6 +614,7 @@ plot_pred(raw_data = rls_final,
   theme(legend.position = "right") 
 
 #ggsave("Output/Pres_figs/Fig3b.png", device = "png", height = 9, width = 12, dpi = 400)
+
 
 # Summary stats -------
 sum_pee <- rls_final %>%
@@ -1070,37 +860,222 @@ rls_auto <- rls_final %>%
 
 testSpatialAutocorrelation(new_resids, x = rls_auto$longitude, y = rls_auto$latitude)
 
-# Mess around ----
 
-rls_animals <- rls_final %>%
-  select(site_code, year, weight_sum, abundance, species_richness, shannon) %>%
-  mutate(kelp_sp = ifelse(site_code == "BMSC15", "macro", "none"))
 
-kelp_animals <- data %>%
-  select(site_code, weight_sum, abundance, species_richness, shannon, kelp_sp) %>%
+# Family specific models -------------------------------------------------------
+# these analyses were removed from the final paper due to reviewer concerns but I'll keep the analyses here anyways
+
+# Make a dataframe where each family we saw on a survey gets a row
+# If we didn't see a certain family on that survey, it doesn't get a row
+# No zeros for abundance!
+family_df_no0_a <- rls_final %>%
+  select(site, site_code, survey_id, year, nh4_avg, depth_avg_scale, weight_sum_scale, abundance_scale, shannon_scale, tide_scale, tide_cat) %>%
+  left_join((rls %>%
+               mutate(family = as.factor(family))%>%
+               group_by(survey_id, method, phylum, family) %>% # if i want methods split up, add it back here
+               summarise(fam_den = sum(survey_den),
+                         weight_fam_sum_g = 1000*sum(weight_size_class_sum))),
+            by = "survey_id") 
+
+# what are the top families?
+
+# df for just the surveys I'm looking at
+rls_sm <- rls_final %>%
+  select(survey_id) %>%
   unique() %>%
-  mutate(year = 2022)
+  left_join(rls, by = "survey_id")
 
-animals <- rbind(rls_animals, kelp_animals) %>%
-  mutate(kelp_sp = ifelse(kelp_sp == "none", "none", "kelp"))
+# CHOOSE THE FAMILIES TO INCLUDE
+# rank of families by total abundance (density)
+fam_list_total <- rls_sm %>%
+  group_by(family) %>%
+  summarise(sum = sum(survey_den)) %>%
+  drop_na(family) %>%
+  arrange(desc(sum)) %>%
+  transmute(family = family, 
+            sum_total = sum,
+            rank_total = 1:58)
 
-ggplot(animals, aes(kelp_sp, species_richness)) +
-  geom_boxplot()
+# but which families show up on the most transects?
+fam_list_count <- rls_sm %>%
+  select(survey_id, family) %>%
+  unique() %>%
+  count(family) %>%
+  drop_na(family) %>%
+  arrange(desc(n)) %>%
+  transmute(family = family, 
+            sum_count = n,
+            rank_count = 1:58)
 
-mod_r <- glmmTMB(species_richness ~ kelp_sp + (1|site_code) + (1|year), data = animals)
-summary(mod_r)
-# ok so no diff for abundance but kelp had higher richness
+# rank of families by biomass
+fam_list_bio <- rls_sm %>%
+  group_by(family) %>%
+  summarise(sum = sum(weight_size_class_sum)) %>%
+  drop_na(family) %>%
+  arrange(desc(sum)) %>%
+  transmute(family = family, 
+            sum_bio = sum,
+            rank_bio = 1:58)
 
-# other stuff
-abalone <- rls %>%
-  filter(species_name == "Haliotis kamtschatkana") %>%
-  group_by(survey_id) %>%
-  summarize(density = sum(total)*100) 
+# join all that fam stuff together
+fam_big_list <- fam_list_total %>%
+  left_join(fam_list_count, by = "family") %>%
+  left_join(fam_list_bio, by = "family") %>%
+  mutate(rank_all = (rank_total + rank_count + rank_bio)/3)
+
+# OK so how do I make sense of this
+# plot all rankings together
+ggplot(fam_big_list) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_total, colour = "density"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_count, colour = "count"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_bio, colour = "biomass"), alpha = 0.5) +
+  geom_point(aes(y = reorder(family, -rank_all), 
+                 x = rank_all, colour = "all"), alpha = 0.5) +
+  geom_vline(xintercept = 15, lty = "dashed") +
+  geom_hline(yintercept = "Sebastidae", lty = "dashed") +
+  labs(y = "Family", x = "Rank", colour = "Rank Type")
+
+# just the families I want to keep
+fam_list_cut <- fam_big_list %>%
+  arrange(rank_all) %>%
+  head(15) %>%
+  select(family) 
+
+# make this final df for the df without 0's
+family_df_no0 <- family_df_no0_a %>%
+  filter(family %in% fam_list_cut$family)
 
 
-# Graveyard -----
+# since I'm working with each family separately I want to change density back to abundance
+fam_df_no0 <- family_df_no0 %>%
+  mutate(total_fam = case_when(method == 1 ~ fam_den*500,
+                               method == 2 ~ fam_den*100),
+         weight_abund_fam_sum_g = case_when(method == 1 ~ weight_fam_sum_g*500,
+                                            method == 2 ~ weight_fam_sum_g*100),
+         abund_fam_scale = c(scale(total_fam)),
+         weight_abund_fam_scale = c(scale(weight_abund_fam_sum_g)),
+         fam_den_scale = c(scale(fam_den)),
+         weight_den_fam_scale = c(scale(weight_fam_sum_g))) %>%
+  as.data.frame() %>%
+  droplevels()
 
-# Family community analysis -----
+# rank of orders by abundance
+order_list_total <- rls_sm %>%
+  group_by(order) %>%
+  summarise(sum = sum(total)) %>%
+  drop_na(order) %>%
+  arrange(desc(sum))
+
+# rank orders by biomass
+order_list_bio <- rls_sm %>%
+  group_by(order) %>%
+  summarise(sum = sum(weight_size_class_sum)) %>%
+  drop_na(order) %>%
+  arrange(desc(sum))
+
+## Family stats ----------------------------------------------------------------
+
+# I want to run one model for each family
+# list family names
+fam_levels <- levels(fam_df_no0$family)
+
+# lapply fam_fun over each family name to create df of predictions for each fam mod
+fam_predictions <- lapply(fam_levels, function(family_name) {
+  fam_fun_combo(fam_df_no0, family_name)  
+})
+
+# join up those predictions
+rls_fam_predicts <- bind_rows(fam_predictions)
+
+
+# what are the top 6 inverts and fish?
+top_fam_r2 <- rls_fam_predicts %>%
+  select(c(family, r2)) %>%
+  unique() %>%
+  arrange(desc(r2)) %>%
+  head(7) %>% # only want top 3 inverts and 3 fish but urchins are above the 3rd fish fam
+  filter(family != "Strongylocentrotidae")
+
+# make df of just the tops
+rls_top_fam_predict <- rls_fam_predicts %>%
+  filter(family %in% top_fam_r2$family) %>%
+  # optional reorder of families
+  arrange(desc(r2)) %>%
+  mutate(family = factor(family, unique(family)))
+
+
+# Outputs for these families
+# list top 6 family names
+top_fam_levels <- levels(rls_top_fam_predict$family)
+
+# get model outputs for each family model
+lapply(top_fam_levels, function(family_name) {
+  diagnose_fun(fam_df_no0, family_name) 
+})
+
+# now filter full family df to just include those top 6 families
+rls_top_fam <- top_fam_r2 %>%
+  left_join(fam_df_no0, by = "family") %>%
+  arrange(desc(r2)) %>%
+  mutate(family = factor(family, unique(family)))
+
+# What % of the total abundance do these top 6 families make up?
+all_fam <- fam_df_no0 %>%
+  summarise(type = "all",
+            total_den = sum(fam_den),
+            total_weight = sum(weight_fam_sum_g)) %>%
+  rbind(rls_top_fam %>%
+          summarise(type = "top",
+                    total_den = sum(fam_den),
+                    total_weight = sum(weight_fam_sum_g)))
+
+## Family plot -----------------------------------------------------------------
+# set scales for each panel manually
+position_scales <- list(
+  scale_x_continuous(n.breaks = 3,
+                     label = c("0", "0.1", "0.2")), #seb
+  scale_x_continuous(breaks = c(0, 0.6, 1.2),
+                     label = c("0", "0.6", "1.2")), # muricid
+  scale_x_continuous(n.breaks = 3), # ast
+  scale_x_continuous(breaks = c(0, 0.04, 0.08),
+                     label = c("0", "0.04", "0.08")), # hexa
+  scale_x_continuous(n.breaks = 3,
+                     label = c("0", "0.3", "0.6")), # acmae
+  scale_x_continuous(breaks = c(0, 1.3, 2.6),
+                     label = c("0", "1.3", "2.6")) # gob
+)
+
+# now make plot
+fam_plot_rls <- ggplot() + 
+  geom_point(data = rls_top_fam, 
+             aes(x = fam_den, y = nh4_avg), colour = pal1,
+             alpha = 0.8, size = 3) +
+  labs(y = expression(paste("Ammonium ", (mu*M))), 
+       x = expression(paste("Animal abundance/m"^2))) +
+  facet_wrap(~family, scales = 'free_x', ncol = 3) +
+  geom_line(data = rls_top_fam_predict,
+            aes(x = fam_den, y = predicted), colour = pal1,
+            linewidth = 1.5) +
+  geom_ribbon(data = rls_top_fam_predict,
+              aes(x = fam_den, y = predicted, 
+                  ymin = conf.low, ymax = conf.high), fill = pal1,
+              alpha = 0.2) +
+  theme_white() +
+  theme(strip.background = element_rect(fill = "grey", color = "grey"),
+        axis.text = element_text(size = 18, color = "black", lineheight = 0.9)) + 
+  theme(panel.spacing = unit(1, "lines")) +
+  facetted_pos_scales(x = position_scales)
+
+
+fam_plot_rls
+
+# ggsave("Output/Figures/Supp2Fig1.png", device = "png", height = 9, width = 16, dpi = 400)
+
+
+## Family NMDS -----------------------------------------------------------------
 # multivariate space for the big fam model??? are communities dominated by certain fams when there's a lot of nh4 in the water?
 # make matrix from communities and then see which direction the nh4 loads???
 # envfit
@@ -1146,61 +1121,7 @@ plot(nmds, type = "t")
 plot(en)
 
 
-# my old code
-# make the dissim matrix
-dissim_mat <- vegdist(fam_wider, method = "horn")
-mod <- adonis(dissim_mat ~ nh4_avg, data = rls_final, permutations = 9999)
-# this looks at species distribution as function of environmental data
-summary(mod)
-
-# Ordination: nMDS
-myNMDS <- metaMDS(fam_wider, k = 2)
-myNMDS #most important: is the stress low? Here it is 0.22 which is a bit on the high side
-stressplot(myNMDS) #low stress means that the observed dissimilarity between site pairs matches that on the 2-D plot fairly well (points hug the line)
-
-my_envfit <- envfit(myNMDS, site_data, permutations = 999)
-spp_fit <- envfit(myNMDS, fam_wider, permutations = 999)
-
-# try to plot?
-
-#save NMDS results into dataframe
-site_scrs <- as.data.frame(scores(myNMDS, display = "sites")) 
-
-spp_scrs <- as.data.frame(scores(spp_fit, display = "vectors")) #save species intrinsic values into dataframe
-spp_scrs <- cbind(spp_scrs, Species = rownames(spp_scrs)) #add species names to dataframe
-spp_scrs <- cbind(spp_scrs, pval = spp_fit$vectors$pvals) #add pvalues to dataframe so you can select species which are significant
-
-# order species
-signif_spp_scrs1 <- spp_scrs[order(spp_scrs$pval),]
-
-#cut species that weren't significant
-sig_spp_scrs <- subset(signif_spp_scrs1, pval<0.137) #subset data to show species significant at 0.05
-
-#ugly plot
-ordiplot(myNMDS, type = "n") 
-ordihull(myNMDS, groups = site_data$beach,draw = "polygon",col = "grey99",label = T)
-orditorp(myNMDS, display = "species", col = "purple4",air = 0.01, cex = 0.9)
-orditorp(myNMDS, display = "sites", cex = 0.75, air = 0.01)
-
-
-
-
-
-# wendy code for R2 values 
-performance::r2(beta_reg_model, tolerance = 0.0000000000001)
-performance::r2_nakagawa(beta_reg_model)
-tidy(beta_reg_model)
-summary(beta_reg_model)
-performance::r2(beta_reg_model, tolerance = 0.0000000000001)
-
-# Calculate the marginal R2
-marginal_R2 <- 1 - (mod_brain$deviance / mod_brain$null_deviance)
-# Calculate the conditional R2
-conditional_R2 <- 1 - (mod_brain$deviance / mod_brain$null_deviance)
-marginal_R2
-conditional_R2
-
-# The big family model
+## The big family model --------------------------------------------------------
 
 # On surveys that we saw a family, does that family abundance ~ nh4 ???
 mod_fam_no0 <- glmmTMB(nh4_avg ~ abund_fam_scale * family +

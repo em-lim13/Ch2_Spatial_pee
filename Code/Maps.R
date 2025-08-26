@@ -1,6 +1,6 @@
 # New R file for making maps of the RLS and Kelp pee data
 # Em Lim
-# Oct 17, 2023, last updated Dec 2024
+# Oct 17, 2023, last updated Aug 2025
 
 # Produces Figure 1d
 
@@ -34,7 +34,7 @@ rls_nh4_all <- rbind(read_csv("Output/Output_data/RLS_nh4_2021.csv"),
   select(site_code, nh4_overall_avg_all) %>%
   unique()
 
-# Load GREAT shapefile ----
+## Load GREAT shapefile --------------------------------------------------------
 hakai_map <- sf::st_read("Data/Hakai_coast/COAST_TEST2.shp") %>%
   st_sf() %>%
   st_set_crs(4326)
@@ -46,7 +46,7 @@ sf_use_s2(FALSE)
 blue <- paste("#b9d1df", sep="")
 
 
-# RLS coords ------
+## RLS coords ------------------------------------------------------------------
 rls_coords <- rls_final %>%
   group_by(site_code) %>%
   # this is the mean of the May samples
@@ -60,7 +60,7 @@ rls_coords <- rls_final %>%
   mutate(Habitat = "Reef") %>%
   left_join(rls_nh4_all, by = "site_code")
 
-# Kelp data coords -----
+## Kelp data coords ------------------------------------------------------------
 kelp_coords <- kelp_map_data %>%
   transmute(site_code = site_code,
             site_name = site_name,
@@ -70,7 +70,7 @@ kelp_coords <- kelp_map_data %>%
             latitude = latitude,
             Habitat = "Kelp")
 
-# Both sets of coords ----
+## Both sets of coords ---------------------------------------------------------
 all_coords <- rbind(rls_coords, kelp_coords) %>%
   # stupidly manually jitter points that are on top of each other
   mutate(latitude = case_when(site_code == "KCCA12" ~ 48.854448, 
@@ -104,9 +104,9 @@ all_coords <- rbind(rls_coords, kelp_coords) %>%
 
 
 
-# Make maps! ------
+# Make maps! -------------------------------------------------------------------
 
-# Fig. 1d -----
+## Fig. 1d -----
 # All sites
 fig1d<- map_daddy(long_min = -125.375,
           long_max = -125.025, 
@@ -122,14 +122,14 @@ fig1d<- map_daddy(long_min = -125.375,
 #  place_label("(d)")
 fig1d
 # size adjusted
-# ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1d.png", device = "png", height = 9, width = 12.606299, dpi = 600) # this saves it at the right size to put it in a ppt, add fig1a-c, and save that at 5x6"
+# ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1d.png", device = "png", height = 9, width = 12.606299, dpi = 600) # this saves it at the right size to put it in inkscape, add fig1a-c, and save that at 5x6"
 
 # old size
 # ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1.png", device = "png", height = 9, width = 16, dpi = 400)
 
-#  5 inches in width and 6 inches in height
 
-# try again ---------
+## try again -------------------------------------------------------------------
+# trying to make fig 1 without inkscape, this doesn't work
 fig1d <- ggplot() +
   geom_sf(data = hakai_map, fill = "grey", colour = "white") +
   # add points
@@ -186,10 +186,10 @@ fig1c <- ggdraw() + draw_image("Images/within_meters.png") +
 (fig1a | fig1b | fig1c)/fig1d +
   plot_layout(heights = c(1, 2))
 
- ggsave("Output/Pub_figs/Fig.1alt.tiff", device = "tiff", height = 4, width = 5, dpi = 400)
+# ggsave("Output/Pub_figs/Fig.1alt.tiff", device = "tiff", height = 4, width = 5, dpi = 400)
 
 
-# Other maps ----
+## Maps for presentations ------------------------------------------------
 # Barkley Sound map
 map_daddy_np(long_min= -127,
              long_max= -123, 
@@ -272,7 +272,7 @@ map_daddy(long_min= -125.3,
 #ggsave("Output/Figures/kelp_nh4_map2.png", device = "png", height = 9, width = 16, dpi = 400)
 
 
-# distance between coords  -----
+# distance between coords  -----------------------------------------------------
 library(geodist)
 distance_matrix <- geodist(rls_coords, measure = 'geodesic' )/1000 #converting it to km
 colnames(distance_matrix) <- rls_coords$site_name
