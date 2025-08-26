@@ -1,6 +1,6 @@
 # Code to analyze both cage experiments
 # Em Lim
-# Oct 17, 2023, last updated Dec 2024
+# Oct 17, 2023, last updated Aug 2025
 
 # Produces Figure 4
 
@@ -16,6 +16,7 @@ library(png)
 library(ggtext)
 
 # renv::restore()
+
 # Load functions
 source("Code/Functions.R")
 
@@ -101,7 +102,7 @@ AIC(mod_cr_gamma, mod_cr_gamma2)
 summary(mod_cr_gamma)
 
 
-#Graphing time folks-------
+# Graphing ---------------------------------------------------------------------
 set.seed(1995)
 # palettes
 pal <- viridis::viridis(10)
@@ -120,7 +121,7 @@ sum_crabs <- ggpredict(mod_cr_gamma, terms = "treatment") %>%
                 nh4_conc = predicted) %>% 
   as_tibble()
 
-# Figure 4 ----
+## Figure 4 ----
 # plot cukes
 cuke_plot <- dot_whisker(sum_data = sum_cukes, 
                          all_data = cuke_pee, 
@@ -157,8 +158,6 @@ cuke_plot / crab_plot &
 
 # ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 5, width = 3.5, dpi = 600)
 
-# old vert size
-# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 7.875, width = 3.5, dpi = 400)
 
 # Old horizontal size
 # ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 3.9375, width = 7, dpi = 400)
@@ -377,23 +376,3 @@ ggplot() +
         legend.position = "null") +
   labs(x = "Longitude", y = "Latitude") +
   scale_x_continuous(breaks = seq(-125.18, -125.1, by = 0.05))
-
-
-# Graveyard -----
-sailboat <- pnw_palette("Sailboat")
-csee_pal <- pnw_palette("Starfish")
-
-# Old cuke x depth plot ----
-# Effect of depth
-ggplot(cuke_pee, aes(depth, nh4_avg)) +
-  geom_point(aes(colour = cukes), size = 4) +
-  geom_smooth(method = lm, aes(linetype = line), 
-              colour = "black", alpha = 0.2) +
-  scale_color_brewer(palette = "YlOrRd") +
-  scale_y_reverse() +
-  labs(y = "Ammonium concentration (umol)", x = "Depth (m)", 
-       colour = "Sea cucumbers", linetype = "Line") +
-  theme(axis.text = element_text(size = 15),
-        axis.title = element_text(size = 16, colour = "black"),
-        legend.text = element_text(size = 14),
-        legend.title = element_text(size = 15)) 
