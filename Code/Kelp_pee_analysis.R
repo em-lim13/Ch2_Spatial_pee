@@ -25,8 +25,6 @@ library(ggtext)
 # set theme and load functions
 theme_set(theme_bw())
 source("Code/Functions.R")
-source("Code/Fig_theme_functions.R")
-
 
 # NH4+ data -----
 # kelp pee inside vs outside data from Kelp_pee_nh4_calc.R
