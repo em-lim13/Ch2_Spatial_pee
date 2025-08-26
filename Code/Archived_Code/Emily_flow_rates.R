@@ -2,6 +2,8 @@
 ##July 2, 2021
 ##By: Emily Leedham and Em
 
+# Produces Figure S3
+
 ##Load packages and data -----
 
 #Load packages
@@ -290,7 +292,8 @@ plot_pred(raw_data = tubs_nh4_added_final,
           pal = pal_flow2,
           theme = "white")
 
-# ggsave("Output/Pub_figs/Supp1Fig3.png", device = "png", height = 3.9375, width = 7, dpi = 400)
+# ggsave("Output/Pub_figs/Supp1Fig3.png", device = "png", height = 3.375, width = 6, dpi = 400)
+
 
 # use ggpredict to get estimates
 sum_stats <- ggpredict(model, terms = c("flow2")) %>% 

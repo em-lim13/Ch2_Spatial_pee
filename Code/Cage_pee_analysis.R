@@ -2,6 +2,8 @@
 # Em Lim
 # Oct 17, 2023, last updated Dec 2024
 
+# Produces Figure 4
+
 # Load packages ----
 library(tidyverse)
 library(ggplot2)
@@ -152,7 +154,9 @@ cuke_plot / crab_plot &
       element_rect(color = "white", fill = "white")))
 
 # Fig 4 vertical white background for pub
-# ggsave("Output/Pub_figs/Fig4.tiff", device = "tiff", height = 5, width = 3.5, dpi = 400)
+# ggsave("Output/Pub_figs/Fig4.tiff", device = "tiff", height = 5, width = 3.5, dpi = 600)
+
+# ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 5, width = 3.5, dpi = 600)
 
 # old vert size
 # ggsave("Output/Pub_figs/Fig4.png", device = "png", height = 7.875, width = 3.5, dpi = 400)
