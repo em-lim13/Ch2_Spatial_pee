@@ -124,13 +124,6 @@
       ],
       "Hash": "fc0fe47d44d1f6756ff7898f58d656d9"
     },
-    "PNWColors": {
-      "Package": "PNWColors",
-      "Version": "0.1.0",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "78ae06927ad2e95460dedbe091c33dce"
-    },
     "R6": {
       "Package": "R6",
       "Version": "2.5.1",
