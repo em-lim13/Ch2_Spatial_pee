@@ -2,6 +2,8 @@
 # Em Lim
 # Oct 17, 2023, last updated Dec 2024
 
+# Produces Figure 1d
+
 # Load packages -----
 library(tidyverse)
 library(ggplot2)
@@ -121,7 +123,7 @@ fig1d<- map_daddy(long_min = -125.375,
 #  place_label("(d)")
 fig1d
 # size adjusted
- ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1d.png", device = "png", height = 9, width = 12.606299, dpi = 400) # this saves it at the right size to put it in a ppt, add fig1a-c, and save that at 5x6"
+# ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1d.png", device = "png", height = 9, width = 12.606299, dpi = 600) # this saves it at the right size to put it in a ppt, add fig1a-c, and save that at 5x6"
 
 # old size
 # ggsave("Output/Pub_figs/ppt_shame_folder/Fig.1.png", device = "png", height = 9, width = 16, dpi = 400)

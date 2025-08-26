@@ -836,7 +836,7 @@ plot_pred <- function(raw_data, predict_data,
     new_plot <- base_pred_plot +
       labs(x = "Flow rate (m/s)", 
            y = expression(paste(Delta, " Ammonium ", (mu*M)))) +
-      labs(colour = "Cucumbers", fill = "Cucumbers", pch = "Cucumbers", lty = "Cucumbers")
+      labs(colour = "Cucumbers ", fill = "Cucumbers ", pch = "Cucumbers ", lty = "Cucumbers ")
   }
   
   
@@ -908,9 +908,11 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
      # axis.ticks.length = unit(0, "pt"),
       plot.title = NULL,
       plot.margin=grid::unit(c(0,0,0,0), "mm"),
+     
       # Specify legend options
-      legend.background = element_rect(color = NA, fill = background),  
-      legend.key = element_rect(color = background,  fill = background),  
+      legend.background = element_blank(), # make legend background transparent
+      legend.key = element_blank(), # make legend background transparent
+      legend.box.background = element_blank(), # make legend background transparent
       legend.key.size = unit(1.2, "lines"),  
       legend.key.height = NULL,  
       legend.key.width = NULL,      
@@ -919,16 +921,15 @@ map_daddy <- function(lat_min, lat_max, long_min, long_max,
       legend.text.align = NULL,  
       legend.title.align = NULL,  
       legend.direction = "vertical",  
+     # try to get legend boxes inside plot
+     legend.position = "inside",
+     legend.position.inside = c(0.99, 0.15),
+     legend.justification.inside = c(0.99, 0.15),
       # if you want the legend back on the side unhash these and hash the inside bit
 #      legend.box = NULL,
 #      legend.position = "right", 
       
-      # try to get legend boxes inside plot
-      legend.position = "inside",
-      legend.position.inside = c(0.99, 0.15),
-      legend.justification.inside = c(0.99, 0.15),
-      legend.box.background = element_rect(color = features, linewidth = 0),
-      
+
       # Specify facetting options
       strip.background = element_rect(fill = "grey30", color = "grey10"),  
       strip.text.x = element_text(size = 30, color = features),  

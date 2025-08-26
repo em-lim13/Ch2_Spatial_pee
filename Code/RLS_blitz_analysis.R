@@ -2,6 +2,8 @@
 # June 2, 2023, last updated Dec 2024
 # Em Lim
 
+# Produces Figure 2
+
 # Load packages and functions ----
 library(tidyverse)
 library(visreg)
@@ -668,8 +670,8 @@ rls_coeffs <- confint(mod_brain, level = 0.95, method = c("wald"), component = c
 
 # Coefficient plot 
 rls_coeff_plot <- coeff_plot(coeff_df = rls_coeffs, 
-                             pal = rev(pal5))
-#  place_label("(a)")
+                             pal = rev(pal5)) +
+  place_label("(a)")
 
 # ggsave("Output/Figures/rls_mod_coeff.png", device = "png", height = 9, width = 12, dpi = 400)
 
@@ -707,21 +709,20 @@ rls_pred_plot <-
             lty_var = tide_cat,
             pch_var = tide_cat,
             pal = rev(pal3),
-            theme = "white")
-#  place_label("(b)")
+            theme = "white") +
+  place_label("(b)")
 
 
 # Fig 2 -----
-rls_coeff_plot + rls_pred_plot  + 
-  plot_annotation(tag_levels = 'a', tag_prefix = "(", tag_suffix = ")") &
-  theme(plot.tag.position = c(0, 1),
-        plot.tag = element_text(hjust = -0.5, vjust = 0))
+rls_coeff_plot + rls_pred_plot
+# add the following to put the tags outside the plots
+#  plot_annotation(tag_levels = 'a', tag_prefix = "(", tag_suffix = ")") &
+#  theme(plot.tag.position = c(0, 1),
+#        plot.tag = element_text(hjust = -0.5, vjust = 0))
 
-# ggsave("Output/Pub_figs/Fig2.tiff", device = "tiff", height = 3.5, width = 6, units = "in", dpi = 400)
+# ggsave("Output/Pub_figs/Fig2.tiff", device = "tiff", height = 3.5, width = 6, units = "in", dpi = 600)
 
-# old incorrect size
-# ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 3.9375, width = 7, units = "in", dpi = 400)
-
+# ggsave("Output/Pub_figs/Fig2.png", device = "png", height = 3.5, width = 6, units = "in", dpi = 600)
 
  # try plotting panels horizontally
 # squish the y axis over
