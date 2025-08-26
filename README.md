@@ -47,5 +47,5 @@ Self explanatory
 ## renv
 Package manager library
 
-## Writing
-Drafts of this manuscript!
+## L&O Submission
+Manuscript and documents for submission
