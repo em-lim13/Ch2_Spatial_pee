@@ -46,6 +46,3 @@ Self explanatory
 
 ## renv
 Package manager library
-
-## L&O Submission
-Manuscript and documents for submission
