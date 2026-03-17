@@ -16,6 +16,7 @@ library(glmmTMB) # better for random effects
 library(patchwork)
 library(ggh4x) # customizing axes for facet wrap panels
 library(emmeans)
+library(DHARMa)
 # for R2 value
 library(insight)
 library(performance)
@@ -477,6 +478,7 @@ pal30 <- viridis::viridis(30)
 pal5 <- c(pal30[16], pal30[18], pal30[20], pal30[22], pal30[24]) # coeff plot
 pal3 <- c(pal30[1], pal30[9], pal30[15]) # tide colours
 pal1 <- pal20[14] # fam plots
+pal_b <- c("#22A884FF", "#7AD151FF", "#FDE725FF") # for black background
 
 
 ## Fig 2a: Coefficient plot ---------------------------------------------------
@@ -568,8 +570,6 @@ rls_coeff_plot / (rls_pred_plot + squish)   +
 # ggsave("Output/Pub_figs/Fig2h.tiff", device = "tiff", height = 5, width = 3.5, units = "in", dpi = 400)
 
 
-
-
 ## Alt Fig 2 tri-panel ---------------------------------------------------------
 squish <- theme(axis.title.y = element_text(margin = margin(r = -120, unit = "pt")))
 
@@ -587,33 +587,40 @@ plot_pred(raw_data = rls_final %>% filter(tide_cat == "Ebb"),
           predict_data = predict %>% filter(tide_cat == "Ebb"),
           plot_type = "rls",
           x_var = abundance, y_var = nh4_avg, 
-          pal = pal3,
+          lty_var = tide_cat,
+          pch_var = tide_cat,
+          pal = rev(pal_b),
           theme = "black") +
-  theme(legend.position = "right") 
-
-#ggsave("Output/Pres_figs/Fig3ba.png", device = "png", height = 9, width = 12, dpi = 400)
+  theme(legend.position = "right") +
+  ylim(0, 3.7)
+#ggsave("Output/Pres_figs/Fig2b_black1.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # add slack
 plot_pred(raw_data = rls_final %>% filter(tide_cat != "Flood"), 
           predict_data = predict %>% filter(tide_cat != "Flood"),
           plot_type = "rls",
           x_var = abundance, y_var = nh4_avg, 
-          pal = pal3,
+          lty_var = tide_cat,
+          pch_var = tide_cat,
+          pal = rev(pal_b),
           theme = "black") +
-  theme(legend.position = "right") 
-
-#ggsave("Output/Pres_figs/Fig3bb.png", device = "png", height = 9, width = 12, dpi = 400)
+  theme(legend.position = "right") +
+  ylim(0, 3.7)
+#ggsave("Output/Pres_figs/Fig2b_black2.png", device = "png", height = 9, width = 12, dpi = 400)
 
 # all of it
 plot_pred(raw_data = rls_final, 
           predict_data = predict,
           plot_type = "rls",
           x_var = abundance, y_var = nh4_avg, 
-          pal = pal3,
+          lty_var = tide_cat,
+          pch_var = tide_cat,
+          pal = rev(pal_b),
           theme = "black") +
-  theme(legend.position = "right") 
+  theme(legend.position = "right") +
+  ylim(0, 3.7)
 
-#ggsave("Output/Pres_figs/Fig3b.png", device = "png", height = 9, width = 12, dpi = 400)
+# ggsave("Output/Pres_figs/Fig2b_black3.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 # Summary stats -------

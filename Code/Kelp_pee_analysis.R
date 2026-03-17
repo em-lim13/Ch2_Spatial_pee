@@ -450,7 +450,6 @@ pal_spc <- c(pal30[19], pal30[20], pal30[21]) # kelp sp colours
 pal3c <- c(pal30[7], pal30[12], pal30[17]) # kelp biomass colours 
 pal2c <- c(pal30[1], pal30[9]) # tide colours
 
-
 ## Fig 3a: model coefficients --------------------------------------------------
 # Save model coefficients 
 # use the no intercept model for plotting
@@ -474,8 +473,14 @@ df <- confint(mod_in_out, level = 0.95, method = c("wald"), component = c("all",
 # plot just cont vars
 kelp_coeff_plot <- coeff_plot(coeff_df = df,
                               pal = rev(pal8c)) +
-  theme(axis.title.y = element_blank())+
+  theme(axis.title.y = element_blank()) +
   place_label("(a)") # this is a function I create in the Functions.R file
+
+# plot again for presentation
+coeff_plot(coeff_df = df,
+           pal = rev(pal8c),
+           theme = "black")
+# ggsave("Output/Pres_figs/Fig3a_black.png", device = "png", height = 8, width = 12, dpi = 400)
 
 
 
@@ -560,6 +565,20 @@ kelp_tide_int_plot <-
   place_label("(c)") +
   ylim(c(-0.79, 1.05)) 
 
+# for presentation
+pal_b <- c("#22A884FF", "#7AD151FF") # for black background
+
+plot_pred(raw_data = (data %>% mutate(
+  tide = ifelse(avg_exchange_rate < 0, "Slack", "Flood"))),
+  predict_data = predict_kelp, 
+  plot_type = "new_kelp",
+  x_var = BiomassM, y_var = in_minus_out, 
+  lty_var = tide_cat,
+  pch_var = tide_cat,
+  pal = rev(pal_b),
+  x_axis_lab = expression(paste("Kelp biomass (kg/m"^2,")")),
+  theme = "black")
+# ggsave("Output/Pres_figs/Fig3c_black.png", device = "png", height = 9, width = 12, dpi = 400)
 
 
 ## Fig 3d: Kelp biomass x abundance interaction --------------------------------
@@ -1039,3 +1058,37 @@ plot(kelp_en)
 
 plot(kelp_nmds, type = "t")
 plot(kelp_en)
+
+
+# Does ammonium link to kelp, does kelp link to animals?
+
+ggplot(aes(in_out_avg, BiomassM, colour = shannon), data = data ) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+ggplot(aes(in_out_avg, forest_biomass), data = data ) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+ggplot(aes(BiomassM, abundance), data = data ) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+ggplot(aes(forest_biomass, abundance), data = data ) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+ggplot(aes(BiomassM, shannon, colour = in_out_avg), data = data ) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+ggplot(aes(in_out_avg, shannon), data = data ) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+d <- data %>%
+  select(site_name, BiomassM, forest_biomass, shannon) %>%
+  unique()
+
+lm <- glmmTMB(shannon ~ BiomassM, data = d)
+summary(lm)

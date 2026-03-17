@@ -859,7 +859,7 @@ dot_whisker <- function(sum_data, all_data, x_var, y_var, pch_var = NULL,
     dot_var = 3
     jitter_var = 2
     line_var = 0.75
-  } else {
+  } else if(theme == "black") {
     theme <- theme_black()
     features <- "white"
     dot_var = 8
@@ -930,16 +930,26 @@ plot_pred <- function(raw_data, predict_data,
                       x_axis_lab = NULL,
                       pal,
                       theme = "white"){
-  if(theme == "white"){
-    theme <- pub_theme()
+  if(theme == "white_pub"){
+    theme_obj <- theme_white()
     features <- "black"
-    size_var = 2
-    line_var = 1
-  } else {
-    theme <- theme_black()
+    size_var <- 4
+    line_var <- 2
+    alpha_var <- 0.5
+    
+  } else if(theme == "white"){
+    theme_obj <- pub_theme()
+    features <- "black"
+    size_var <- 2
+    line_var <- 1
+    alpha_var <- 0.5
+    
+  } else if(theme == "black"){
+    theme_obj <- theme_black()
     features <- "white"
-    size_var = 4
-    line_var = 2
+    size_var <- 4
+    line_var <- 2
+    alpha_var <- 0.8
   }
   
   base_pred_plot <-  ggplot() + 
@@ -947,7 +957,7 @@ plot_pred <- function(raw_data, predict_data,
                aes(x = {{x_var}}, y = {{y_var}}, 
                    colour = {{lty_var}}, fill = {{lty_var}},
                    pch = {{pch_var}}), 
-               alpha = 0.5, size = size_var) +
+               alpha = alpha_var, size = size_var) +
     geom_line(data = predict_data,
               aes(x = {{x_var}}, y = predicted,
                   colour = {{lty_var}}),
@@ -957,9 +967,9 @@ plot_pred <- function(raw_data, predict_data,
                     ymin = conf.low, ymax = conf.high), 
                 alpha = 0.25) +
     labs(colour = "Tide", fill = "Tide", pch = "Tide") +
-    theme +
-    scale_colour_manual(values = (pal)) +
-    scale_fill_manual(values = (pal)) +
+    theme_obj +
+    scale_colour_manual(values = pal) +
+    scale_fill_manual(values = pal) +
     guides(lty = guide_legend(override.aes = list(linewidth = line_var/3)),
            size = guide_legend(override.aes = list(colour = features)),
            colour = guide_legend(override.aes = list(size = size_var*0.75, linewidth = line_var/3)))
@@ -984,7 +994,8 @@ plot_pred <- function(raw_data, predict_data,
       labs(y = expression(paste("Ammonium ", (mu*M))), 
            x = expression(paste("Animal abundance/m"^2))) +
       scale_fill_manual(values = pal, drop = FALSE) +
-      scale_colour_manual(values = (pal), drop = FALSE) +
+      scale_colour_manual(values = pal, drop = FALSE) +
+      scale_shape(drop = FALSE) +
       theme(legend.position = c(0.83, 0.865))
   }
   
@@ -995,11 +1006,8 @@ plot_pred <- function(raw_data, predict_data,
       labs(colour = "Cucumbers ", fill = "Cucumbers ", pch = "Cucumbers ", lty = "Cucumbers ")
   }
   
-  
-  
   print(new_plot)
 }
-
 
 
 

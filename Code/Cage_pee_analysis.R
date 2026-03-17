@@ -165,6 +165,34 @@ cuke_plot / crab_plot &
 # ggsave("Output/Pres_figs/Fig4.png", device = "png", height = 6, width = 12, dpi = 400)
 # og is 9 x 16
 
+# Plots for presentation
+cuke_plot_black <- dot_whisker(sum_data = sum_cukes, 
+                               all_data = cuke_pee, 
+                               x_var = cukes, 
+                               y_var = nh4_avg, 
+                               labels = cuke_labels,
+                               pal = pal_c,
+                               theme = "black") +
+  ylim(0, 1.5) +
+  theme(axis.title.x = element_blank()) 
+
+crab_plot_black <- dot_whisker(sum_data = sum_crabs, 
+                               all_data = crab_pee,
+                               x_var = treatment,
+                               y_var = nh4_conc,
+                               labels = crab_labels,
+                               pal = pal_c,
+                               theme = "black") +
+  theme(axis.title.x = element_blank())
+
+(cuke_plot_black + crab_plot_black) &
+  theme(plot.background = element_rect(fill = "black", colour = "black"))
+
+# ggsave("Output/Pres_figs/Fig4_black.png", device = "png", height = 5, width = 9.8, dpi = 400)
+
+
+
+
 # Summary stats -----
 sum_crab <- crab_pee %>%
   group_by(cage, treatment, week) %>%
@@ -324,10 +352,10 @@ ggplot() +
 # make the map!
 ggplot() +
   geom_sf(data = hakai_map, fill = "white", colour = blue) +
-  geom_sf(data = coords, 
-          alpha = 0.9,
-          size = 9,
-          aes(colour = site)) +
+#  geom_sf(data = coords, 
+#          alpha = 0.9,
+#          size = 9,
+#          aes(colour = site)) +
   coord_sf(xlim = c(-125.25, -125.1), ylim = c(48.80, 48.9), expand = FALSE)  +
   theme_black() +
   theme(panel.background = element_rect(fill = blue),
@@ -336,7 +364,7 @@ ggplot() +
   labs(x = "Longitude", y = "Latitude") +
   scale_x_continuous(breaks = seq(-125.3, -125.1, by = 0.1))
 
-# ggsave("Output/Figures/cage_site_map.png", device = "png", height = 9, width = 16, dpi = 400)
+# ggsave("Output/Pres_figs/cage_site_map.png", device = "png", height = 9, width = 16, dpi = 400)
 
 # Barkley sound for schematic
 google_blue <- "#9bbff4"
