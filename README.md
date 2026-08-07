@@ -1,5 +1,8 @@
 # Ch2_Spatial_pee
-Everything for my spatial ammonium variation chapter
+This project hosts data and scripts associated with the manuscript “Spatial dynamics of animal-mediated nutrients in temperate waters”, published in the journal Limnology and Oceanography (October 2025).
+
+https://aslopubs.onlinelibrary.wiley.com/doi/10.1002/lno.70242
+
 
 ## Code
 Analyses and figures for each of the three main sections of this paper:
